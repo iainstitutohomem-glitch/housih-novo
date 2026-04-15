@@ -181,24 +181,32 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
 
         // Create new
-        const { data: conv } = await supabase
+        const newId = crypto.randomUUID();
+        const { error: cError } = await supabase
             .from('chat_conversations')
-            .insert({ type: 'direct' })
-            .select()
-            .single();
+            .insert({ id: newId, type: 'direct' });
 
-        if (conv) {
-            await supabase.from('chat_participants').insert([
-                { conversation_id: conv.id, user_email: session.user.email },
-                { conversation_id: conv.id, user_email: recipientEmail }
+        if (!cError) {
+            const { error: pError } = await supabase.from('chat_participants').insert([
+                { conversation_id: newId, user_email: session.user.email },
+                { conversation_id: newId, user_email: recipientEmail }
             ]);
 
+            if (pError) {
+                console.error("Participant insert error:", pError);
+                return;
+            }
+
             const newConv: Conversation = {
-                ...conv,
+                id: newId,
+                type: 'direct',
+                last_message_at: new Date().toISOString(),
                 participants: [session.user.email, recipientEmail]
             };
             setConversations(prev => [newConv, ...prev]);
             setActiveConversation(newConv);
+        } else {
+            console.error("Conversation creation error:", cError);
         }
     };
 
