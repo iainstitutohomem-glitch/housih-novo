@@ -12,6 +12,7 @@ import { NotificationBell } from './components/NotificationBell';
 import { Plus, Menu } from 'lucide-react';
 import { useState } from 'react';
 import { ChatDrawer } from './components/Chat/ChatDrawer';
+import { ChatProvider } from './context/ChatContext';
 
 const NovaTarefaButton = () => {
   const { openModal } = useTasks();
@@ -86,7 +87,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-import { ChatProvider } from './context/ChatContext';
 
 function App() {
   return (

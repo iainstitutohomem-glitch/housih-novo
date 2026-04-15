@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Building2, PieChart, Users, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
+import { useTasks } from '../context/TasksContext';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -72,8 +74,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     );
 };
 
-import { useChat } from '../context/ChatContext';
-import { useTasks } from '../context/TasksContext';
+
 
 const TeamPresenceSidebar = () => {
     const { teamMembers } = useTasks();

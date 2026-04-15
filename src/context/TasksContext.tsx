@@ -87,6 +87,7 @@ interface TasksContextType {
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { session } = useAuth();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -395,8 +396,6 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             fetchTeam();
         }
     };
-
-    const { session } = useAuth();
 
     useEffect(() => {
         if (!session) return;
