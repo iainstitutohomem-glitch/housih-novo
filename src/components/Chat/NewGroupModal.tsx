@@ -1,6 +1,6 @@
 import React, { useState, type FC } from 'react';
 import { X, Users, CheckSquare, Square } from 'lucide-react';
-import { useTasks, type TeamMember } from '../../context/TasksContext';
+import { useTasks } from '../../context/TasksContext';
 import { useChat } from '../../context/ChatContext';
 
 interface NewGroupModalProps {
@@ -66,8 +66,8 @@ export const NewGroupModal: FC<NewGroupModalProps> = ({ isOpen, onClose }) => {
                                     key={member.id}
                                     onClick={() => toggleMember(member.email!)}
                                     className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${selectedEmails.includes(member.email!)
-                                            ? 'bg-primary-50 border-primary-100'
-                                            : 'hover:bg-gray-50'
+                                        ? 'bg-primary-50 border-primary-100'
+                                        : 'hover:bg-gray-50'
                                         }`}
                                 >
                                     <div className="shrink-0">

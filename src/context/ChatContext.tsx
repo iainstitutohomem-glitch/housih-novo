@@ -263,7 +263,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     return (
-        <ChatContext.Provider value={{ conversations, messages, onlineUsers, activeConversation, setActiveConversation, sendMessage, startPrivateChat, loading }}>
+        <ChatContext.Provider value={{ conversations, messages, onlineUsers, activeConversation, setActiveConversation, sendMessage, startPrivateChat, createGroup, loading }}>
             {children}
         </ChatContext.Provider>
     );
