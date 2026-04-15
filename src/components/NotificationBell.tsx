@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Check, Trash2, Calendar, User } from 'lucide-react';
+import { Bell, Check, Trash2, Calendar, User, X } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const NotificationBell = () => {
-    const { notifications, markNotificationAsRead, clearAllNotifications } = useTasks();
+    const { notifications, markNotificationAsRead, deleteNotification, clearAllNotifications } = useTasks();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -97,12 +97,19 @@ export const NotificationBell = () => {
                                         {!notif.read && (
                                             <button
                                                 onClick={() => markNotificationAsRead(notif.id)}
-                                                className="absolute top-4 right-4 p-1.5 bg-white rounded-full shadow-sm text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 active:scale-95"
+                                                className="absolute top-4 right-10 p-1.5 bg-white rounded-full shadow-sm text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 active:scale-95"
                                                 title="Marcar como lida"
                                             >
                                                 <Check size={14} />
                                             </button>
                                         )}
+                                        <button
+                                            onClick={() => deleteNotification(notif.id)}
+                                            className="absolute top-4 right-4 p-1.5 bg-white rounded-full shadow-sm text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 hover:scale-110 active:scale-95"
+                                            title="Excluir notificação"
+                                        >
+                                            <X size={14} />
+                                        </button>
                                     </div>
                                 ))}
                             </div>

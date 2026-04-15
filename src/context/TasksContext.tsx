@@ -74,6 +74,7 @@ interface TasksContextType {
     notifications: Notification[];
     fetchNotifications: () => Promise<void>;
     markNotificationAsRead: (id: string) => Promise<void>;
+    deleteNotification: (id: string) => Promise<void>;
     clearAllNotifications: () => Promise<void>;
     loading: boolean;
     isModalOpen: boolean;
@@ -202,19 +203,30 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         await supabase.from('notifications').update({ read: true }).eq('id', id);
     };
 
+    const deleteNotification = async (id: string) => {
+        setNotifications(notifications.filter(n => n.id !== id));
+        const { error } = await supabase.from('notifications').delete().eq('id', id);
+        if (error) console.error("Error deleting notification:", error);
+    };
+
     const clearAllNotifications = async () => {
         const email = session?.user?.email;
         if (!email) return;
         setNotifications([]);
-        await supabase.from('notifications').delete().eq('recipient_email', email);
+        const { error } = await supabase.from('notifications').delete().eq('recipient_email', email);
+        if (error) console.error("Error clearing notifications:", error);
     };
 
     const createNotification = async (notif: Partial<Notification>) => {
         const sender = teamMembers.find(m => m.email === session?.user?.email)?.name || session?.user?.email || 'Sistema';
-        await supabase.from('notifications').insert([{
+        console.log("Creating notification for:", notif.recipient_email, "from:", sender);
+        const { error } = await supabase.from('notifications').insert([{
             ...notif,
             sender_name: sender,
         }]);
+        if (error) {
+            console.error("Supabase Notification Insert Error:", error);
+        }
     };
 
     const addTask = async (task: Partial<Task>) => {
@@ -263,11 +275,13 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
             // 2. Notificar menções @Nome nas observações
             if (task.observations && task.observations !== oldTask?.observations) {
+                const newObs = task.observations.toLowerCase();
+                const oldObs = (oldTask?.observations || '').toLowerCase();
+
                 teamMembers.forEach(async member => {
-                    const mentionTag = `@${member.name}`;
-                    // Só notifica se a tag for nova (não estava antes) e for o destinatário correto
-                    if (task.observations?.includes(mentionTag) && !oldTask?.observations?.includes(mentionTag)) {
-                        if (member.email && member.email !== session?.user?.email) {
+                    const mentionTag = `@${member.name.toLowerCase()}`;
+                    if (newObs.includes(mentionTag) && !oldObs.includes(mentionTag)) {
+                        if (member.email && member.email.toLowerCase() !== session?.user?.email?.toLowerCase()) {
                             await createNotification({
                                 recipient_email: member.email,
                                 task_id: taskId,
@@ -404,7 +418,7 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         <TasksContext.Provider value={{
             tasks, filteredTasks, filters, setFilters, companies, teamMembers, fetchTasks, updateTaskStatus, addTask, updateTask, deleteTask, loading,
             isModalOpen, editingTask, openModal, closeModal, addCompany, updateCompany, deleteCompany, addTeamMember, updateTeamMember, deleteTeamMember,
-            notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications
+            notifications, fetchNotifications, markNotificationAsRead, deleteNotification, clearAllNotifications
         }}>
             {children}
         </TasksContext.Provider>
