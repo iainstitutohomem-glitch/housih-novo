@@ -60,13 +60,58 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                             <span>{item.label}</span>
                         </NavLink>
                     ))}
+                    <TeamPresenceSidebar />
                 </nav>
 
-                <button onClick={signOut} className="flex items-center gap-3 px-3 py-3 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors mt-auto">
+                <button onClick={signOut} className="flex items-center gap-3 px-3 py-3 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors mt-8">
                     <LogOut size={20} />
                     <span className="font-medium">Sair</span>
                 </button>
             </aside>
         </>
+    );
+};
+
+import { useChat } from '../context/ChatContext';
+import { useTasks } from '../context/TasksContext';
+
+const TeamPresenceSidebar = () => {
+    const { teamMembers } = useTasks();
+    const { onlineUsers, startPrivateChat } = useChat();
+    const { session } = useAuth();
+
+    return (
+        <div className="mt-8 px-2">
+            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-4 flex items-center justify-between">
+                Equipe Online
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+            </h3>
+            <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                {teamMembers.filter(m => m.email !== session?.user?.email).map((member) => (
+                    <button
+                        key={member.id}
+                        onClick={() => startPrivateChat(member.email!)}
+                        className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors group text-left"
+                    >
+                        <div className="relative shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-xs uppercase">
+                                {member.avatar_url ? (
+                                    <img src={member.avatar_url} alt="" className="w-full h-full object-cover rounded-full" />
+                                ) : (
+                                    member.name.charAt(0)
+                                )}
+                            </div>
+                            {onlineUsers.has(member.email!) && (
+                                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></div>
+                            )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-gray-700 truncate group-hover:text-primary-600 transition-colors">{member.name}</p>
+                            <p className="text-[9px] text-gray-400 truncate">{onlineUsers.has(member.email!) ? 'Disponível' : 'Offline'}</p>
+                        </div>
+                    </button>
+                ))}
+            </div>
+        </div>
     );
 };

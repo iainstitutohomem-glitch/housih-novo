@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationBell } from './components/NotificationBell';
 import { Plus, Menu } from 'lucide-react';
 import { useState } from 'react';
+import { ChatDrawer } from './components/Chat/ChatDrawer';
 
 const NovaTarefaButton = () => {
   const { openModal } = useTasks();
@@ -79,36 +80,41 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
           {children}
         </div>
+        <ChatDrawer />
       </main>
     </div>
   );
 };
 
+import { ChatProvider } from './context/ChatContext';
+
 function App() {
   return (
     <AuthProvider>
       <TasksProvider>
-        <TaskModal />
-        <BrowserRouter>
-          <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans overflow-hidden">
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="*" element={
-                <ProtectedRoute>
-                  <DashboardLayout>
-                    <Routes>
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                      <Route path="/dashboard" element={<MetricsDashboard />} />
-                      <Route path="/kanban" element={<KanbanBoard />} />
-                      <Route path="/companies" element={<CompanyManager />} />
-                      <Route path="/team" element={<TeamManager />} />
-                    </Routes>
-                  </DashboardLayout>
-                </ProtectedRoute>
-              } />
-            </Routes>
-          </div>
-        </BrowserRouter>
+        <ChatProvider>
+          <TaskModal />
+          <BrowserRouter>
+            <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans overflow-hidden">
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="*" element={
+                  <ProtectedRoute>
+                    <DashboardLayout>
+                      <Routes>
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/dashboard" element={<MetricsDashboard />} />
+                        <Route path="/kanban" element={<KanbanBoard />} />
+                        <Route path="/companies" element={<CompanyManager />} />
+                        <Route path="/team" element={<TeamManager />} />
+                      </Routes>
+                    </DashboardLayout>
+                  </ProtectedRoute>
+                } />
+              </Routes>
+            </div>
+          </BrowserRouter>
+        </ChatProvider>
       </TasksProvider>
     </AuthProvider>
   );
