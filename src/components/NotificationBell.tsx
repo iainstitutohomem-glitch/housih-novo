@@ -3,9 +3,18 @@ import { Bell, Check, Trash2, Calendar, User, X } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const NotificationBell = () => {
-    const { notifications, markNotificationAsRead, deleteNotification, clearAllNotifications } = useTasks();
+    const { notifications, markNotificationAsRead, deleteNotification, clearAllNotifications, openModal, tasks } = useTasks();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const handleNotificationClick = (notif: any) => {
+        markNotificationAsRead(notif.id);
+        const task = tasks.find(t => t.id === notif.task_id);
+        if (task) {
+            openModal(task);
+            setIsOpen(false);
+        }
+    };
 
     const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -68,17 +77,15 @@ export const NotificationBell = () => {
                                 {notifications.map((notif) => (
                                     <div
                                         key={notif.id}
-                                        className={`p-4 hover:bg-primary-50/30 transition-colors relative group ${!notif.read ? 'bg-blue-50/30' : ''}`}
+                                        onClick={() => handleNotificationClick(notif)}
+                                        className={`p-4 hover:bg-primary-50/30 transition-colors relative group cursor-pointer ${!notif.read ? 'bg-blue-50/30' : ''}`}
                                     >
                                         <div className="flex gap-3">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${notif.type === 'transfer' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${notif.type === 'transfer' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>
                                                 {notif.type === 'transfer' ? <User size={18} /> : <Bell size={18} />}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-start mb-1">
-                                                    <span className="text-xs font-bold text-primary-600 uppercase tracking-wider">
-                                                        {notif.type === 'transfer' ? 'Transferência' : 'Menção'}
-                                                    </span>
                                                     <span className="text-[10px] text-gray-400 font-medium">
                                                         {formatTime(notif.created_at)}
                                                     </span>
@@ -96,7 +103,10 @@ export const NotificationBell = () => {
                                         </div>
                                         {!notif.read && (
                                             <button
-                                                onClick={() => markNotificationAsRead(notif.id)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    markNotificationAsRead(notif.id);
+                                                }}
                                                 className="absolute top-4 right-10 p-1.5 bg-white rounded-full shadow-sm text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 active:scale-95"
                                                 title="Marcar como lida"
                                             >
@@ -104,7 +114,10 @@ export const NotificationBell = () => {
                                             </button>
                                         )}
                                         <button
-                                            onClick={() => deleteNotification(notif.id)}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteNotification(notif.id);
+                                            }}
                                             className="absolute top-4 right-4 p-1.5 bg-white rounded-full shadow-sm text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 hover:scale-110 active:scale-95"
                                             title="Excluir notificação"
                                         >

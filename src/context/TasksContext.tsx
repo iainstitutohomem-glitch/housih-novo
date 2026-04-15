@@ -286,12 +286,19 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                     const mentionTag = `@${member.name.toLowerCase()}`;
                     if (addedText.includes(mentionTag)) {
                         if (member.email && member.email.toLowerCase() !== session?.user?.email?.toLowerCase()) {
+                            // Pega a última linha e limpa o timestamp e o nome do remetente para o resumo
+                            const lastComment = task.observations?.split('\n').pop() || '';
+                            const summary = lastComment
+                                .replace(/^\[.*?\].*?:\s*/, '') // Remove o prefixo de timestamp e nome
+                                .replace(new RegExp(`@${member.name}`, 'gi'), '') // Remove a menção @Nome
+                                .trim();
+
                             await createNotification({
                                 recipient_email: member.email,
                                 task_id: taskId,
                                 task_title: updatedTask.title,
                                 type: 'mention',
-                                message: `Mencionou você na tarefa: "${updatedTask.title}"`
+                                message: summary || `Mencionou você na tarefa: "${updatedTask.title}"`
                             });
                         }
                     }
