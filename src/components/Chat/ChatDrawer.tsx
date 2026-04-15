@@ -13,9 +13,9 @@ export const ChatDrawer = () => {
 
     const activeMsgs = activeConversation ? messages[activeConversation.id] || [] : [];
 
-    const recipientEmail = activeConversation?.participants.find(p => p.toLowerCase() !== session?.user?.email?.toLowerCase());
+    const recipientEmail = activeConversation?.participants.find((p: string) => p.toLowerCase() !== session?.user?.email?.toLowerCase());
     const recipient = teamMembers.find(m => m.email?.toLowerCase() === recipientEmail?.toLowerCase());
-    const isOnline = recipientEmail ? Array.from(onlineUsers).some(u => u.toLowerCase() === recipientEmail.toLowerCase()) : false;
+    const isOnline = recipientEmail ? Array.from(onlineUsers).some((u: string) => u.toLowerCase() === recipientEmail.toLowerCase()) : false;
 
     useEffect(() => {
         if (scrollRef.current) {

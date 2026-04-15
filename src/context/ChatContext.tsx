@@ -109,7 +109,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 if (convs) {
                     const mapped = convs.map(c => ({
                         ...c,
-                        participants: c.chat_participants.map((p: any) => p.user_email)
+                        participants: c.chat_participants.map((p: any) => p.user_email as string)
                     }));
                     setConversations(mapped);
                 }
@@ -172,8 +172,8 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         // Check if exists
         const existing = conversations.find(c =>
             c.type === 'direct' &&
-            c.participants.some(p => p.toLowerCase() === recipientEmail.toLowerCase()) &&
-            c.participants.some(p => p.toLowerCase() === session.user.email?.toLowerCase())
+            c.participants.some((p: string) => p.toLowerCase() === recipientEmail.toLowerCase()) &&
+            c.participants.some((p: string) => p.toLowerCase() === session.user.email?.toLowerCase())
         );
 
         if (existing) {

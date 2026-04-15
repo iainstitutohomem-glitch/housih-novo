@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Building2, PieChart, Users, LogOut, MessageSquarePlus, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Building2, PieChart, Users, LogOut, Plus, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useTasks } from '../context/TasksContext';
@@ -79,7 +79,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                                     className="p-1 hover:bg-primary-50 text-primary-600 rounded-md transition-colors"
                                     title="Criar Novo Grupo"
                                 >
-                                    <MessageSquarePlus size={16} />
+                                    <Plus size={16} />
                                 </button>
                             </div>
                             <GroupList />
@@ -145,8 +145,8 @@ const TeamPresenceSidebar = () => {
                     <button
                         key={member.id}
                         onClick={() => startPrivateChat(member.email!)}
-                        className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors group text-left ${activeConversation?.participants.some(p => p.toLowerCase() === member.email?.toLowerCase()) && activeConversation.type === 'direct'
-                                ? 'bg-primary-50' : 'hover:bg-gray-50'
+                        className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors group text-left ${activeConversation?.participants.some((p: string) => p.toLowerCase() === member.email?.toLowerCase()) && activeConversation.type === 'direct'
+                            ? 'bg-primary-50' : 'hover:bg-gray-50'
                             }`}
                     >
                         <div className="relative shrink-0">
@@ -157,14 +157,14 @@ const TeamPresenceSidebar = () => {
                                     member.name.charAt(0)
                                 )}
                             </div>
-                            {Array.from(onlineUsers).some(u => u.toLowerCase() === member.email?.toLowerCase()) && (
+                            {Array.from(onlineUsers).some((u: string) => u.toLowerCase() === member.email?.toLowerCase()) && (
                                 <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></div>
                             )}
                         </div>
                         <div className="flex-1 min-w-0 text-gray-800">
                             <p className="text-xs font-medium truncate group-hover:text-primary-600 transition-colors">{member.name}</p>
                             <p className="text-[9px] text-gray-400 truncate">
-                                {Array.from(onlineUsers).some(u => u.toLowerCase() === member.email?.toLowerCase()) ? 'Disponível' : 'Offline'}
+                                {Array.from(onlineUsers).some((u: string) => u.toLowerCase() === member.email?.toLowerCase()) ? 'Disponível' : 'Offline'}
                             </p>
                         </div>
                     </button>
