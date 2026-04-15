@@ -32,6 +32,7 @@ interface ChatContextType {
     setActiveConversation: (conv: Conversation | null) => void;
     sendMessage: (content: string, type?: 'text' | 'file' | 'task', metadata?: any) => Promise<void>;
     startPrivateChat: (recipientEmail: string) => Promise<void>;
+    createGroup: (name: string, participantEmails: string[]) => Promise<void>;
     loading: boolean;
 }
 
@@ -166,7 +167,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }, [activeConversation]);
 
     const startPrivateChat = async (recipientEmail: string) => {
-        if (!session?.user?.email) return;
+        if (!session?.user?.email || !recipientEmail) return;
 
         // Check if exists
         const existing = conversations.find(c =>
@@ -207,6 +208,36 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             setActiveConversation(newConv);
         } else {
             console.error("Conversation creation error:", cError);
+        }
+    };
+
+    const createGroup = async (name: string, participantEmails: string[]) => {
+        if (!session?.user?.email) return;
+
+        const newId = crypto.randomUUID();
+        const { error: cError } = await supabase
+            .from('chat_conversations')
+            .insert({ id: newId, type: 'group', name })
+
+        if (!cError) {
+            const participants = [
+                { conversation_id: newId, user_email: session.user.email },
+                ...participantEmails.map(email => ({ conversation_id: newId, user_email: email }))
+            ];
+
+            const { error: pError } = await supabase.from('chat_participants').insert(participants);
+
+            if (!pError) {
+                const newConv: Conversation = {
+                    id: newId,
+                    type: 'group',
+                    name,
+                    last_message_at: new Date().toISOString(),
+                    participants: [session.user.email, ...participantEmails]
+                };
+                setConversations(prev => [newConv, ...prev]);
+                setActiveConversation(newConv);
+            }
         }
     };
 

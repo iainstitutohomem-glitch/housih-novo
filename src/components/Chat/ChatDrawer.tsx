@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type FormEvent } from 'react';
-import { Send, Paperclip, Link, X, User } from 'lucide-react';
+import { Send, Paperclip, Link, X, User, Users } from 'lucide-react';
 import { useChat } from '../../context/ChatContext';
 import { useTasks } from '../../context/TasksContext';
 import { useAuth } from '../../context/AuthContext';
@@ -45,19 +45,25 @@ export const ChatDrawer = () => {
                 <div className="flex items-center gap-3">
                     <div className="relative">
                         <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
-                            {recipient?.avatar_url ? (
+                            {activeConversation.type === 'group' ? (
+                                <Users size={20} />
+                            ) : recipient?.avatar_url ? (
                                 <img src={recipient.avatar_url} alt="" className="w-full h-full object-cover" />
                             ) : (
                                 <User size={20} />
                             )}
                         </div>
-                        {isOnline && (
+                        {activeConversation.type === 'direct' && isOnline && (
                             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-primary-600"></div>
                         )}
                     </div>
                     <div>
-                        <h3 className="font-bold text-sm leading-tight">{recipient?.name || 'Chat'}</h3>
-                        <p className="text-[10px] opacity-80">{isOnline ? 'Online agora' : 'Offline'}</p>
+                        <h3 className="font-bold text-sm leading-tight">{activeConversation.type === 'group' ? activeConversation.name : recipient?.name || 'Chat'}</h3>
+                        <p className="text-[10px] opacity-80">
+                            {activeConversation.type === 'group'
+                                ? `${activeConversation.participants.length} integrantes`
+                                : (isOnline ? 'Online agora' : 'Offline')}
+                        </p>
                     </div>
                 </div>
                 <button onClick={() => setActiveConversation(null)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
