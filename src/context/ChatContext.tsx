@@ -171,8 +171,8 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         // Check if exists
         const existing = conversations.find(c =>
             c.type === 'direct' &&
-            c.participants.includes(recipientEmail) &&
-            c.participants.includes(session.user.email!)
+            c.participants.some(p => p.toLowerCase() === recipientEmail.toLowerCase()) &&
+            c.participants.some(p => p.toLowerCase() === session.user.email?.toLowerCase())
         );
 
         if (existing) {
@@ -213,7 +213,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const sendMessage = async (content: string, type: 'text' | 'file' | 'task' = 'text', metadata: any = {}) => {
         if (!activeConversation || !session?.user?.email) return;
 
-        const senderName = teamMembers.find(m => m.email === session.user.email)?.name || 'Usuário';
+        const senderName = teamMembers.find(m => m.email?.toLowerCase() === session.user.email?.toLowerCase())?.name || 'Usuário';
 
         const { error } = await supabase.from('chat_messages').insert({
             conversation_id: activeConversation.id,
