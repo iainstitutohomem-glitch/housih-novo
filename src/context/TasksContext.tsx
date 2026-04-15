@@ -81,6 +81,7 @@ interface TasksContextType {
     editingTask: Task | null;
     openModal: (task?: Task) => void;
     closeModal: () => void;
+    session: any;
 }
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
@@ -275,12 +276,15 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
             // 2. Notificar menções @Nome nas observações
             if (task.observations && task.observations !== oldTask?.observations) {
-                const newObs = task.observations.toLowerCase();
                 const oldObs = (oldTask?.observations || '').toLowerCase();
+                const newObs = task.observations.toLowerCase();
+
+                // Se foi um "append" (comentário novo), foca apenas no que foi adicionado
+                const addedText = newObs.startsWith(oldObs) ? newObs.slice(oldObs.length) : newObs;
 
                 teamMembers.forEach(async member => {
                     const mentionTag = `@${member.name.toLowerCase()}`;
-                    if (newObs.includes(mentionTag) && !oldObs.includes(mentionTag)) {
+                    if (addedText.includes(mentionTag)) {
                         if (member.email && member.email.toLowerCase() !== session?.user?.email?.toLowerCase()) {
                             await createNotification({
                                 recipient_email: member.email,
@@ -418,7 +422,7 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         <TasksContext.Provider value={{
             tasks, filteredTasks, filters, setFilters, companies, teamMembers, fetchTasks, updateTaskStatus, addTask, updateTask, deleteTask, loading,
             isModalOpen, editingTask, openModal, closeModal, addCompany, updateCompany, deleteCompany, addTeamMember, updateTeamMember, deleteTeamMember,
-            notifications, fetchNotifications, markNotificationAsRead, deleteNotification, clearAllNotifications
+            notifications, fetchNotifications, markNotificationAsRead, deleteNotification, clearAllNotifications, session
         }}>
             {children}
         </TasksContext.Provider>

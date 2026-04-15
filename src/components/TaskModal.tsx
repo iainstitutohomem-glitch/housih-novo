@@ -3,7 +3,7 @@ import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2,
 import { useTasks } from '../context/TasksContext';
 
 export const TaskModal = () => {
-    const { isModalOpen, closeModal, editingTask, addTask, updateTask, deleteTask, companies, teamMembers } = useTasks();
+    const { isModalOpen, closeModal, editingTask, addTask, updateTask, deleteTask, companies, teamMembers, session } = useTasks();
 
     const [title, setTitle] = useState('');
     const [company, setCompany] = useState('Nenhuma');
@@ -59,7 +59,19 @@ export const TaskModal = () => {
         } else {
             await addTask(taskData);
         }
-        closeModal();
+    };
+
+    const handleSendObservation = async () => {
+        if (!observations.trim() || !editingTask) return;
+
+        const timestamp = new Date().toLocaleString('pt-BR');
+        const currentUser = teamMembers.find(m => m.email === session?.user?.email)?.name || 'Sistema';
+        const newMsg = `\n[${timestamp}] ${currentUser}: ${observations}`;
+
+        const updatedObs = (editingTask.observations || '') + newMsg;
+
+        setObservations(''); // Limpa o campo localmente para a próxima
+        await updateTask(editingTask.id, { observations: updatedObs });
     };
 
     const handleDelete = async () => {
@@ -242,7 +254,7 @@ export const TaskModal = () => {
                         </label>
                         <textarea
                             rows={3}
-                            placeholder="Digite suas observações ou use @ para mencionar alguém..."
+                            placeholder="Digite um comentário ou use @ para mencionar alguém..."
                             value={observations}
                             onChange={(e) => {
                                 const val = e.target.value;
@@ -259,8 +271,35 @@ export const TaskModal = () => {
                                     setShowMentionList(false);
                                 }
                             }}
-                            className="w-full bg-gray-50/50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all resize-none text-sm"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey && observations.trim() && editingTask) {
+                                    e.preventDefault();
+                                    handleSendObservation();
+                                }
+                            }}
+                            className="w-full bg-gray-50/50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all resize-none text-sm pr-12"
                         ></textarea>
+
+                        {editingTask && (
+                            <button
+                                onClick={handleSendObservation}
+                                disabled={!observations.trim()}
+                                className="absolute bottom-3 right-3 p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Enviar comentário"
+                            >
+                                <MessageSquare size={16} />
+                            </button>
+                        )}
+
+                        {editingTask && editingTask.observations && (
+                            <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 max-h-40 overflow-y-auto space-y-2">
+                                {editingTask.observations.split('\n').filter(line => line.trim()).map((line, idx) => (
+                                    <div key={idx} className="text-xs text-gray-600 border-b border-white pb-1">
+                                        {line}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
                         {showMentionList && (
                             <div className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[10000] animate-in slide-in-from-bottom-2 duration-200">
