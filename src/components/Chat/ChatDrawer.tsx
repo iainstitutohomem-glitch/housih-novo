@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Link, X, User, Circle, Image as ImageIcon, FileText } from 'lucide-react';
-import { useChat, ChatMessage } from '../../context/ChatContext';
+import { useState, useRef, useEffect, type FormEvent } from 'react';
+import { Send, Paperclip, Link, X, User } from 'lucide-react';
+import { useChat } from '../../context/ChatContext';
 import { useTasks } from '../../context/TasksContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -25,7 +25,7 @@ export const ChatDrawer = () => {
 
     if (!activeConversation) return null;
 
-    const handleSend = async (e?: React.FormEvent) => {
+    const handleSend = async (e?: FormEvent) => {
         e?.preventDefault();
         if (!input.trim()) return;
 
@@ -76,7 +76,7 @@ export const ChatDrawer = () => {
                     </div>
                 )}
 
-                {activeMsgs.map((msg, idx) => {
+                {activeMsgs.map((msg) => {
                     const isMe = msg.sender_email === session?.user?.email;
                     return (
                         <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>

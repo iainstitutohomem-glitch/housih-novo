@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, type Dispatch, type SetStateAction, type ReactNode, type FC } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -57,7 +57,7 @@ interface TasksContextType {
     tasks: Task[];
     filteredTasks: Task[];
     filters: FilterState;
-    setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
+    setFilters: Dispatch<SetStateAction<FilterState>>;
     companies: Company[];
     teamMembers: TeamMember[];
     fetchTasks: () => Promise<void>;
@@ -86,7 +86,7 @@ interface TasksContextType {
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
-export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const { session } = useAuth();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);

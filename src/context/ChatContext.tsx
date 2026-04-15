@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, type FC, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useTasks } from './TasksContext';
@@ -37,7 +37,7 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const { session } = useAuth();
     const { teamMembers } = useTasks();
     const [conversations, setConversations] = useState<Conversation[]>([]);
