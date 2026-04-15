@@ -269,7 +269,7 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                         task_id: taskId,
                         task_title: updatedTask.title,
                         type: 'transfer',
-                        message: `Transferiu uma tarefa para você: "${updatedTask.title}"`
+                        message: `transferiu uma tarefa para Você: "${updatedTask.title}"`
                     });
                 }
             }
