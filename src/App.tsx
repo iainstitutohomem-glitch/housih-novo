@@ -8,15 +8,19 @@ import { useTasks, TasksProvider } from './context/TasksContext';
 import { TaskModal } from './components/TaskModal';
 import { TeamManager } from './components/TeamManager';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationBell } from './components/NotificationBell';
+import { Plus, Menu } from 'lucide-react';
+import { useState } from 'react';
 
 const NovaTarefaButton = () => {
   const { openModal } = useTasks();
   return (
     <button
       onClick={() => openModal()}
-      className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm shadow-primary-600/20 transition-all active:scale-95"
+      className="bg-primary-600 hover:bg-primary-700 text-white p-2.5 sm:px-5 sm:py-2.5 rounded-xl font-medium shadow-sm shadow-primary-600/20 transition-all active:scale-95 flex items-center gap-2"
     >
-      + Nova Tarefa
+      <Plus size={20} />
+      <span className="hidden sm:inline">Nova Tarefa</span>
     </button>
   );
 };
@@ -35,12 +39,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-import { Menu } from 'lucide-react';
-import { useState } from 'react';
-
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const getTitle = () => {
+    switch (location.pathname) {
+      case '/kanban': return 'Quadro Kanban';
+      case '/companies': return 'Gestão de Empresas';
+      case '/team': return 'Nossa Equipe';
+      default: return 'Visão Geral';
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans overflow-hidden w-full">
@@ -55,12 +65,13 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               <Menu size={24} />
             </button>
             <h1 className="text-xl lg:text-2xl font-semibold text-gray-800 truncate">
-              {location.pathname === '/kanban' ? 'Quadro Kanban' :
-                location.pathname === '/companies' ? 'Gestão de Empresas' :
-                  location.pathname === '/team' ? 'Nossa Equipe' : 'Visão Geral'}
+              {getTitle()}
             </h1>
           </div>
-          <NovaTarefaButton />
+          <div className="flex items-center gap-2 sm:gap-4">
+            <NotificationBell />
+            <NovaTarefaButton />
+          </div>
         </header>
 
         <div className="flex-1 overflow-auto p-4 lg:p-8 relative z-0">

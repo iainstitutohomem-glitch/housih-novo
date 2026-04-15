@@ -32,6 +32,18 @@ export interface TeamMember {
     email?: string;
 }
 
+export interface Notification {
+    id: string;
+    recipient_email: string;
+    sender_name: string;
+    task_id: string;
+    task_title: string;
+    type: 'mention' | 'transfer';
+    message: string;
+    read: boolean;
+    created_at: string;
+}
+
 export interface FilterState {
     empresa: string;
     prioridade: string;
@@ -59,6 +71,10 @@ interface TasksContextType {
     addTeamMember: (name: string, avatar_url: string, email?: string) => Promise<void>;
     updateTeamMember: (id: string | number, updates: Partial<TeamMember>) => Promise<void>;
     deleteTeamMember: (id: string) => Promise<void>;
+    notifications: Notification[];
+    fetchNotifications: () => Promise<void>;
+    markNotificationAsRead: (id: string) => Promise<void>;
+    clearAllNotifications: () => Promise<void>;
     loading: boolean;
     isModalOpen: boolean;
     editingTask: Task | null;
@@ -72,6 +88,7 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const [tasks, setTasks] = useState<Task[]>([]);
     const [companies, setCompanies] = useState<Company[]>([]);
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
 
     const [filters, setFilters] = useState<FilterState>({
@@ -169,16 +186,100 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     };
 
+    const fetchNotifications = async () => {
+        const email = session?.user?.email;
+        if (!email) return;
+        const { data, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('recipient_email', email)
+            .order('created_at', { ascending: false });
+        if (!error && data) setNotifications(data);
+    };
+
+    const markNotificationAsRead = async (id: string) => {
+        setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+        await supabase.from('notifications').update({ read: true }).eq('id', id);
+    };
+
+    const clearAllNotifications = async () => {
+        const email = session?.user?.email;
+        if (!email) return;
+        setNotifications([]);
+        await supabase.from('notifications').delete().eq('recipient_email', email);
+    };
+
+    const createNotification = async (notif: Partial<Notification>) => {
+        const sender = teamMembers.find(m => m.email === session?.user?.email)?.name || session?.user?.email || 'Sistema';
+        await supabase.from('notifications').insert([{
+            ...notif,
+            sender_name: sender,
+        }]);
+    };
+
     const addTask = async (task: Partial<Task>) => {
         const { data, error } = await supabase.from('tasks').insert([task]).select();
         if (error) alert("Erro ao salvar tarefa: " + error.message);
-        else if (data) setTasks([data[0], ...tasks]);
+        else if (data) {
+            setTasks([data[0], ...tasks]);
+
+            // Notificar destinatário se houver um responsável definido
+            if (task.assignee) {
+                const recipient = teamMembers.find(m => m.name === task.assignee);
+                if (recipient?.email && recipient.email !== session?.user?.email) {
+                    await createNotification({
+                        recipient_email: recipient.email,
+                        task_id: data[0].id,
+                        task_title: data[0].title,
+                        type: 'transfer',
+                        message: `Atribuiu uma nova tarefa a você: "${data[0].title}"`
+                    });
+                }
+            }
+        }
     };
 
     const updateTask = async (taskId: string, task: Partial<Task>) => {
+        const oldTask = tasks.find(t => t.id === taskId);
         const { data, error } = await supabase.from('tasks').update(task).eq('id', taskId).select();
         if (error) alert("Erro: " + error.message);
-        else if (data) setTasks(tasks.map(t => t.id === taskId ? data[0] : t));
+        else if (data) {
+            const updatedTask = data[0];
+            setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
+
+            // 1. Notificar transferência se mudou o responsável
+            if (task.assignee && task.assignee !== oldTask?.assignee) {
+                const recipient = teamMembers.find(m => m.name === task.assignee);
+                if (recipient?.email && recipient.email !== session?.user?.email) {
+                    await createNotification({
+                        recipient_email: recipient.email,
+                        task_id: taskId,
+                        task_title: updatedTask.title,
+                        type: 'transfer',
+                        message: `Transferiu uma tarefa para você: "${updatedTask.title}"`
+                    });
+                }
+            }
+
+            // 2. Notificar menções @Nome nas observações
+            if (task.observations && task.observations !== oldTask?.observations) {
+                teamMembers.forEach(async member => {
+                    const mentionTag = `@${member.name}`;
+                    // Só notifica se a tag for nova (não estava antes) e for o destinatário correto
+                    if (task.observations?.includes(mentionTag) && !oldTask?.observations?.includes(mentionTag)) {
+                        if (member.email && member.email !== session?.user?.email) {
+                            await createNotification({
+                                recipient_email: member.email,
+                                task_id: taskId,
+                                task_title: updatedTask.title,
+                                type: 'mention',
+                                message: `Mencionou você na tarefa: "${updatedTask.title}"`
+                            });
+                        }
+                    }
+                });
+            }
+        }
     };
 
     const deleteTask = async (taskId: string) => {
@@ -278,6 +379,7 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         fetchTasks();
         fetchCompanies();
         fetchTeam();
+        fetchNotifications();
 
         // Subscrição Realtime para atualizações automáticas
         const taskSubscription = supabase
@@ -285,6 +387,12 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchTasks())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members' }, () => fetchTeam())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, () => fetchCompanies())
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'notifications',
+                filter: `recipient_email=eq.${session.user.email}`
+            }, () => fetchNotifications())
             .subscribe();
 
         return () => {
@@ -295,7 +403,8 @@ export const TasksProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return (
         <TasksContext.Provider value={{
             tasks, filteredTasks, filters, setFilters, companies, teamMembers, fetchTasks, updateTaskStatus, addTask, updateTask, deleteTask, loading,
-            isModalOpen, editingTask, openModal, closeModal, addCompany, updateCompany, deleteCompany, addTeamMember, updateTeamMember, deleteTeamMember
+            isModalOpen, editingTask, openModal, closeModal, addCompany, updateCompany, deleteCompany, addTeamMember, updateTeamMember, deleteTeamMember,
+            notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications
         }}>
             {children}
         </TasksContext.Provider>
