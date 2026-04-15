@@ -185,7 +185,7 @@ export const CompanyManager = () => {
                         <div className="space-y-3">
                             {formPasswords.map((pwd, idx) => (
                                 <div key={pwd.id} className="flex gap-3 items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                    <div className="flex-1 grid grid-cols-3 gap-3">
+                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <input type="text" placeholder="Serviço (Ex: HostGator)" value={pwd.service} onChange={(e) => {
                                             const v = [...formPasswords]; v[idx].service = e.target.value; setFormPasswords(v);
                                         }} className="w-full bg-white border border-gray-200 text-sm py-2 px-3 rounded-lg focus:outline-none" />

@@ -83,7 +83,7 @@ export const MetricsDashboard = () => {
             {/* 3. Donut Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Status Chart */}
-                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex items-center h-80">
+                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center min-h-[400px] sm:h-80">
                     <div className="w-1/2 h-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -105,7 +105,7 @@ export const MetricsDashboard = () => {
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
-                    <div className="flex-1 pl-4 flex flex-col gap-3 justify-center">
+                    <div className="flex-1 w-full sm:pl-4 flex flex-col gap-3 justify-center mt-4 sm:mt-0">
                         {statusData.length === 0 && <p className="text-gray-400 text-sm">Nenhum dado.</p>}
                         {Object.entries(STATUS_COLORS).map(([status, color]) => {
                             if (!statusData.find(d => d.name === status)) return null;
@@ -122,7 +122,7 @@ export const MetricsDashboard = () => {
                 </div>
 
                 {/* Company Chart */}
-                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex items-center h-80">
+                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center min-h-[400px] sm:h-80">
                     <div className="w-1/2 h-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
@@ -145,7 +145,7 @@ export const MetricsDashboard = () => {
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
-                    <div className="flex-1 pl-4 flex flex-col gap-2 justify-center max-h-[100%] overflow-y-auto pr-2">
+                    <div className="flex-1 w-full sm:pl-4 flex flex-col gap-2 justify-center max-h-[100%] overflow-y-auto mt-4 sm:mt-0 pr-2">
                         {companyData.length === 0 && <p className="text-gray-400 text-sm">Nenhum dado.</p>}
                         {companyData.map(c => {
                             const comp = companies.find(co => co.name === c.name);

@@ -40,7 +40,7 @@ export const KanbanBoard = () => {
                                 <div
                                     {...provided.droppableProps}
                                     ref={provided.innerRef}
-                                    className="flex flex-col min-w-[320px] max-w-[320px] bg-slate-100/50 border border-white/50 rounded-2xl p-4 shadow-sm h-full"
+                                    className="flex flex-col min-w-[280px] lg:min-w-[320px] max-w-[320px] shrink-0 bg-slate-100/50 border border-white/50 rounded-2xl p-4 shadow-sm h-full"
                                 >
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="font-semibold text-gray-700 flex items-center gap-2">

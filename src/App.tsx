@@ -35,22 +35,35 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+import { Menu } from 'lucide-react';
+import { useState } from 'react';
+
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans overflow-hidden w-full">
-      <Sidebar />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <header className="h-20 border-b border-gray-200/50 bg-white/40 backdrop-blur-sm flex items-center px-8 justify-between z-10 shrink-0">
-          <h1 className="text-2xl font-semibold text-gray-800">
-            {location.pathname === '/kanban' ? 'Quadro Kanban' :
-              location.pathname === '/companies' ? 'Gestão de Empresas' :
-                location.pathname === '/team' ? 'Nossa Equipe' : 'Visão Geral'}
-          </h1>
+        <header className="h-16 lg:h-20 border-b border-gray-200/50 bg-white/40 backdrop-blur-sm flex items-center px-4 lg:px-8 justify-between z-10 shrink-0">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+            >
+              <Menu size={24} />
+            </button>
+            <h1 className="text-xl lg:text-2xl font-semibold text-gray-800 truncate">
+              {location.pathname === '/kanban' ? 'Quadro Kanban' :
+                location.pathname === '/companies' ? 'Gestão de Empresas' :
+                  location.pathname === '/team' ? 'Nossa Equipe' : 'Visão Geral'}
+            </h1>
+          </div>
           <NovaTarefaButton />
         </header>
 
-        <div className="flex-1 overflow-auto p-8 relative z-0">
+        <div className="flex-1 overflow-auto p-4 lg:p-8 relative z-0">
           <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-primary-400/10 rounded-full blur-3xl pointer-events-none"></div>
           <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
           {children}

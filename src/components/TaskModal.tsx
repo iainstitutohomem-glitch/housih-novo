@@ -88,7 +88,7 @@ export const TaskModal = () => {
                     </button>
                 </div>
                 <div className="p-6 space-y-8">
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Empresa</label>
@@ -293,14 +293,14 @@ export const TaskModal = () => {
                     </div>
                 </div>
                 {/* Footer */}
-                <div className="p-6 border-t border-gray-100 flex justify-between gap-3 bg-gray-50/50 rounded-b-2xl">
+                <div className="p-6 border-t border-gray-100 flex flex-col sm:flex-row justify-between gap-4 bg-gray-50/50 rounded-b-2xl">
                     {editingTask ? (
-                        <button onClick={handleDelete} className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                        <button onClick={handleDelete} className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors w-full sm:w-auto">
                             <Trash2 size={16} /> Excluir
                         </button>
                     ) : <div></div>}
-                    <div className="flex gap-3">
-                        <button onClick={closeModal} className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <button onClick={closeModal} className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors w-full sm:w-auto order-last sm:order-first">
                             Cancelar
                         </button>
                         {editingTask && status !== 'Concluído' && (
@@ -320,12 +320,12 @@ export const TaskModal = () => {
                                     await updateTask(editingTask.id, taskData);
                                     closeModal();
                                 }}
-                                className="px-5 py-2.5 text-sm font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 rounded-xl transition-all flex items-center gap-2"
+                                className="px-5 py-2.5 text-sm font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 rounded-xl transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
                             >
                                 <CheckCircle2 size={16} /> Finalizar Tarefa
                             </button>
                         )}
-                        <button onClick={handleSave} className="px-5 py-2.5 text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-xl shadow-sm shadow-primary-600/30 transition-all active:scale-95">
+                        <button onClick={handleSave} className="px-5 py-2.5 text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-xl shadow-sm shadow-primary-600/30 transition-all active:scale-95 w-full sm:w-auto">
                             {editingTask ? 'Salvar Alterações' : 'Salvar Tarefa'}
                         </button>
                     </div>
