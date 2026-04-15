@@ -83,14 +83,14 @@ export const MetricsDashboard = () => {
             {/* 3. Donut Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Status Chart */}
-                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center min-h-[400px] sm:h-80">
-                    <div className="w-1/2 h-full">
+                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center min-h-[450px] sm:h-80">
+                    <div className="w-full sm:w-1/2 h-64 sm:h-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                            <PieChart margin={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                                 <Pie
                                     data={statusData}
                                     cx="50%" cy="50%"
-                                    innerRadius={55} outerRadius={105}
+                                    innerRadius="60%" outerRadius="90%"
                                     stroke="#fff"
                                     strokeWidth={3}
                                     dataKey="value"
@@ -122,14 +122,14 @@ export const MetricsDashboard = () => {
                 </div>
 
                 {/* Company Chart */}
-                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center min-h-[400px] sm:h-80">
-                    <div className="w-1/2 h-full">
+                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center min-h-[450px] sm:h-80">
+                    <div className="w-full sm:w-1/2 h-64 sm:h-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
+                            <PieChart margin={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                                 <Pie
                                     data={companyData}
                                     cx="50%" cy="50%"
-                                    innerRadius={55} outerRadius={105}
+                                    innerRadius="60%" outerRadius="90%"
                                     stroke="#fff"
                                     strokeWidth={3}
                                     dataKey="value"
