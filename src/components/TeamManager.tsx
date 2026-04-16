@@ -1,9 +1,8 @@
-import { useState } from 'react';
-import { Plus, Trash2, Camera } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Trash2, Camera, MessageSquare } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
-import { MessageSquare } from 'lucide-react';
 
 export const TeamManager = () => {
     const { user } = useAuth();
