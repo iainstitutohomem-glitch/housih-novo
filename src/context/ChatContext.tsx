@@ -92,11 +92,17 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         const fetchConversations = async () => {
             setLoading(true);
+            const userEmail = session?.user?.email;
+            if (!userEmail) {
+                setLoading(false);
+                return;
+            }
+
             // Busca os IDs das conversas das quais o usuário participa (case-insensitive)
             const { data: participants, error: pError } = await supabase
                 .from('chat_participants')
                 .select('conversation_id')
-                .ilike('user_email', session.user.email);
+                .ilike('user_email', userEmail);
 
             if (pError) console.error("Error fetching participants:", pError);
 
@@ -201,7 +207,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (!cError) {
             // Inserimos os participantes (e-mail do receptor sempre em lowercase para normalizar)
             const { error: pError } = await supabase.from('chat_participants').insert([
-                { conversation_id: newId, user_email: session.user.email.toLowerCase() },
+                { conversation_id: newId, user_email: userEmail.toLowerCase() },
                 { conversation_id: newId, user_email: recipientEmail.toLowerCase() }
             ]);
 
@@ -214,7 +220,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 id: newId,
                 type: 'direct',
                 last_message_at: new Date().toISOString(),
-                participants: [session.user.email.toLowerCase(), recipientEmail.toLowerCase()]
+                participants: [userEmail.toLowerCase(), recipientEmail.toLowerCase()]
             };
             setConversations(prev => [newConv, ...prev]);
             setActiveConversation(newConv);
@@ -233,7 +239,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         if (!cError) {
             const participants = [
-                { conversation_id: newId, user_email: session.user.email.toLowerCase() },
+                { conversation_id: newId, user_email: userEmail.toLowerCase() },
                 ...participantEmails.map(email => ({ conversation_id: newId, user_email: email.toLowerCase() }))
             ];
 
@@ -245,7 +251,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     type: 'group',
                     name,
                     last_message_at: new Date().toISOString(),
-                    participants: [session.user.email.toLowerCase(), ...participantEmails.map(e => e.toLowerCase())]
+                    participants: [userEmail.toLowerCase(), ...participantEmails.map(e => e.toLowerCase())]
                 };
                 setConversations(prev => [newConv, ...prev]);
                 setActiveConversation(newConv);

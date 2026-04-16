@@ -1,4 +1,4 @@
-import React, { useState, type FC } from 'react';
+import { useState, type FC } from 'react';
 import { X, Users, CheckSquare, Square } from 'lucide-react';
 import { useTasks } from '../../context/TasksContext';
 import { useChat } from '../../context/ChatContext';

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Building2, PieChart, Users, LogOut, Plus, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
