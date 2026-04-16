@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Calendar } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
@@ -9,7 +10,9 @@ const columns = [
     { id: 'Concluído', title: 'Concluído', color: 'bg-green-100 text-green-700', dot: '#4ade80' },
     { id: 'Cancelado', title: 'Cancelado', color: 'bg-purple-100 text-purple-700', dot: '#c084fc' },
     { id: 'Atrasado', title: 'Atrasado', color: 'bg-red-100 text-red-700', dot: '#ef4444' }
-];export const KanbanBoard = () => {
+];
+
+export const KanbanBoard = () => {
     const { filteredTasks, updateTaskStatus, loading, companies, openModal, teamMembers, updateTask } = useTasks();
     const [transferringTaskId, setTransferringTaskId] = useState<string | null>(null);
 
