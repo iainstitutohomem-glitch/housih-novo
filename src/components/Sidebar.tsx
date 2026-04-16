@@ -167,6 +167,7 @@ const TeamPresenceSidebar = () => {
                                 {Array.from(onlineUsers).some((u: string) => u.toLowerCase() === member.email?.toLowerCase()) ? 'Disponível' : 'Offline'}
                             </p>
                         </div>
+                        <MessageSquare size={14} className="text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
                 ))}
             </div>

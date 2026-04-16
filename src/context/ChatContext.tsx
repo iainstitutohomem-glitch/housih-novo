@@ -92,19 +92,24 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         const fetchConversations = async () => {
             setLoading(true);
-            const { data: participants } = await supabase
+            // Busca os IDs das conversas das quais o usuário participa (case-insensitive)
+            const { data: participants, error: pError } = await supabase
                 .from('chat_participants')
                 .select('conversation_id')
-                .eq('user_email', session.user.email);
+                .ilike('user_email', session.user.email);
+
+            if (pError) console.error("Error fetching participants:", pError);
 
             if (participants && participants.length > 0) {
                 const convIds = participants.map(p => p.conversation_id);
 
-                const { data: convs } = await supabase
+                const { data: convs, error: cError } = await supabase
                     .from('chat_conversations')
                     .select('*, chat_participants(user_email)')
                     .in('id', convIds)
                     .order('last_message_at', { ascending: false });
+
+                if (cError) console.error("Error fetching conversations:", cError);
 
                 if (convs) {
                     const mapped = convs.map(c => ({
@@ -188,9 +193,10 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             .insert({ id: newId, type: 'direct' });
 
         if (!cError) {
+            // Inserimos os participantes (e-mail do receptor sempre em lowercase para normalizar)
             const { error: pError } = await supabase.from('chat_participants').insert([
-                { conversation_id: newId, user_email: session.user.email },
-                { conversation_id: newId, user_email: recipientEmail }
+                { conversation_id: newId, user_email: session.user.email.toLowerCase() },
+                { conversation_id: newId, user_email: recipientEmail.toLowerCase() }
             ]);
 
             if (pError) {
@@ -202,7 +208,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 id: newId,
                 type: 'direct',
                 last_message_at: new Date().toISOString(),
-                participants: [session.user.email, recipientEmail]
+                participants: [session.user.email.toLowerCase(), recipientEmail.toLowerCase()]
             };
             setConversations(prev => [newConv, ...prev]);
             setActiveConversation(newConv);
@@ -221,8 +227,8 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         if (!cError) {
             const participants = [
-                { conversation_id: newId, user_email: session.user.email },
-                ...participantEmails.map(email => ({ conversation_id: newId, user_email: email }))
+                { conversation_id: newId, user_email: session.user.email.toLowerCase() },
+                ...participantEmails.map(email => ({ conversation_id: newId, user_email: email.toLowerCase() }))
             ];
 
             const { error: pError } = await supabase.from('chat_participants').insert(participants);
@@ -233,7 +239,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     type: 'group',
                     name,
                     last_message_at: new Date().toISOString(),
-                    participants: [session.user.email, ...participantEmails]
+                    participants: [session.user.email.toLowerCase(), ...participantEmails.map(e => e.toLowerCase())]
                 };
                 setConversations(prev => [newConv, ...prev]);
                 setActiveConversation(newConv);

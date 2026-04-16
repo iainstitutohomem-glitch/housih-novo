@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { Plus, Trash2, Camera } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
+import { MessageSquare } from 'lucide-react';
 
 export const TeamManager = () => {
     const { user } = useAuth();
     const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember } = useTasks();
+    const { startPrivateChat } = useChat();
     const [isAdding, setIsAdding] = useState(false);
     const [newName, setNewName] = useState('');
     const [newEmail, setNewEmail] = useState('');
@@ -158,6 +161,15 @@ export const TeamManager = () => {
                         </div>
                         <h3 className="text-lg font-semibold text-gray-800">{member.name}</h3>
                         <p className="text-xs text-gray-500 mt-1">{user?.email === member.email ? 'Você' : 'Membro da Equipe'}</p>
+
+                        {member.email && user?.email !== member.email && (
+                            <button
+                                onClick={() => startPrivateChat(member.email!)}
+                                className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-600 rounded-xl hover:bg-primary-600 hover:text-white transition-all text-xs font-bold border border-primary-100"
+                            >
+                                <MessageSquare size={14} /> Iniciar Chat
+                            </button>
+                        )}
                     </div>
                 ))}
                 {teamMembers.length === 0 && !isAdding && (
