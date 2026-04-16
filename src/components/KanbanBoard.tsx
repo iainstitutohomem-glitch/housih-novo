@@ -26,16 +26,20 @@ export const KanbanBoard = () => {
     };
 
     const getDateColor = (dateStr: string) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const taskDate = new Date(dateStr);
-        taskDate.setHours(0, 0, 0, 0);
+        if (!dateStr) return 'bg-gray-50 text-gray-500 border-gray-100';
+        
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        const parts = dateStr.split('T')[0].split('-');
+        const taskDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
 
         const diffTime = taskDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays === 0) return 'bg-red-50 text-red-600 border-red-200'; // Hoje
         if (diffDays === 1) return 'bg-amber-50 text-amber-600 border-amber-200'; // Amanhã
+        if (diffDays < 0) return 'bg-red-100 text-red-800 border-red-300 font-bold'; // Atrasado
         return 'bg-gray-50 text-gray-500 border-gray-100'; // Futuro
     };
 
