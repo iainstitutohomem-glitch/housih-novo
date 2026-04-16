@@ -80,7 +80,46 @@ export const MetricsDashboard = () => {
             {/* 2. Global Filters Bar */}
             <TaskFilterBar />
 
-            {/* 3. Donut Charts */}
+            {/* 3. Status Summary Chart (Horizontal) */}
+            <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm">
+                <div className="space-y-3">
+                    {Object.entries(STATUS_COLORS).map(([status, color]) => {
+                        const count = filteredTasks.filter(t => t.status === status).length;
+                        const percentage = totalTasks === 0 ? 0 : (count / totalTasks) * 100;
+                        const label = status === 'Concluído' ? 'Finalizado' : status === 'Atrasado' ? 'Em atraso' : status;
+
+                        return (
+                            <div key={status} className="flex items-center gap-4 group">
+                                <div
+                                    className="w-32 py-1.5 px-3 rounded text-white text-xs font-bold shadow-sm transition-transform group-hover:scale-105"
+                                    style={{ backgroundColor: color }}
+                                >
+                                    {label}
+                                </div>
+                                <div className="flex-1 h-3 bg-gray-100 rounded-sm overflow-hidden border border-gray-200/50">
+                                    <div
+                                        className="h-full transition-all duration-1000 ease-out"
+                                        style={{ backgroundColor: color, width: `${percentage}%` }}
+                                    />
+                                </div>
+                                <div className="w-12 text-right font-bold text-gray-700 tabular-nums">
+                                    {count}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center font-black text-gray-900 uppercase tracking-tighter text-sm">
+                    <div className="flex gap-20 w-full">
+                        <span className="flex-1 text-left">Total geral</span>
+                        <span className="w-24 text-center">{totalTasks}</span>
+                        <span className="w-12 text-right">{totalTasks}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* 4. Donut Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Status Chart */}
                 <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center min-h-[450px] sm:h-80">
