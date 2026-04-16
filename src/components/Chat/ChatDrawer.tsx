@@ -114,20 +114,32 @@ export const ChatDrawer = () => {
 
             {/* Input */}
             <form onSubmit={handleSend} className="p-4 bg-white border-t border-gray-100 rounded-b-2xl">
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    className="hidden"
+                />
                 <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary-500/20 focus-within:border-primary-500/50 transition-all">
-                    <button type="button" className="p-2 text-gray-400 hover:text-primary-600 transition-colors">
-                        <Paperclip size={20} />
+                    <button
+                        type="button"
+                        disabled={uploading}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="p-2 text-gray-400 hover:text-primary-600 transition-colors disabled:opacity-50"
+                    >
+                        {uploading ? <div className="w-5 h-5 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" /> : <Paperclip size={20} />}
                     </button>
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Mensagem..."
+                        placeholder={uploading ? "Enviando arquivo..." : "Mensagem..."}
+                        disabled={uploading}
                         className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 px-1"
                     />
                     <button
                         type="submit"
-                        disabled={!input.trim()}
+                        disabled={!input.trim() || uploading}
                         className="p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all active:scale-95 disabled:opacity-50 disabled:grayscale"
                     >
                         <Send size={18} />

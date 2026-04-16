@@ -36,9 +36,9 @@ export interface Notification {
     id: string;
     recipient_email: string;
     sender_name: string;
-    task_id: string;
-    task_title: string;
-    type: 'mention' | 'transfer';
+    task_id?: string;
+    task_title?: string;
+    type: 'mention' | 'transfer' | 'chat';
     message: string;
     read: boolean;
     created_at: string;

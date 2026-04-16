@@ -33,6 +33,7 @@ interface ChatContextType {
     sendMessage: (content: string, type?: 'text' | 'file' | 'task', metadata?: any) => Promise<void>;
     startPrivateChat: (recipientEmail: string) => Promise<void>;
     createGroup: (name: string, participantEmails: string[]) => Promise<void>;
+    uploadFile: (file: File) => Promise<{ url: string; name: string }>;
     loading: boolean;
 }
 
@@ -313,8 +314,26 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     };
 
+    const uploadFile = async (file: File): Promise<{ url: string; name: string }> => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${session?.user?.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('chat-files')
+            .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage
+            .from('chat-files')
+            .getPublicUrl(filePath);
+
+        return { url: data.publicUrl, name: file.name };
+    };
+
     return (
-        <ChatContext.Provider value={{ conversations, messages, onlineUsers, activeConversation, setActiveConversation, sendMessage, startPrivateChat, createGroup, loading }}>
+        <ChatContext.Provider value={{ conversations, messages, onlineUsers, activeConversation, setActiveConversation, sendMessage, startPrivateChat, createGroup, uploadFile, loading }}>
             {children}
         </ChatContext.Provider>
     );

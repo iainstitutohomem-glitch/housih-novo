@@ -53,7 +53,18 @@ exception
     raise notice 'Erro ao configurar Realtime (pode ser ignorado se já estiver configurado): %', sqlerrm;
 end $$;
 
--- 3. Políticas de Segurança (RLS)
+-- 3. Função Auxiliar para quebrar recursão do RLS (Modo Seguro)
+-- Usamos 'security definer' para que a função ignore o RLS interno e apenas retorne o booleano
+create or replace function public.is_chat_member(conv_id uuid)
+returns boolean as $$
+  select exists (
+    select 1 from public.chat_participants 
+    where conversation_id = conv_id 
+    and lower(user_email) = lower(auth.jwt() ->> 'email')
+  );
+$$ language sql security definer;
+
+-- Ativação do RLS nas tabelas
 alter table chat_conversations enable row level security;
 alter table chat_participants enable row level security;
 alter table chat_messages enable row level security;
@@ -61,54 +72,26 @@ alter table chat_messages enable row level security;
 -- Limpeza de políticas antigas
 drop policy if exists "Users can see their conversations" on chat_conversations;
 drop policy if exists "Users can see participants" on chat_participants;
-drop policy if exists "Users can see participants of their conversations" on chat_participants;
 drop policy if exists "Users can see messages" on chat_messages;
-drop policy if exists "Users can see messages of their conversations" on chat_messages;
 drop policy if exists "Users can insert participants" on chat_participants;
-drop policy if exists "Users can insert participants for their conversations" on chat_participants;
 drop policy if exists "Users can insert messages" on chat_messages;
-drop policy if exists "Users can insert messages in their conversations" on chat_messages;
 drop policy if exists "Users can create conversations" on chat_conversations;
 
--- Aplicação de Novas Políticas (Case Insensitive)
+-- Aplicação de Novas Políticas (Usando a função is_chat_member para evitar recursão)
 create policy "Users can see their conversations" on chat_conversations
-  for select using (
-    exists (
-      select 1 from chat_participants
-      where conversation_id = chat_conversations.id
-      and lower(user_email) = lower(auth.jwt() ->> 'email')
-    )
-  );
+  for select using (is_chat_member(id));
 
 create policy "Users can see participants" on chat_participants
-  for select using (
-    exists (
-      select 1 from chat_participants as p
-      where p.conversation_id = chat_participants.conversation_id
-      and lower(p.user_email) = lower(auth.jwt() ->> 'email')
-    )
-  );
+  for select using (is_chat_member(conversation_id));
 
 create policy "Users can see messages" on chat_messages
-  for select using (
-    exists (
-      select 1 from chat_participants
-      where conversation_id = chat_messages.conversation_id
-      and lower(user_email) = lower(auth.jwt() ->> 'email')
-    )
-  );
+  for select using (is_chat_member(conversation_id));
 
 create policy "Users can insert participants" on chat_participants
   for insert with check (true);
 
 create policy "Users can insert messages" on chat_messages
-  for insert with check (
-    exists (
-      select 1 from chat_participants
-      where conversation_id = chat_messages.conversation_id
-      and lower(user_email) = lower(auth.jwt() ->> 'email')
-    )
-  );
+  for insert with check (is_chat_member(conversation_id));
 
 create policy "Users can create conversations" on chat_conversations
   for insert with check (true);
