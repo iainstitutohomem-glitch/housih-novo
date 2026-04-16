@@ -144,10 +144,12 @@ const TeamPresenceSidebar = () => {
                 {eligibleMembers.map((member) => (
                     <button
                         key={member.id}
-                        onClick={() => startPrivateChat(member.email!)}
-                        className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors group text-left ${activeConversation?.participants.some((p: string) => p.toLowerCase() === member.email?.toLowerCase()) && activeConversation.type === 'direct'
-                            ? 'bg-primary-50' : 'hover:bg-gray-50'
-                            }`}
+                        onClick={() => member.email && startPrivateChat(member.email)}
+                        className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors group text-left ${
+                            (activeConversation?.type === 'direct' && 
+                             activeConversation.participants.some(p => p.toLowerCase() === member.email?.toLowerCase()))
+                             ? 'bg-primary-50' : 'hover:bg-gray-50'
+                        }`}
                     >
                         <div className="relative shrink-0">
                             <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-xs uppercase overflow-hidden">

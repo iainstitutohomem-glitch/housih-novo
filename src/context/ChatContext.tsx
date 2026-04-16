@@ -158,10 +158,15 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             .on('postgres_changes' as any,
                 { event: 'INSERT', table: 'chat_messages', filter: `conversation_id=eq.${activeConversation.id}` },
                 (payload: any) => {
-                    setMessages(prev => ({
-                        ...prev,
-                        [activeConversation.id]: [...(prev[activeConversation.id] || []), payload.new as ChatMessage]
-                    }));
+                    if (activeConversation && payload.new) {
+                        setMessages(prev => {
+                            const currentMsgs = prev[activeConversation.id] || [];
+                            return {
+                                ...prev,
+                                [activeConversation.id]: [...currentMsgs, payload.new as ChatMessage]
+                            };
+                        });
+                    }
                 }
             )
             .subscribe();
@@ -172,13 +177,14 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }, [activeConversation]);
 
     const startPrivateChat = async (recipientEmail: string) => {
-        if (!session?.user?.email || !recipientEmail) return;
+        const userEmail = session?.user?.email;
+        if (!userEmail) return;
 
         // Check if exists
         const existing = conversations.find(c =>
             c.type === 'direct' &&
             c.participants.some((p: string) => p.toLowerCase() === recipientEmail.toLowerCase()) &&
-            c.participants.some((p: string) => p.toLowerCase() === session.user.email?.toLowerCase())
+            c.participants.some((p: string) => p.toLowerCase() === userEmail.toLowerCase())
         );
 
         if (existing) {
