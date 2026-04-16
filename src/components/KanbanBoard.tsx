@@ -12,7 +12,7 @@ const columns = [
 ];
 
 export const KanbanBoard = () => {
-    const { filteredTasks, updateTaskStatus, loading, companies, openModal } = useTasks();
+    const { filteredTasks, updateTaskStatus, loading, companies, openModal, teamMembers } = useTasks();
 
     const onDragEnd = (result: any) => {
         if (!result.destination) return;
@@ -72,8 +72,14 @@ export const KanbanBoard = () => {
                                                             <h4 className="font-medium text-gray-800 mb-2">{task.title}</h4>
                                                             <div className="flex justify-between items-center text-xs mt-3">
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold border border-primary-200">
-                                                                        {task.assignee ? task.assignee.charAt(0).toUpperCase() : '?'}
+                                                                    <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold border border-primary-200 overflow-hidden">
+                                                                        {(() => {
+                                                                            const member = teamMembers.find(m => m.name === task.assignee);
+                                                                            if (member?.avatar_url) {
+                                                                                return <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />;
+                                                                            }
+                                                                            return task.assignee ? task.assignee.charAt(0).toUpperCase() : '?';
+                                                                        })()}
                                                                     </div>
                                                                     <span className="text-gray-600 font-medium truncate max-w-[80px]">{task.assignee || 'Sem resp.'}</span>
                                                                 </div>
