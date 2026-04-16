@@ -5,11 +5,13 @@ import { useTasks } from '../../context/TasksContext';
 import { useAuth } from '../../context/AuthContext';
 
 export const ChatDrawer = () => {
-    const { activeConversation, setActiveConversation, messages, sendMessage, onlineUsers } = useChat();
+    const { activeConversation, setActiveConversation, messages, sendMessage, onlineUsers, uploadFile } = useChat();
     const { teamMembers, openModal, tasks } = useTasks();
     const { session } = useAuth();
     const [input, setInput] = useState('');
+    const [uploading, setUploading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const activeMsgs = activeConversation ? messages[activeConversation.id] || [] : [];
 
@@ -27,10 +29,27 @@ export const ChatDrawer = () => {
 
     const handleSend = async (e?: FormEvent) => {
         e?.preventDefault();
-        if (!input.trim()) return;
+        if (!input.trim() || uploading) return;
 
         await sendMessage(input.trim());
         setInput('');
+    };
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setUploading(true);
+            const { url, name } = await uploadFile(file);
+            await sendMessage(name, 'file', { file_url: url, file_name: name });
+        } catch (error) {
+            console.error("File upload error:", error);
+            alert("Erro ao enviar arquivo.");
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
     };
 
     const handleTaskMention = (taskId: string) => {
@@ -91,6 +110,19 @@ export const ChatDrawer = () => {
                                 {!isMe && <p className="text-[10px] font-bold mb-1 opacity-70">{msg.sender_name}</p>}
 
                                 {msg.type === 'text' && <p className="leading-relaxed">{msg.content}</p>}
+
+                                {msg.type === 'file' && (
+                                    <a
+                                        href={msg.file_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`flex items-center gap-2 p-2 rounded-lg mt-1 transition-colors border ${isMe ? 'bg-primary-700 border-primary-500 hover:bg-primary-800' : 'bg-primary-50 border-primary-100 hover:bg-primary-100 text-primary-700'
+                                            }`}
+                                    >
+                                        <Paperclip size={14} />
+                                        <span className="text-xs font-medium truncate max-w-[150px]">{msg.file_name || 'Arquivo'}</span>
+                                    </a>
+                                )}
 
                                 {msg.type === 'task' && (
                                     <button
