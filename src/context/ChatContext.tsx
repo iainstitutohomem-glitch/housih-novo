@@ -262,10 +262,32 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     const sendMessage = async (content: string, type: 'text' | 'file' | 'task' = 'text', metadata: any = {}) => {
         const userEmail = session?.user?.email;
-        if (!activeConversation || !userEmail) return;
+        if (!activeConversation || !userEmail) {
+            console.error("Tentativa de envio sem conversa ativa ou sessão.");
+            return;
+        }
 
         const senderName = teamMembers.find(m => m.email?.toLowerCase() === userEmail.toLowerCase())?.name || 'Usuário';
 
+        // 1. Criação da mensagem otimista para feedback instantâneo
+        const optimisticMsg: ChatMessage = {
+            id: `temp-${Date.now()}`,
+            conversation_id: activeConversation.id,
+            sender_email: userEmail,
+            sender_name: senderName,
+            content,
+            type,
+            created_at: new Date().toISOString(),
+            ...metadata
+        };
+
+        // Adiciona localmente antes mesmo de ir pro banco
+        setMessages(prev => ({
+            ...prev,
+            [activeConversation.id]: [...(prev[activeConversation.id] || []), optimisticMsg]
+        }));
+
+        // 2. Envio pro Supabase
         const { error } = await supabase.from('chat_messages').insert({
             conversation_id: activeConversation.id,
             sender_email: userEmail,
@@ -275,7 +297,16 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             ...metadata
         });
 
-        if (!error) {
+        if (error) {
+            console.error("Erro ao salvar mensagem no Supabase:", error);
+            // Remove a mensagem otimista em caso de erro real
+            setMessages(prev => ({
+                ...prev,
+                [activeConversation.id]: (prev[activeConversation.id] || []).filter(m => m.id !== optimisticMsg.id)
+            }));
+            alert("Erro ao enviar mensagem: " + error.message);
+        } else {
+            console.log("Mensagem enviada com sucesso!");
             await supabase.from('chat_conversations')
                 .update({ last_message_at: new Date().toISOString() })
                 .eq('id', activeConversation.id);
