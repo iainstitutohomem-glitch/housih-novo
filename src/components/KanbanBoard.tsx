@@ -25,7 +25,9 @@ export const KanbanBoard = () => {
         }
     };
 
-    const getDateColor = (dateStr: string) => {
+    const getDateColor = (dateStr: string, status: string) => {
+        if (status === 'Concluído') return 'bg-green-50 text-green-600 border-green-200';
+        if (status === 'Cancelado') return 'bg-gray-50 text-gray-400 border-gray-100 opacity-60';
         if (!dateStr) return 'bg-gray-50 text-gray-500 border-gray-100';
         
         const now = new Date();
@@ -137,7 +139,7 @@ export const KanbanBoard = () => {
                                                                         {task.priority}
                                                                     </span>
                                                                     {task.due_date && (
-                                                                        <span className={`font-medium px-2 py-1 rounded-md border flex items-center gap-1 transition-colors ${getDateColor(task.due_date)}`}>
+                                                                        <span className={`font-medium px-2 py-1 rounded-md border flex items-center gap-1 transition-colors ${getDateColor(task.due_date, task.status)}`}>
                                                                             <Calendar size={12} /> {task.due_date.substring(0, 10).split('-').reverse().join('/')}
                                                                         </span>
                                                                     )}
