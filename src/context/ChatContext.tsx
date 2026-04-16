@@ -230,7 +230,8 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     const createGroup = async (name: string, participantEmails: string[]) => {
-        if (!session?.user?.email) return;
+        const userEmail = session?.user?.email;
+        if (!userEmail) return;
 
         const newId = crypto.randomUUID();
         const { error: cError } = await supabase
@@ -260,13 +261,14 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     const sendMessage = async (content: string, type: 'text' | 'file' | 'task' = 'text', metadata: any = {}) => {
-        if (!activeConversation || !session?.user?.email) return;
+        const userEmail = session?.user?.email;
+        if (!activeConversation || !userEmail) return;
 
-        const senderName = teamMembers.find(m => m.email?.toLowerCase() === session.user.email?.toLowerCase())?.name || 'Usuário';
+        const senderName = teamMembers.find(m => m.email?.toLowerCase() === userEmail.toLowerCase())?.name || 'Usuário';
 
         const { error } = await supabase.from('chat_messages').insert({
             conversation_id: activeConversation.id,
-            sender_email: session.user.email,
+            sender_email: userEmail,
             sender_name: senderName,
             content,
             type,
