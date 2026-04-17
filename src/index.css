@@ -23,3 +23,11 @@
 .glass-dark {
   @apply bg-dark-800/80 backdrop-blur-md shadow-lg border border-dark-700/50;
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
