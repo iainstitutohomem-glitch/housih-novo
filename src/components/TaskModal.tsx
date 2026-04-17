@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, Users, UserPlus } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const TaskModal = () => {
@@ -17,6 +17,7 @@ export const TaskModal = () => {
     const [newChecklistItem, setNewChecklistItem] = useState('');
     const [mentionSearch, setMentionSearch] = useState('');
     const [showMentionList, setShowMentionList] = useState(false);
+    const [activeChecklistMenu, setActiveChecklistMenu] = useState<{ id: number, type: 'date' | 'users' } | null>(null);
 
     useEffect(() => {
         if (editingTask) {
@@ -199,25 +200,139 @@ export const TaskModal = () => {
                         </div>
                     </div>
                     {/* Checklist */}
+                    {/* Checklist */}
                     <div>
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Checklist</label>
-                        <div className="space-y-2 mb-3">
-                            {checklist.map((item) => (
-                                <div key={item.id} className="flex items-center gap-3 group">
-                                    <button onClick={() => setChecklist(checklist.map(c => c.id === item.id ? { ...c, done: !c.done } : c))}>
-                                        {item.done ? <CheckCircle2 size={20} className="text-primary-500" /> : <Circle size={20} className="text-gray-300 hover:text-primary-400 transition-colors" />}
-                                    </button>
-                                    <span className={`text-sm flex-1 ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>{item.text}</span>
-                                    <button
-                                        onClick={() => setChecklist(checklist.filter(c => c.id !== item.id))}
-                                        className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                </div>
-                            ))}
+                        <div className="space-y-4 mb-3">
+                            {checklist.map((item) => {
+                                const isOverdue = item.due_date && new Date(item.due_date) < new Date() && !item.done;
+                                const itemAssignees = item.assignees || [];
+                                
+                                return (
+                                    <div key={item.id} className="flex flex-col gap-2">
+                                        <div className="flex items-center gap-3 group">
+                                            <button onClick={() => setChecklist(checklist.map(c => c.id === item.id ? { ...c, done: !c.done } : c))}>
+                                                {item.done ? <CheckCircle2 size={20} className="text-primary-500" /> : <Circle size={20} className="text-gray-300 hover:text-primary-400 transition-colors" />}
+                                            </button>
+                                            
+                                            <input 
+                                                type="text"
+                                                value={item.text}
+                                                onChange={(e) => setChecklist(checklist.map(c => c.id === item.id ? { ...c, text: e.target.value } : c))}
+                                                className={`text-sm flex-1 bg-transparent border-none focus:outline-none ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}
+                                            />
+
+                                            <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-all">
+                                                {/* Botão Data */}
+                                                <div className="relative">
+                                                    <button 
+                                                        onClick={() => setActiveChecklistMenu(activeChecklistMenu?.id === item.id && activeChecklistMenu.type === 'date' ? null : { id: item.id, type: 'date' })}
+                                                        className={`p-1.5 rounded-lg hover:bg-gray-100 transition-colors ${item.due_date ? (isOverdue ? 'text-red-500' : 'text-primary-600 bg-primary-50') : 'text-gray-400'}`}
+                                                        title="Definir data"
+                                                    >
+                                                        <Calendar size={14} />
+                                                    </button>
+                                                    {activeChecklistMenu?.id === item.id && activeChecklistMenu.type === 'date' && (
+                                                        <div className="absolute bottom-full right-0 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] animate-in zoom-in-95 duration-200">
+                                                            <input 
+                                                                type="date" 
+                                                                className="text-xs border-none bg-gray-50 rounded-lg p-1.5 focus:ring-0"
+                                                                value={item.due_date || ''}
+                                                                onChange={(e) => {
+                                                                    setChecklist(checklist.map(c => c.id === item.id ? { ...c, due_date: e.target.value } : c));
+                                                                    setActiveChecklistMenu(null);
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Botão Responsáveis */}
+                                                <div className="relative">
+                                                    <button 
+                                                        onClick={() => setActiveChecklistMenu(activeChecklistMenu?.id === item.id && activeChecklistMenu.type === 'users' ? null : { id: item.id, type: 'users' })}
+                                                        className={`p-1.5 rounded-lg hover:bg-gray-100 transition-colors ${itemAssignees.length > 0 ? 'text-primary-600 bg-primary-50' : 'text-gray-400'}`}
+                                                        title="Adicionar responsáveis"
+                                                    >
+                                                        <UserPlus size={14} />
+                                                    </button>
+                                                    {activeChecklistMenu?.id === item.id && activeChecklistMenu.type === 'users' && (
+                                                        <div className="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] animate-in zoom-in-95 duration-200">
+                                                            <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
+                                                                {teamMembers.map(member => (
+                                                                    <label key={member.id} className="flex items-center gap-2 p-1.5 hover:bg-primary-50 rounded-lg cursor-pointer transition-colors">
+                                                                        <input 
+                                                                            type="checkbox"
+                                                                            className="w-3 h-3 text-primary-600 rounded"
+                                                                            checked={itemAssignees.includes(member.name)}
+                                                                            onChange={(e) => {
+                                                                                const newAssignees = e.target.checked 
+                                                                                    ? [...itemAssignees, member.name]
+                                                                                    : itemAssignees.filter(name => name !== member.name);
+                                                                                setChecklist(checklist.map(c => c.id === item.id ? { ...c, assignees: newAssignees } : c));
+                                                                            }}
+                                                                        />
+                                                                        <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
+                                                                            {member.avatar_url ? (
+                                                                                <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
+                                                                            ) : (
+                                                                                <div className="w-full h-full bg-primary-100 flex items-center justify-center text-[10px] font-bold text-primary-600">
+                                                                                    {member.name.charAt(0)}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <span className="text-[11px] font-medium text-gray-700 truncate">{member.name}</span>
+                                                                    </label>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <button
+                                                    onClick={() => setChecklist(checklist.filter(c => c.id !== item.id))}
+                                                    className="text-gray-300 hover:text-red-500 transition-all p-1.5"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Detalhes do item (data e fotos dos responsáveis) */}
+                                        {(item.due_date || itemAssignees.length > 0) && (
+                                            <div className="flex items-center gap-3 ml-8">
+                                                {item.due_date && (
+                                                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${isOverdue ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
+                                                        <Calendar size={10} />
+                                                        {new Date(item.due_date).toLocaleDateString('pt-BR')}
+                                                    </div>
+                                                )}
+                                                <div className="flex -space-x-1.5 overflow-hidden">
+                                                    {itemAssignees.map(name => {
+                                                        const member = teamMembers.find(m => m.name === name);
+                                                        return (
+                                                            <div key={name} className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-primary-50 text-primary-700 rounded-md text-[10px] font-bold border border-primary-100">
+                                                                <div className="w-4 h-4 rounded-full overflow-hidden flex-shrink-0">
+                                                                    {member?.avatar_url ? (
+                                                                        <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
+                                                                    ) : (
+                                                                        <div className="w-full h-full bg-primary-200 flex items-center justify-center text-[8px] font-bold text-primary-700">
+                                                                            {name.charAt(0)}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                {name}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 p-2 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 group-within:border-primary-200 group-within:bg-white transition-all">
                             <Plus size={18} className="text-gray-400" />
                             <input
                                 type="text"
@@ -227,7 +342,7 @@ export const TaskModal = () => {
                                 onChange={(e) => setNewChecklistItem(e.target.value)}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && newChecklistItem.trim()) {
-                                        setChecklist([...checklist, { id: Date.now(), text: newChecklistItem.trim(), done: false }]);
+                                        setChecklist([...checklist, { id: Date.now(), text: newChecklistItem.trim(), done: false, assignees: [], due_date: null }]);
                                         setNewChecklistItem('');
                                     }
                                 }}
