@@ -57,13 +57,20 @@ export const SharedReportPage = () => {
     const exportToImage = async () => {
         if (!reportRef.current) return;
         try {
+            const width = reportRef.current.offsetWidth;
+            const height = reportRef.current.offsetHeight;
+
             const dataUrl = await toPng(reportRef.current, { 
                 backgroundColor: '#f9fafb', 
                 cacheBust: true,
-                pixelRatio: 3, // High-definition
+                pixelRatio: 2,
+                width: width,
+                height: height,
                 style: {
-                    borderRadius: '0', // Ensure clean edges for export
-                    transform: 'scale(1)',
+                    borderRadius: '0',
+                    transform: 'none',
+                    margin: '0',
+                    padding: '32px' // Match the p-8 class internally for capture
                 }
             });
             const link = document.createElement('a');
@@ -78,15 +85,29 @@ export const SharedReportPage = () => {
     const exportToPDF = async () => {
         if (!reportRef.current) return;
         try {
+            const width = reportRef.current.offsetWidth;
+            const height = reportRef.current.offsetHeight;
+
             const dataUrl = await toPng(reportRef.current, { 
                 backgroundColor: '#f9fafb', 
                 cacheBust: true,
-                pixelRatio: 2 // Slightly lower for PDF to avoid massive files, still very sharp
+                pixelRatio: 2,
+                width: width,
+                height: height,
+                style: {
+                    borderRadius: '0',
+                    transform: 'none',
+                    margin: '0',
+                    padding: '32px'
+                }
             });
             const pdf = new jsPDF('p', 'mm', 'a4');
             const imgProps = pdf.getImageProperties(dataUrl);
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            
+            // If the report is very long, we might need multiple pages, 
+            // but for now let's ensure the single page capture is complete.
             pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
             pdf.save(`Relatório_Housih_${report?.title || id?.slice(0, 8)}.pdf`);
         } catch (err) {
