@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus } from 'lucide-react';
+import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus, Download } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const TaskModal = () => {
@@ -35,6 +35,7 @@ export const TaskModal = () => {
             setPriority(editingTask.priority || 'Média');
             setObservations(editingTask.observations || '');
             setChecklist(editingTask.checklist || []);
+            setAttachments(editingTask.attachments || []);
         } else {
             setTitle('');
             setCompany('Nenhuma');
@@ -56,9 +57,10 @@ export const TaskModal = () => {
             assignee: assignees,
             status,
             priority,
-            due_date: dueDate ? new Date(dueDate).toISOString() : new Date().toISOString(),
+            due_date: dueDate ? new Date(`${dueDate}T00:00:00`).toISOString() : new Date().toISOString(),
             observations,
-            checklist
+            checklist,
+            attachments
         };
 
         if (editingTask) {
@@ -369,11 +371,33 @@ export const TaskModal = () => {
                         {attachments.length > 0 && (
                             <div className="flex flex-col gap-2 mb-3">
                                 {attachments.map((file, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 border border-gray-200 rounded-lg">
-                                        <span className="text-xs truncate text-gray-600 font-medium max-w-[200px]">{file.name}</span>
-                                        <button onClick={() => setAttachments(attachments.filter((_, i) => i !== idx))} className="text-gray-400 hover:text-red-500 transition-colors p-1">
-                                            <X size={14} />
-                                        </button>
+                                    <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 border border-gray-200 rounded-lg group/file">
+                                        <div className="flex items-center gap-2 overflow-hidden">
+                                            <span className="text-xs truncate text-gray-600 font-medium max-w-[200px]">{file.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <button 
+                                                onClick={() => {
+                                                    const link = document.createElement('a');
+                                                    link.href = file.data;
+                                                    link.download = file.name;
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                }}
+                                                className="text-gray-400 hover:text-primary-600 transition-colors p-1"
+                                                title="Download"
+                                            >
+                                                <Download size={14} />
+                                            </button>
+                                            <button 
+                                                onClick={() => setAttachments(attachments.filter((_, i) => i !== idx))} 
+                                                className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                                                title="Remover"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -504,9 +528,10 @@ export const TaskModal = () => {
                                         assignee: assignees,
                                         status: 'Concluído',
                                         priority,
-                                        due_date: dueDate ? new Date(dueDate).toISOString() : new Date().toISOString(),
+                                        due_date: dueDate ? new Date(`${dueDate}T00:00:00`).toISOString() : new Date().toISOString(),
                                         observations,
-                                        checklist
+                                        checklist,
+                                        attachments
                                     };
                                     await updateTask(editingTask.id, taskData);
                                     closeModal();
