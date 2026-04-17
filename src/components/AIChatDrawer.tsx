@@ -19,6 +19,7 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [retryStatus, setRetryStatus] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     // Identificação do Usuário
@@ -51,6 +52,12 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
     }, [messages, loading]);
 
     const getSystemContext = () => {
+        // Otimização: Limitar o número de tarefas detalhadas para 40
+        // para evitar exceder o limite de tokens e causar erro "High Demand"
+        const maxDetailedTasks = 40;
+        const detailedTasks = tasks.slice(0, maxDetailedTasks);
+        const remainingTasksCount = Math.max(0, tasks.length - maxDetailedTasks);
+
         const data = {
             resumo_sistema: {
                 total_tarefas: tasks.length,
@@ -60,16 +67,17 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                     em_andamento: tasks.filter((t: any) => t.status === 'Em Andamento').length,
                     nao_iniciadas: tasks.filter((t: any) => t.status === 'Não Iniciado').length,
                 },
-                empresas: companies.map((c: any) => ({ id: c.id, nome: c.name, cor: c.color })),
+                empresas: companies.slice(0, 20).map((c: any) => ({ id: c.id, nome: c.name, cor: c.color })),
                 membros: teamMembers.map((m: any) => ({ id: m.id, nome: m.name })),
-                tarefas_detalhadas: tasks.map((t: any) => ({
+                tarefas_recentes_detalhadas: detailedTasks.map((t: any) => ({
                     titulo: t.title,
                     empresa: companies.find((c: any) => c.id === t.company_id)?.name || 'Nenhuma',
                     responsavel: Array.isArray(t.assignee) ? t.assignee.join(', ') : t.assignee,
                     status: t.status,
                     prioridade: t.priority,
                     data_entrega: t.due_date ? t.due_date.substring(0, 10) : 'Sem data'
-                }))
+                })),
+                outras_tarefas_resumo: remainingTasksCount > 0 ? `Existem mais ${remainingTasksCount} tarefas não listadas detalhadamente.` : "Todas as tarefas listadas."
             }
         };
 
@@ -130,8 +138,7 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                 "gemini-3-flash", 
                 "gemini-2.5-flash", 
                 "gemini-1.5-flash-latest", 
-                "gemini-1.5-flash",
-                "gemini-1.0-pro" // Último recurso estável
+                "gemini-1.5-flash"
             ];
             
             let text = "";
@@ -139,16 +146,17 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
 
             for (const modelId of models) {
                 let attempts = 0;
-                const maxAttempts = modelId.includes('3.1') ? 2 : 1; // Tenta modelos novos 2 vezes
+                const maxAttempts = 2; // Tenta cada modelo 2 vezes com espera
 
                 while (attempts < maxAttempts) {
                     try {
+                        setRetryStatus(null);
                         const chat = ai.chats.create({
                             model: modelId,
                             history: [
                                 { role: 'user', parts: [{ text: getSystemContext() }] },
                                 { role: 'model', parts: [{ text: 'Entendido. Estou pronto para analisar seus dados do Sistema Housih. O que deseja saber?' }] },
-                                ...history.slice(1) // Pular a saudação inicial do histórico carregado
+                                ...history.slice(1)
                             ],
                         });
 
@@ -164,17 +172,13 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                         const isRetryable = err.status === 503 || err.status === 429 || 
                                           (err.message && (err.message.includes('503') || err.message.includes('429')));
                         
-                        if (is404) break; // Próximo modelo da lista
+                        if (is404) break; 
 
-                        if (isRetryable && attempts < maxAttempts) {
-                            // Esperar mais tempo (3s) em 503/429
-                            await new Promise(resolve => setTimeout(resolve, 3000));
+                        if (isRetryable) {
+                            setRetryStatus(`Google ocupado... tentando novamente em alguns segundos.`);
+                            // Espera exponencial: 2s na primeira falha, 4s na segunda
+                            await new Promise(resolve => setTimeout(resolve, attempts * 2000));
                             continue;
-                        }
-
-                        if (isRetryable && attempts >= maxAttempts) {
-                            // Se esgotou as tentativas desse modelo, tenta o próximo da lista
-                            break; 
                         }
                         
                         throw err; 
@@ -202,6 +206,7 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
             setMessages((prev: Message[]) => [...prev, { role: 'assistant', content: `Ops! ${errorMsg}` }]);
         } finally {
             setLoading(false);
+            setRetryStatus(null);
         }
     };
 
@@ -252,13 +257,20 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                         </div>
                     ))}
                     {loading && (
-                        <div className="flex gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-white text-primary-600 shadow-sm border border-gray-100 flex items-center justify-center">
-                                <Loader2 size={18} className="animate-spin" />
+                        <div className="flex flex-col gap-2">
+                            <div className="flex gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-white text-primary-600 shadow-sm border border-gray-100 flex items-center justify-center">
+                                    <Loader2 size={18} className="animate-spin" />
+                                </div>
+                                <div className="bg-white text-gray-400 shadow-sm border border-gray-100 p-3 rounded-2xl rounded-tl-none text-xs italic">
+                                    Analisando dados do sistema...
+                                </div>
                             </div>
-                            <div className="bg-white text-gray-400 shadow-sm border border-gray-100 p-3 rounded-2xl rounded-tl-none text-xs italic">
-                                Analisando dados do sistema...
-                            </div>
+                            {retryStatus && (
+                                <div className="ml-11 text-[10px] text-primary-500 font-medium animate-pulse">
+                                    {retryStatus}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
