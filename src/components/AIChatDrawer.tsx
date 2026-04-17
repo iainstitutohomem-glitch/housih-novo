@@ -1,3 +1,6 @@
+import { useState, useRef, useEffect } from 'react';
+import { X, Send, Sparkles, Bot, User, Loader2 } from 'lucide-react';
+import { useTasks } from '../context/TasksContext';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
 
@@ -26,16 +29,16 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
             resumo_sistema: {
                 total_tarefas: tasks.length,
                 status: {
-                    concluidas: tasks.filter(t => t.status === 'Concluído').length,
-                    atrasadas: tasks.filter(t => t.status === 'Atrasado').length,
-                    em_andamento: tasks.filter(t => t.status === 'Em Andamento').length,
-                    nao_iniciadas: tasks.filter(t => t.status === 'Não Iniciado').length,
+                    concluidas: tasks.filter((t: any) => t.status === 'Concluído').length,
+                    atrasadas: tasks.filter((t: any) => t.status === 'Atrasado').length,
+                    em_andamento: tasks.filter((t: any) => t.status === 'Em Andamento').length,
+                    nao_iniciadas: tasks.filter((t: any) => t.status === 'Não Iniciado').length,
                 },
-                empresas: companies.map(c => ({ id: c.id, nome: c.name, cor: c.color })),
-                membros: teamMembers.map(m => ({ id: m.id, nome: m.name })),
-                tarefas_detalhadas: tasks.map(t => ({
+                empresas: companies.map((c: any) => ({ id: c.id, nome: c.name, cor: c.color })),
+                membros: teamMembers.map((m: any) => ({ id: m.id, nome: m.name })),
+                tarefas_detalhadas: tasks.map((t: any) => ({
                     titulo: t.title,
-                    empresa: companies.find(c => c.id === t.company_id)?.name || 'Nenhuma',
+                    empresa: companies.find((c: any) => c.id === t.company_id)?.name || 'Nenhuma',
                     responsavel: Array.isArray(t.assignee) ? t.assignee.join(', ') : t.assignee,
                     status: t.status,
                     prioridade: t.priority,
@@ -65,7 +68,7 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
 
         const userMsg = input;
         setInput('');
-        setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+        setMessages((prev: Message[]) => [...prev, { role: 'user', content: userMsg }]);
         setLoading(true);
 
         try {
@@ -76,7 +79,7 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
 
             const ai = new GoogleGenAI({ apiKey });
             
-            const history = messages.map(m => ({
+            const history = messages.map((m: Message) => ({
                 role: m.role === 'user' ? 'user' : 'model',
                 parts: [{ text: m.content }]
             }));
@@ -93,7 +96,7 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
             const result = await chat.sendMessage({ message: userMsg });
             const text = result.text || '';
 
-            setMessages(prev => [...prev, { role: 'assistant', content: text }]);
+            setMessages((prev: Message[]) => [...prev, { role: 'assistant', content: text }]);
         } catch (error: any) {
             console.error("Erro AI:", error);
             setMessages(prev => [...prev, { role: 'assistant', content: `Ops! Ocorreu um erro ao falar com a IA: ${error.message}` }]);
