@@ -84,22 +84,45 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                 parts: [{ text: m.content }]
             }));
 
-            const chat = ai.chats.create({
-                model: "gemini-2.5-flash",
-                history: [
-                    { role: 'user', parts: [{ text: getSystemContext() }] },
-                    { role: 'model', parts: [{ text: 'Entendido. Estou pronto para analisar seus dados do Sistema Housih. O que deseja saber?' }] },
-                    ...history.slice(1) // Pular a saudação inicial
-                ],
-            });
+            const models = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
+            let text = "";
+            let success = false;
 
-            const result = await chat.sendMessage({ message: userMsg });
-            const text = result.text || '';
+            for (const modelId of models) {
+                try {
+                    const chat = ai.chats.create({
+                        model: modelId,
+                        history: [
+                            { role: 'user', parts: [{ text: getSystemContext() }] },
+                            { role: 'model', parts: [{ text: 'Entendido. Estou pronto para analisar seus dados do Sistema Housih. O que deseja saber?' }] },
+                            ...history.slice(1) // Pular a saudação inicial
+                        ],
+                    });
 
-            setMessages((prev: Message[]) => [...prev, { role: 'assistant', content: text }]);
+                    const result = await chat.sendMessage({ message: userMsg });
+                    text = result.text || '';
+                    success = true;
+                    break;
+                } catch (err: any) {
+                    console.error(`Falha no modelo ${modelId}:`, err);
+                    if (err.status === 503 || (err.message && err.message.includes('503'))) {
+                        // Esperar 2 segundos antes de tentar próximo modelo ou repetir
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        continue;
+                    }
+                    throw err; // Se não for 503, lançar erro imediato
+                }
+            }
+
+            if (success) {
+                setMessages((prev: Message[]) => [...prev, { role: 'assistant', content: text }]);
+            } else {
+                throw new Error("O Google AI está com demanda muito alta no momento. Por favor, tente novamente em alguns instantes.");
+            }
         } catch (error: any) {
             console.error("Erro AI:", error);
-            setMessages(prev => [...prev, { role: 'assistant', content: `Ops! Ocorreu um erro ao falar com a IA: ${error.message}` }]);
+            const errorMsg = error.message || 'Erro desconhecido';
+            setMessages((prev: Message[]) => [...prev, { role: 'assistant', content: `Ops! ${errorMsg}` }]);
         } finally {
             setLoading(false);
         }
