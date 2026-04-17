@@ -57,20 +57,21 @@ export const SharedReportPage = () => {
     const exportToImage = async () => {
         if (!reportRef.current) return;
         try {
-            const width = reportRef.current.offsetWidth;
-            const height = reportRef.current.offsetHeight;
-
+            // Wait for charts to be fully ready
+            await new Promise(r => setTimeout(r, 800));
+            
             const dataUrl = await toPng(reportRef.current, { 
                 backgroundColor: '#f9fafb', 
                 cacheBust: true,
                 pixelRatio: 2,
-                width: width,
-                height: height,
+                // Ensure the canvas doesn't clip
                 style: {
                     borderRadius: '0',
                     transform: 'none',
                     margin: '0',
-                    padding: '32px' // Match the p-8 class internally for capture
+                    padding: '40px',
+                    height: 'auto',
+                    overflow: 'visible'
                 }
             });
             const link = document.createElement('a');
@@ -85,20 +86,19 @@ export const SharedReportPage = () => {
     const exportToPDF = async () => {
         if (!reportRef.current) return;
         try {
-            const width = reportRef.current.offsetWidth;
-            const height = reportRef.current.offsetHeight;
+            await new Promise(r => setTimeout(r, 800));
 
             const dataUrl = await toPng(reportRef.current, { 
-                backgroundColor: '#f9fafb', 
+                backgroundColor: '#ffffff', 
                 cacheBust: true,
                 pixelRatio: 2,
-                width: width,
-                height: height,
                 style: {
                     borderRadius: '0',
                     transform: 'none',
                     margin: '0',
-                    padding: '32px'
+                    padding: '40px',
+                    height: 'auto',
+                    overflow: 'visible'
                 }
             });
             const pdf = new jsPDF('p', 'mm', 'a4');
@@ -106,8 +106,6 @@ export const SharedReportPage = () => {
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
             
-            // If the report is very long, we might need multiple pages, 
-            // but for now let's ensure the single page capture is complete.
             pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
             pdf.save(`Relatório_Housih_${report?.title || id?.slice(0, 8)}.pdf`);
         } catch (err) {
@@ -145,7 +143,7 @@ export const SharedReportPage = () => {
     }, []);
 
     const companyData = tasks.reduce((acc: any, task: any) => {
-        const companyName = companies.find((c: any) => c.id === task.company_id)?.name || 'Nenhuma';
+        const companyName = companies.find((c: any) => c.id === task.company_id || c.name === task.company_name)?.name || 'Nenhuma';
         const found = acc.find((d: any) => d.name === companyName);
         if (found) found.value++;
         else acc.push({ name: companyName, value: 1 });
@@ -164,202 +162,204 @@ export const SharedReportPage = () => {
                 </button>
             </div>
 
-            <div ref={reportRef} className="max-w-full space-y-6 bg-gray-50/50 p-8 rounded-[40px]">
-                {/* Header matching site style */}
-                <div className="bg-white/40 backdrop-blur-md border-b border-gray-200/50 -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 mb-8 px-4 lg:px-8 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex items-center gap-4">
-                        <img src="/logo.png" alt="Housih" className="h-6" />
-                        <div className="h-6 w-px bg-gray-200" />
-                        <h1 className="text-xl lg:text-2xl font-semibold text-gray-800 tracking-tight">
-                            {report.title}
-                        </h1>
-                    </div>
-                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-white/60 px-3 py-1.5 rounded-lg border border-white/40">
-                        Snapshot: {new Date(report.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                    </div>
-                </div>
-
-                {/* 1. Progress Bar - Matching Dashboard */}
-                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-sm">
-                    <div className="w-48 text-xl font-bold leading-tight text-gray-800">
-                        Progresso de Entregas
-                    </div>
-                    <div className="flex-1 w-full flex items-center gap-4">
-                        <div className="flex-1 h-4 bg-gray-100/50 rounded-full overflow-hidden border border-gray-200/20">
-                            <div 
-                                className="h-full bg-gradient-to-r from-primary-500 to-primary-600 transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(249,115,22,0.3)]"
-                                style={{ width: `${completionPercentage}%` }}
-                            />
+            <div className="max-w-full bg-gray-50/50 rounded-[40px] border border-white/20">
+                <div ref={reportRef} className="flex flex-col gap-6 p-8 bg-gray-50/50 rounded-[40px] overflow-visible">
+                    {/* Header matching site style */}
+                    <div className="bg-white/40 backdrop-blur-md border-b border-gray-200/50 -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 mb-8 px-4 lg:px-8 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex items-center gap-4">
+                            <img src="/logo.png" alt="Housih" className="h-6" />
+                            <div className="h-6 w-px bg-gray-200" />
+                            <h1 className="text-xl lg:text-2xl font-semibold text-gray-800 tracking-tight">
+                                {report.title}
+                            </h1>
                         </div>
-                        <span className="text-2xl font-black text-primary-600 w-16 text-right tabular-nums">{completionPercentage}%</span>
+                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-white/60 px-3 py-1.5 rounded-lg border border-white/40">
+                            Snapshot: {new Date(report.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                        </div>
                     </div>
-                </div>
 
-                {/* 3. Status Summary Chart (Horizontal Bars) - EXACTLY MATCHING SITE */}
-                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm">
-                    <div className="flex items-center gap-2 mb-6">
-                        <div className="w-1.5 h-6 bg-primary-500 rounded-full"></div>
-                        <h3 className="font-bold text-gray-800 uppercase tracking-widest text-xs">Resumo por Status</h3>
+                    {/* 1. Progress Bar - Matching Dashboard */}
+                    <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-sm">
+                        <div className="w-48 text-xl font-bold leading-tight text-gray-800">
+                            Progresso de Entregas
+                        </div>
+                        <div className="flex-1 w-full flex items-center gap-4">
+                            <div className="flex-1 h-4 bg-gray-100/50 rounded-full overflow-hidden border border-gray-200/20">
+                                <div 
+                                    className="h-full bg-gradient-to-r from-primary-500 to-primary-600 transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(249,115,22,0.3)]"
+                                    style={{ width: `${completionPercentage}%` }}
+                                />
+                            </div>
+                            <span className="text-2xl font-black text-primary-600 w-16 text-right tabular-nums">{completionPercentage}%</span>
+                        </div>
                     </div>
-                    <div className="space-y-3">
-                        {Object.entries(STATUS_COLORS).map(([status, color]) => {
-                            const count = tasks.filter((t: any) => t.status === status).length;
-                            const percentage = totalTasks === 0 ? 0 : (count / totalTasks) * 100;
-                            const label = status === 'Concluído' ? 'Finalizado' : status === 'Atrasado' ? 'Em atraso' : status;
 
-                            return (
-                                <div key={status} className="flex items-center gap-4 group">
-                                    <div
-                                        className="w-32 py-1.5 px-3 rounded text-white text-xs font-bold shadow-sm"
-                                        style={{ backgroundColor: color }}
-                                    >
-                                        {label}
-                                    </div>
-                                    <div className="flex-1 h-3 bg-gray-100/50 rounded-sm overflow-hidden border border-gray-200/20">
+                    {/* 3. Status Summary Chart (Horizontal Bars) - EXACTLY MATCHING SITE */}
+                    <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm">
+                        <div className="flex items-center gap-2 mb-6">
+                            <div className="w-1.5 h-6 bg-primary-500 rounded-full"></div>
+                            <h3 className="font-bold text-gray-800 uppercase tracking-widest text-xs">Resumo por Status</h3>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            {Object.entries(STATUS_COLORS).map(([status, color]) => {
+                                const count = tasks.filter((t: any) => t.status === status).length;
+                                const percentage = totalTasks === 0 ? 0 : (count / totalTasks) * 100;
+                                const label = status === 'Concluído' ? 'Finalizado' : status === 'Atrasado' ? 'Em atraso' : status;
+
+                                return (
+                                    <div key={status} className="flex items-center gap-4 group">
                                         <div
-                                            className="h-full transition-all duration-1000 ease-out"
-                                            style={{ backgroundColor: color, width: `${percentage}%` }}
-                                        />
+                                            className="w-32 py-1.5 px-3 rounded text-white text-xs font-bold shadow-sm"
+                                            style={{ backgroundColor: color }}
+                                        >
+                                            {label}
+                                        </div>
+                                        <div className="flex-1 h-3 bg-gray-100/50 rounded-sm overflow-hidden border border-gray-200/20">
+                                            <div
+                                                className="h-full"
+                                                style={{ backgroundColor: color, width: `${percentage}%` }}
+                                            />
+                                        </div>
+                                        <div className="w-12 text-right font-bold text-gray-700 tabular-nums">
+                                            {count}
+                                        </div>
                                     </div>
-                                    <div className="w-12 text-right font-bold text-gray-700 tabular-nums">
-                                        {count}
+                                );
+                            })}
+                        </div>
+
+                        <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center font-black text-gray-900 uppercase tracking-tighter text-sm">
+                            <div className="flex gap-20 w-full">
+                                <span className="flex-1 text-left">Total geral</span>
+                                <span className="w-12 text-right">{totalTasks}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 4. Donut Charts - Matching Dashboard */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center h-80">
+                            <div className="w-full sm:w-1/2 h-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie data={statusData} cx="50%" cy="50%" innerRadius="60%" outerRadius="90%" stroke="#fff" strokeWidth={3} dataKey="value" labelLine={false} label={renderCustomizedLabel}>
+                                            {statusData.map((entry: any, index: number) => (
+                                                <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#ccc'} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="flex-1 w-full sm:pl-4 flex flex-col gap-3 justify-center">
+                                {statusData.map((d: any) => (
+                                    <div key={d.name} className="flex items-center gap-3">
+                                        <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: STATUS_COLORS[d.name] }} />
+                                        <span className="text-sm font-medium text-gray-700">{d.name} ({((d.value / totalTasks) * 100).toFixed(0)}%)</span>
                                     </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                                ))}
+                            </div>
+                        </div>
 
-                    <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center font-black text-gray-900 uppercase tracking-tighter text-sm">
-                        <div className="flex gap-20 w-full">
-                            <span className="flex-1 text-left">Total geral</span>
-                            <span className="w-12 text-right">{totalTasks}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 4. Donut Charts - Matching Dashboard */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center h-80">
-                        <div className="w-full sm:w-1/2 h-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={statusData} cx="50%" cy="50%" innerRadius="60%" outerRadius="90%" stroke="#fff" strokeWidth={3} dataKey="value" labelLine={false} label={renderCustomizedLabel}>
-                                        {statusData.map((entry: any, index: number) => (
-                                            <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#ccc'} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className="flex-1 w-full sm:pl-4 flex flex-col gap-3 justify-center">
-                            {statusData.map((d: any) => (
-                                <div key={d.name} className="flex items-center gap-3">
-                                    <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: STATUS_COLORS[d.name] }} />
-                                    <span className="text-sm font-medium text-gray-700">{d.name} ({((d.value / totalTasks) * 100).toFixed(0)}%)</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center h-80">
-                        <div className="w-full sm:w-1/2 h-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={companyData} cx="50%" cy="50%" innerRadius="60%" outerRadius="90%" stroke="#fff" strokeWidth={3} dataKey="value" labelLine={false} label={renderCustomizedLabel}>
-                                        {companyData.map((entry: any, index: number) => {
-                                             const c = companies.find((co: any) => co.name === entry.name);
-                                            return <Cell key={`cell-${index}`} fill={c?.color || '#ccc'} />;
-                                        })}
-                                    </Pie>
-                                    <Tooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className="flex-1 w-full sm:pl-4 flex flex-col gap-2 justify-center max-h-[100%] overflow-y-auto">
-                             {companyData.map((c: any) => {
-                                 const comp = companies.find((co: any) => co.name === c.name);
-                                 return (
-                                     <div key={c.name} className="flex items-center gap-3">
-                                         <div className="w-4 h-4 rounded-full shadow-sm flex-shrink-0" style={{ backgroundColor: comp?.color || '#ccc' }} />
-                                         <span className="text-sm font-medium text-gray-700 truncate">
-                                             {c.name} ({((c.value / totalTasks) * 100).toFixed(0)}%)
-                                         </span>
-                                     </div>
-                                 );
-                             })}
-                        </div>
-                    </div>
-                </div>
-
-                {/* 5. Table - EXACTLY MATCHING DASHBOARD */}
-                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto no-scrollbar">
-                        <table className="w-full text-left text-sm whitespace-nowrap">
-                            <thead className="bg-gray-50/80 text-gray-600 border-b border-gray-100">
-                                <tr>
-                                    <th className="px-6 py-4 font-semibold border-r border-gray-100">Empresa</th>
-                                    <th className="px-6 py-4 font-semibold">Tarefa</th>
-                                    <th className="px-6 py-4 font-semibold">Responsáveis</th>
-                                    <th className="px-6 py-4 font-semibold">Status</th>
-                                    <th className="px-6 py-4 font-semibold">Prioridade</th>
-                                    <th className="px-6 py-4 font-semibold">Data Final</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 bg-white/40">
-                                {tasks.map((task: any) => {
-                                    const comp = companies.find((c: any) => c.id === task.company_id || c.name === task.company_name);
+                        <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center h-80">
+                            <div className="w-full sm:w-1/2 h-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie data={companyData} cx="50%" cy="50%" innerRadius="60%" outerRadius="90%" stroke="#fff" strokeWidth={3} dataKey="value" labelLine={false} label={renderCustomizedLabel}>
+                                            {companyData.map((entry: any, index: number) => {
+                                                const c = companies.find((co: any) => co.name === entry.name);
+                                                return <Cell key={`cell-${index}`} fill={c?.color || '#ccc'} />;
+                                            })}
+                                        </Pie>
+                                        <Tooltip />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="flex-1 w-full sm:pl-4 flex flex-col gap-2 justify-center max-h-[100%] overflow-y-auto">
+                                {companyData.map((c: any) => {
+                                    const comp = companies.find((co: any) => co.name === c.name);
                                     return (
-                                        <tr key={task.id} className="hover:bg-white/60 transition-colors group">
-                                            <td className="w-48 p-0 border-r border-gray-100/50">
-                                                <div 
-                                                    className="h-full w-full px-6 py-4 font-bold text-white shadow-sm"
-                                                    style={{ backgroundColor: comp?.color || '#4b5563' }}
-                                                >
-                                                    {comp?.name || '---'}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 border-r border-gray-100/50">
-                                                <span className="font-bold text-gray-800">{task.title}</span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-wrap gap-2">
-                                                    {task.assignee?.map((name: string, i: number) => {
-                                                        const m = team.find((t: any) => t.name === name);
-                                                        return (
-                                                            <div key={i} className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-full text-[11px] font-medium border border-gray-200 shadow-sm">
-                                                                <div className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center overflow-hidden border border-gray-100 flex-shrink-0">
-                                                                    {m?.avatar_url ? <img src={m.avatar_url} className="w-full h-full object-cover" /> : <span className="text-[9px] font-bold">{name.charAt(0).toUpperCase()}</span>}
-                                                                </div>
-                                                                {name}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 font-bold">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_COLORS[task.status] }} />
-                                                    <span style={{ color: STATUS_COLORS[task.status] }}>{task.status}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${
-                                                    task.priority === 'Alta' ? 'bg-red-50 text-red-600' :
-                                                    task.priority === 'Média' ? 'bg-orange-50 text-orange-600' :
-                                                    'bg-green-50 text-green-600'
-                                                }`}>
-                                                    {task.priority || 'Média'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-gray-500 tabular-nums font-medium">
-                                                {task.due_date ? new Date(task.due_date).toLocaleDateString() : '---'}
-                                            </td>
-                                        </tr>
+                                        <div key={c.name} className="flex items-center gap-3">
+                                            <div className="w-4 h-4 rounded-full shadow-sm flex-shrink-0" style={{ backgroundColor: comp?.color || '#ccc' }} />
+                                            <span className="text-sm font-medium text-gray-700 truncate">
+                                                {c.name} ({((c.value / totalTasks) * 100).toFixed(0)}%)
+                                            </span>
+                                        </div>
                                     );
                                 })}
-                            </tbody>
-                        </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 5. Table - EXACTLY MATCHING DASHBOARD */}
+                    <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm whitespace-nowrap">
+                                <thead className="bg-gray-50/80 text-gray-600 border-b border-gray-100">
+                                    <tr>
+                                        <th className="px-6 py-4 font-semibold border-r border-gray-100">Empresa</th>
+                                        <th className="px-6 py-4 font-semibold">Tarefa</th>
+                                        <th className="px-6 py-4 font-semibold">Responsáveis</th>
+                                        <th className="px-6 py-4 font-semibold">Status</th>
+                                        <th className="px-6 py-4 font-semibold">Prioridade</th>
+                                        <th className="px-6 py-4 font-semibold">Data Final</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 bg-white/40">
+                                    {tasks.map((task: any) => {
+                                        const comp = companies.find((c: any) => c.id === task.company_id || c.name === task.company_name);
+                                        return (
+                                            <tr key={task.id} className="hover:bg-white/60 transition-colors group">
+                                                <td className="w-48 p-0 border-r border-gray-100/50">
+                                                    <div 
+                                                        className="h-full w-full px-6 py-4 font-bold text-white shadow-sm"
+                                                        style={{ backgroundColor: comp?.color || '#4b5563' }}
+                                                    >
+                                                        {comp?.name || '---'}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 border-r border-gray-100/50">
+                                                    <span className="font-bold text-gray-800">{task.title}</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {task.assignee?.map((name: string, i: number) => {
+                                                            const m = team.find((t: any) => t.name === name);
+                                                            return (
+                                                                <div key={i} className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-full text-[11px] font-medium border border-gray-200 shadow-sm">
+                                                                    <div className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center overflow-hidden border border-gray-100 flex-shrink-0">
+                                                                        {m?.avatar_url ? <img src={m.avatar_url} className="w-full h-full object-cover" /> : <span className="text-[9px] font-bold">{name.charAt(0).toUpperCase()}</span>}
+                                                                    </div>
+                                                                    {name}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 font-bold">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_COLORS[task.status] }} />
+                                                        <span style={{ color: STATUS_COLORS[task.status] }}>{task.status}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                                                        task.priority === 'Alta' ? 'bg-red-50 text-red-600' :
+                                                        task.priority === 'Média' ? 'bg-orange-50 text-orange-600' :
+                                                        'bg-green-50 text-green-600'
+                                                    }`}>
+                                                        {task.priority || 'Média'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-500 tabular-nums font-medium">
+                                                    {task.due_date ? new Date(task.due_date).toLocaleDateString() : '---'}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
