@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Sparkles, Bot, User, Loader2 } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
 
@@ -11,12 +13,36 @@ interface Message {
 
 export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
     const { tasks, companies, teamMembers } = useTasks();
+    const { user } = useAuth();
     const [messages, setMessages] = useState<Message[]>([
         { role: 'assistant', content: 'Olá! Sou seu Assistente Housih. Como posso ajudar com a análise do seu **Sistema** hoje?' }
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Identificação do Usuário
+    const currentUser = teamMembers.find(m => m.email?.toLowerCase() === user?.email?.toLowerCase());
+    const userName = currentUser?.name || user?.user_metadata?.full_name || 'Usuário';
+
+    // Carregar Histórico Persistente
+    useEffect(() => {
+        if (!isOpen || !user) return;
+
+        const fetchHistory = async () => {
+            const { data, error } = await supabase
+                .from('ai_chat_history')
+                .select('role, content')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: true });
+
+            if (!error && data && data.length > 0) {
+                setMessages(data as Message[]);
+            }
+        };
+
+        fetchHistory();
+    }, [isOpen, user]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -50,6 +76,8 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
         return `Você é o Assistente Housih, um analista de dados especialista em produtividade e gestão de projetos. 
         Seu objetivo é analisar os dados abaixo e fornecer insights acionáveis, resumos precisos e responder perguntas sobre o estado do projeto.
         
+        Você está conversando com o(a) **${userName}**. Refira-se a ele(a) pelo nome de forma amigável quando apropriado.
+
         REGRAS CRÍTICAS:
         1. NUNCA use o termo "CRM". Refira-se ao sistema como "Sistema Housih" ou "Plataforma".
         2. Use negrito (**texto**) para destacar pontos importantes, métricas ou nomes.
@@ -70,6 +98,13 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
         setInput('');
         setMessages((prev: Message[]) => [...prev, { role: 'user', content: userMsg }]);
         setLoading(true);
+
+        // Salvar Mensagem do Usuário no Banco
+        if (user) {
+            await supabase.from('ai_chat_history').insert([
+                { user_id: user.id, role: 'user', content: userMsg }
+            ]);
+        }
 
         try {
             const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -133,8 +168,16 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                 }
             }
 
+
             if (success) {
                 setMessages((prev: Message[]) => [...prev, { role: 'assistant', content: text }]);
+                
+                // Salvar Resposta da IA no Banco
+                if (user) {
+                    await supabase.from('ai_chat_history').insert([
+                        { user_id: user.id, role: 'assistant', content: text }
+                    ]);
+                }
             } else {
                 throw new Error("O Google AI está com demanda muito alta no momento. Por favor, tente novamente em alguns instantes.");
             }
