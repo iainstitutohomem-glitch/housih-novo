@@ -114,58 +114,73 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
 
             const ai = new GoogleGenAI({ apiKey });
             
-            const history = messages.map((m: Message) => ({
+            // Limitar o histórico enviado para a IA para as últimas 25 mensagens
+            // Isso evita erros de "High Demand" por excesso de tokens e sobrecarga do servidor
+            const historyLimit = 25;
+            const historyToProcess = messages.length > historyLimit ? messages.slice(-historyLimit) : messages;
+
+            const history = historyToProcess.map((m: Message) => ({
                 role: m.role === 'user' ? 'user' : 'model',
                 parts: [{ text: m.content }]
             }));
 
             const models = [
                 "gemini-3.1-flash", 
-                "gemini-3.1-flash-latest", 
-                "gemini-3-flash", 
                 "gemini-3.1-flash-lite", 
+                "gemini-3-flash", 
                 "gemini-2.5-flash", 
                 "gemini-1.5-flash-latest", 
-                "gemini-1.5-flash"
+                "gemini-1.5-flash",
+                "gemini-1.0-pro" // Último recurso estável
             ];
+            
             let text = "";
             let success = false;
 
             for (const modelId of models) {
-                try {
-                    const chat = ai.chats.create({
-                        model: modelId,
-                        history: [
-                            { role: 'user', parts: [{ text: getSystemContext() }] },
-                            { role: 'model', parts: [{ text: 'Entendido. Estou pronto para analisar seus dados do Sistema Housih. O que deseja saber?' }] },
-                            ...history.slice(1) // Pular a saudação inicial
-                        ],
-                    });
+                let attempts = 0;
+                const maxAttempts = modelId.includes('3.1') ? 2 : 1; // Tenta modelos novos 2 vezes
 
-                    const result = await chat.sendMessage({ message: userMsg });
-                    text = result.text || '';
-                    success = true;
-                    break;
-                } catch (err: any) {
-                    console.error(`Falha no modelo ${modelId}:`, err);
-                    
-                    const is404 = err.status === 404 || (err.message && err.message.includes('404'));
-                    const isRetryable = err.status === 503 || err.status === 429 || 
-                                      (err.message && (err.message.includes('503') || err.message.includes('429')));
-                    
-                    if (is404) {
-                        // Se não existe o modelo, tenta o próximo IMEDIATAMENTE
-                        continue;
-                    }
+                while (attempts < maxAttempts) {
+                    try {
+                        const chat = ai.chats.create({
+                            model: modelId,
+                            history: [
+                                { role: 'user', parts: [{ text: getSystemContext() }] },
+                                { role: 'model', parts: [{ text: 'Entendido. Estou pronto para analisar seus dados do Sistema Housih. O que deseja saber?' }] },
+                                ...history.slice(1) // Pular a saudação inicial do histórico carregado
+                            ],
+                        });
 
-                    if (isRetryable) {
-                        // Se for erro de cota ou demanda, espera um pouco e tenta o próximo
-                        await new Promise(resolve => setTimeout(resolve, 1500));
-                        continue;
+                        const result = await chat.sendMessage({ message: userMsg });
+                        text = result.text || '';
+                        success = true;
+                        break;
+                    } catch (err: any) {
+                        attempts++;
+                        console.error(`Falha no modelo ${modelId} (Tentativa ${attempts}):`, err);
+                        
+                        const is404 = err.status === 404 || (err.message && err.message.includes('404'));
+                        const isRetryable = err.status === 503 || err.status === 429 || 
+                                          (err.message && (err.message.includes('503') || err.message.includes('429')));
+                        
+                        if (is404) break; // Próximo modelo da lista
+
+                        if (isRetryable && attempts < maxAttempts) {
+                            // Esperar mais tempo (3s) em 503/429
+                            await new Promise(resolve => setTimeout(resolve, 3000));
+                            continue;
+                        }
+
+                        if (isRetryable && attempts >= maxAttempts) {
+                            // Se esgotou as tentativas desse modelo, tenta o próximo da lista
+                            break; 
+                        }
+                        
+                        throw err; 
                     }
-                    
-                    throw err; 
                 }
+                if (success) break;
             }
 
 
