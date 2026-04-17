@@ -84,7 +84,7 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                 parts: [{ text: m.content }]
             }));
 
-            const models = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
+            const models = ["gemini-2.5-flash", "gemini-1.5-flash"];
             let text = "";
             let success = false;
 
@@ -105,12 +105,16 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                     break;
                 } catch (err: any) {
                     console.error(`Falha no modelo ${modelId}:`, err);
-                    if (err.status === 503 || (err.message && err.message.includes('503'))) {
-                        // Esperar 2 segundos antes de tentar próximo modelo ou repetir
-                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    // Captura 503 (Demanda Alta) ou 429 (Limite Excedido ou Modelo Bloqueado no Plano)
+                    const isRetryable = err.status === 503 || err.status === 429 || 
+                                      (err.message && (err.message.includes('503') || err.message.includes('429')));
+                    
+                    if (isRetryable) {
+                        // Esperar um pouco antes de tentar o próximo modelo (fallback)
+                        await new Promise(resolve => setTimeout(resolve, 1500));
                         continue;
                     }
-                    throw err; // Se não for 503, lançar erro imediato
+                    throw err; 
                 }
             }
 
