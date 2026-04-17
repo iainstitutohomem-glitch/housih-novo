@@ -86,7 +86,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-4 lg:p-8 relative z-0">
+        <div className="flex-1 flex flex-col overflow-hidden relative z-0">
           <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-primary-400/10 rounded-full blur-3xl pointer-events-none"></div>
           <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
           {children}

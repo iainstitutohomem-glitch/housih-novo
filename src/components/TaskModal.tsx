@@ -30,8 +30,17 @@ export const TaskModal = () => {
             setTitle(editingTask.title || '');
             setCompany(editingTask.company_id || 'Nenhuma');
             setAssignees(editingTask.assignee || []);
+            setAssignees(editingTask.assignee || []);
             setStatus(editingTask.status || 'Não Iniciado');
-            setDueDate(editingTask.due_date ? editingTask.due_date.split('T')[0] : '');
+            if (editingTask.due_date) {
+                const d = new Date(editingTask.due_date);
+                const y = d.getUTCFullYear();
+                const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+                const dd = String(d.getUTCDate()).padStart(2, '0');
+                setDueDate(`${y}-${m}-${dd}`);
+            } else {
+                setDueDate('');
+            }
             setPriority(editingTask.priority || 'Média');
             setObservations(editingTask.observations || '');
             setChecklist(editingTask.checklist || []);
@@ -57,7 +66,7 @@ export const TaskModal = () => {
             assignee: assignees,
             status,
             priority,
-            due_date: dueDate ? new Date(`${dueDate}T00:00:00`).toISOString() : new Date().toISOString(),
+            due_date: dueDate ? new Date(`${dueDate}T12:00:00`).toISOString() : new Date().toISOString(),
             observations,
             checklist,
             attachments
@@ -528,7 +537,7 @@ export const TaskModal = () => {
                                         assignee: assignees,
                                         status: 'Concluído',
                                         priority,
-                                        due_date: dueDate ? new Date(`${dueDate}T00:00:00`).toISOString() : new Date().toISOString(),
+                                        due_date: dueDate ? new Date(`${dueDate}T12:00:00`).toISOString() : new Date().toISOString(),
                                         observations,
                                         checklist,
                                         attachments
