@@ -56,22 +56,42 @@ export const SharedReportPage = () => {
 
     const exportToImage = async () => {
         if (!reportRef.current) return;
-        const dataUrl = await toPng(reportRef.current, { backgroundColor: '#f9fafb', cacheBust: true });
-        const link = document.createElement('a');
-        link.download = `Relatório_Housih_${id?.slice(0, 8)}.png`;
-        link.href = dataUrl;
-        link.click();
+        try {
+            const dataUrl = await toPng(reportRef.current, { 
+                backgroundColor: '#f9fafb', 
+                cacheBust: true,
+                pixelRatio: 3, // High-definition
+                style: {
+                    borderRadius: '0', // Ensure clean edges for export
+                    transform: 'scale(1)',
+                }
+            });
+            const link = document.createElement('a');
+            link.download = `Relatório_Housih_${report?.title || id?.slice(0, 8)}.png`;
+            link.href = dataUrl;
+            link.click();
+        } catch (err) {
+            console.error('Export failed', err);
+        }
     };
 
     const exportToPDF = async () => {
         if (!reportRef.current) return;
-        const dataUrl = await toPng(reportRef.current, { backgroundColor: '#f9fafb', cacheBust: true });
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgProps = pdf.getImageProperties(dataUrl);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`Relatório_Housih_${id?.slice(0, 8)}.pdf`);
+        try {
+            const dataUrl = await toPng(reportRef.current, { 
+                backgroundColor: '#f9fafb', 
+                cacheBust: true,
+                pixelRatio: 2 // Slightly lower for PDF to avoid massive files, still very sharp
+            });
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgProps = pdf.getImageProperties(dataUrl);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+            pdf.save(`Relatório_Housih_${report?.title || id?.slice(0, 8)}.pdf`);
+        } catch (err) {
+            console.error('PDF export failed', err);
+        }
     };
 
     if (loading) return (
@@ -103,15 +123,23 @@ export const SharedReportPage = () => {
         return acc;
     }, []);
 
+    const companyData = tasks.reduce((acc: any, task: any) => {
+        const companyName = companies.find((c: any) => c.id === task.company_id)?.name || 'Nenhuma';
+        const found = acc.find((d: any) => d.name === companyName);
+        if (found) found.value++;
+        else acc.push({ name: companyName, value: 1 });
+        return acc;
+    }, []);
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans p-4 lg:p-8 pb-20 no-scrollbar">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans p-4 lg:p-8 pb-24 no-scrollbar">
             {/* Subtle Controls */}
             <div className="fixed bottom-6 right-6 flex gap-2 z-50 animate-in fade-in slide-in-from-bottom-4">
-                <button onClick={exportToImage} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-all shadow-lg hover:border-primary-500 hover:text-primary-600 active:scale-95">
-                    <Camera size={16} /> Salvar JPEG
+                <button onClick={exportToImage} className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-all shadow-xl hover:border-primary-500 hover:text-primary-600 active:scale-95">
+                    <Camera size={18} /> Salvar JPEG
                 </button>
-                <button onClick={exportToPDF} className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-primary-600/20 active:scale-95">
-                    <FileText size={16} /> Salvar PDF
+                <button onClick={exportToPDF} className="flex items-center gap-2 px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold transition-all shadow-xl shadow-primary-600/20 active:scale-95">
+                    <FileText size={18} /> Salvar PDF
                 </button>
             </div>
 
@@ -146,25 +174,47 @@ export const SharedReportPage = () => {
                     </div>
                 </div>
 
-                {/* 3. Status Summary - Matching Dashboard */}
+                {/* 3. Status Summary Chart (Horizontal Bars) - EXACTLY MATCHING SITE */}
                 <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm">
                     <div className="flex items-center gap-2 mb-6">
                         <div className="w-1.5 h-6 bg-primary-500 rounded-full"></div>
                         <h3 className="font-bold text-gray-800 uppercase tracking-widest text-xs">Resumo por Status</h3>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div className="space-y-3">
                         {Object.entries(STATUS_COLORS).map(([status, color]) => {
                             const count = tasks.filter((t: any) => t.status === status).length;
+                            const percentage = totalTasks === 0 ? 0 : (count / totalTasks) * 100;
+                            const label = status === 'Concluído' ? 'Finalizado' : status === 'Atrasado' ? 'Em atraso' : status;
+
+                            if (count === 0) return null;
+
                             return (
-                                <div key={status} className="bg-white/60 p-4 rounded-xl border border-white/40 shadow-sm flex flex-col gap-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }}></div>
-                                        <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider truncate">{status}</span>
+                                <div key={status} className="flex items-center gap-4 group">
+                                    <div
+                                        className="w-32 py-1.5 px-3 rounded text-white text-xs font-bold shadow-sm"
+                                        style={{ backgroundColor: color }}
+                                    >
+                                        {label}
                                     </div>
-                                    <span className="text-2xl font-black text-gray-800">{count}</span>
+                                    <div className="flex-1 h-3 bg-gray-100/50 rounded-sm overflow-hidden border border-gray-200/20">
+                                        <div
+                                            className="h-full transition-all duration-1000 ease-out"
+                                            style={{ backgroundColor: color, width: `${percentage}%` }}
+                                        />
+                                    </div>
+                                    <div className="w-12 text-right font-bold text-gray-700 tabular-nums">
+                                        {count}
+                                    </div>
                                 </div>
                             );
                         })}
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center font-black text-gray-900 uppercase tracking-tighter text-sm">
+                        <div className="flex gap-20 w-full">
+                            <span className="flex-1 text-left">Total geral</span>
+                            <span className="w-12 text-right">{totalTasks}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -197,33 +247,44 @@ export const SharedReportPage = () => {
                         <div className="w-full sm:w-1/2 h-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={statusData /* Placeholder to match dashboard layout */} cx="50%" cy="50%" innerRadius="60%" outerRadius="90%" stroke="#fff" strokeWidth={3} dataKey="value" labelLine={false} label={renderCustomizedLabel}>
-                                        {statusData.map((entry: any, index: number) => (
-                                            <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#ccc'} />
-                                        ))}
+                                    <Pie data={companyData} cx="50%" cy="50%" innerRadius="60%" outerRadius="90%" stroke="#fff" strokeWidth={3} dataKey="value" labelLine={false} label={renderCustomizedLabel}>
+                                        {companyData.map((entry: any, index: number) => {
+                                             const c = companies.find((co: any) => co.name === entry.name);
+                                            return <Cell key={`cell-${index}`} fill={c?.color || '#ccc'} />;
+                                        })}
                                     </Pie>
                                     <Tooltip />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
-                        <div className="flex-1 w-full sm:pl-4 flex flex-col gap-3 justify-center">
-                             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Relatório Consolidado</p>
-                             <p className="text-sm text-gray-600 leading-relaxed italic">"Este snapshot contém todas as {totalTasks} tarefas monitoradas para o período selecionado."</p>
+                        <div className="flex-1 w-full sm:pl-4 flex flex-col gap-2 justify-center max-h-[100%] overflow-y-auto">
+                             {companyData.map((c: any) => {
+                                 const comp = companies.find((co: any) => co.name === c.name);
+                                 return (
+                                     <div key={c.name} className="flex items-center gap-3">
+                                         <div className="w-4 h-4 rounded-full shadow-sm flex-shrink-0" style={{ backgroundColor: comp?.color || '#ccc' }} />
+                                         <span className="text-sm font-medium text-gray-700 truncate">
+                                             {c.name} ({((c.value / totalTasks) * 100).toFixed(0)}%)
+                                         </span>
+                                     </div>
+                                 );
+                             })}
                         </div>
                     </div>
                 </div>
 
-                {/* 5. Table - Matching Dashboard */}
+                {/* 5. Table - EXACTLY MATCHING DASHBOARD */}
                 <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl overflow-hidden shadow-sm">
                     <div className="overflow-x-auto no-scrollbar">
                         <table className="w-full text-left text-sm whitespace-nowrap">
                             <thead className="bg-gray-50/80 text-gray-600 border-b border-gray-100">
                                 <tr>
                                     <th className="px-6 py-4 font-semibold border-r border-gray-100">Empresa</th>
-                                    <th className="px-6 py-4 font-semibold border-r border-gray-100">Tarefa</th>
+                                    <th className="px-6 py-4 font-semibold">Tarefa</th>
                                     <th className="px-6 py-4 font-semibold">Responsáveis</th>
                                     <th className="px-6 py-4 font-semibold">Status</th>
-                                    <th className="px-6 py-4 font-semibold">Previsão</th>
+                                    <th className="px-6 py-4 font-semibold">Prioridade</th>
+                                    <th className="px-6 py-4 font-semibold">Data Final</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 bg-white/40">
@@ -231,37 +292,48 @@ export const SharedReportPage = () => {
                                     const comp = companies.find((c: any) => c.id === task.company_id || c.name === task.company_name);
                                     return (
                                         <tr key={task.id} className="hover:bg-white/60 transition-colors group">
-                                            <td className="px-6 py-4 border-r border-gray-100/50">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: comp?.color || '#ccc' }} />
-                                                    <span className="font-bold text-gray-800">{comp?.name || '---'}</span>
+                                            <td className="w-48 p-0 border-r border-gray-100/50">
+                                                <div 
+                                                    className="h-full w-full px-6 py-4 font-bold text-white shadow-sm"
+                                                    style={{ backgroundColor: comp?.color || '#4b5563' }}
+                                                >
+                                                    {comp?.name || '---'}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 border-r border-gray-100/50">
-                                                <span className="font-medium text-gray-700">{task.title}</span>
+                                                <span className="font-bold text-gray-800">{task.title}</span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex -space-x-2">
+                                                <div className="flex flex-wrap gap-2">
                                                     {task.assignee?.map((name: string, i: number) => {
                                                         const m = team.find((t: any) => t.name === name);
                                                         return (
-                                                            <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm" title={name}>
-                                                                {m?.avatar_url ? <img src={m.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold bg-primary-100 text-primary-600">{name.charAt(0)}</div>}
+                                                            <div key={i} className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-full text-[11px] font-medium border border-gray-200 shadow-sm">
+                                                                <div className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center overflow-hidden border border-gray-100 flex-shrink-0">
+                                                                    {m?.avatar_url ? <img src={m.avatar_url} className="w-full h-full object-cover" /> : <span className="text-[9px] font-bold">{name.charAt(0).toUpperCase()}</span>}
+                                                                </div>
+                                                                {name}
                                                             </div>
                                                         );
                                                     })}
                                                 </div>
                                             </td>
+                                            <td className="px-6 py-4 font-bold">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_COLORS[task.status] }} />
+                                                    <span style={{ color: STATUS_COLORS[task.status] }}>{task.status}</span>
+                                                </div>
+                                            </td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                                    task.status === 'Concluído' ? 'bg-green-100 text-green-600' :
-                                                    task.status === 'Atrasado' ? 'bg-red-100 text-red-600' :
-                                                    'bg-amber-100 text-amber-600'
+                                                <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                                                    task.priority === 'Alta' ? 'bg-red-50 text-red-600' :
+                                                    task.priority === 'Média' ? 'bg-orange-50 text-orange-600' :
+                                                    'bg-green-50 text-green-600'
                                                 }`}>
-                                                    {task.status}
+                                                    {task.priority || 'Média'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-gray-400 tabular-nums font-medium">
+                                            <td className="px-6 py-4 text-gray-500 tabular-nums font-medium">
                                                 {task.due_date ? new Date(task.due_date).toLocaleDateString() : '---'}
                                             </td>
                                         </tr>

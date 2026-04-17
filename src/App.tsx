@@ -130,7 +130,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                 <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
                     <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                         <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
-                            <Share2 className="text-primary-600" size={24} /> Criar Relatório Público
+                            <Share2 className="text-primary-600" size={24} /> Criar Relatório
                         </h3>
                         <button onClick={() => { setIsShareModalOpen(false); setGeneratedLink(''); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                             <X size={20} className="text-gray-400" />
@@ -155,7 +155,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                                     disabled={isGenerating}
                                     className="w-full bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary-600/20 transition-all flex items-center justify-center gap-3"
                                 >
-                                    {isGenerating ? 'Gerando Link...' : 'Gerar Snapshot Agora'}
+                                    {isGenerating ? 'Gerando Link...' : 'GERAR RELATÓRIO AGORA'}
                                 </button>
                             </>
                         ) : (
