@@ -1,3 +1,4 @@
+import { Search } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const TaskFilterBar = () => {
@@ -5,6 +6,18 @@ export const TaskFilterBar = () => {
 
     return (
         <div className="flex flex-wrap gap-4 bg-white/80 backdrop-blur-md border border-white/40 p-4 rounded-2xl shadow-sm mb-6 w-full">
+            <div className="flex-[2] min-w-[250px] relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none group-focus-within:text-primary-500 transition-colors">
+                    <Search size={18} className="text-gray-400 group-focus-within:text-primary-500" />
+                </div>
+                <input 
+                    type="text"
+                    placeholder="Buscar tarefa pelo nome..."
+                    value={filters.busca}
+                    onChange={(e) => setFilters({ ...filters, busca: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 pl-11 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all text-sm"
+                />
+            </div>
             <div className="flex-1 min-w-[150px]">
                 <select value={filters.empresa} onChange={(e) => setFilters({ ...filters, empresa: e.target.value })} className="w-full bg-gray-50 border border-gray-200 text-gray-600 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 appearance-none text-sm cursor-pointer hover:bg-gray-100 transition-colors">
                     <option value="Todas">Empresas (Todas)</option>

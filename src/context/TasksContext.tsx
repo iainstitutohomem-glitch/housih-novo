@@ -51,6 +51,7 @@ export interface FilterState {
     status: string;
     dataInicio: string;
     dataFim: string;
+    busca: string;
 }
 
 interface TasksContextType {
@@ -100,7 +101,8 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         responsavel: 'Todos',
         status: 'Todos',
         dataInicio: '',
-        dataFim: ''
+        dataFim: '',
+        busca: ''
     });
 
     const filteredTasks = useMemo(() => {
@@ -116,6 +118,8 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 if (filters.dataInicio && td < filters.dataInicio) return false;
                 if (filters.dataFim && td > filters.dataFim) return false;
             }
+            if (filters.busca && !task.title.toLowerCase().includes(filters.busca.toLowerCase())) return false;
+            
             return true;
         });
     }, [tasks, filters]);
