@@ -275,7 +275,7 @@ export const SharedReportPage = () => {
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
-                            <div className="flex-1 w-full sm:pl-4 flex flex-col gap-2 justify-center max-h-[100%] overflow-y-auto">
+                            <div className="flex-1 w-full sm:pl-4 flex flex-col gap-2 justify-center max-h-[100%] overflow-y-auto no-scrollbar">
                                 {companyData.map((c: any) => {
                                     const comp = companies.find((co: any) => co.name === c.name);
                                     return (
