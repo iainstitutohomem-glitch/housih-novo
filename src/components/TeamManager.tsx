@@ -38,7 +38,7 @@ export const TeamManager = () => {
     };
 
     return (
-        <div className="max-w-6xl mx-auto flex flex-col h-full gap-6">
+        <div className="w-full flex flex-col h-full gap-6">
             <div className="flex justify-between items-center bg-white/60 backdrop-blur-md p-6 rounded-2xl border border-white/40 shadow-sm">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Equipe</h2>

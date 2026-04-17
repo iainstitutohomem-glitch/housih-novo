@@ -78,7 +78,7 @@ export const CompanyManager = () => {
     };
 
     return (
-        <div className="max-w-6xl mx-auto flex flex-col h-full gap-6">
+        <div className="w-full flex flex-col h-full gap-6">
             <div className="flex justify-between items-center bg-white/60 backdrop-blur-md p-6 rounded-2xl border border-white/40 shadow-sm">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Empresas e Clientes</h2>
@@ -94,13 +94,6 @@ export const CompanyManager = () => {
 
             {isAdding && (
                 <div className="bg-white/80 backdrop-blur-md p-8 rounded-2xl border border-white/40 shadow-xl animate-in fade-in slide-in-from-top-4 space-y-6">
-                    <h3 className="text-xl font-bold text-gray-800 border-b pb-4">{editingCompany ? 'Editar Empresa' : 'Cadastrar Nova Empresa'}</h3>
-
-                    <div className="flex flex-col md:flex-row gap-8">
-                        {/* Logo Upload */}
-                        <div className="flex flex-col items-center gap-2">
-                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Logo</label>
-                            <div
                                 className="w-32 h-32 rounded-2xl bg-gray-50 flex items-center justify-center overflow-hidden border-2 border-dashed border-gray-300 relative group cursor-pointer shadow-sm transition-all"
                                 style={{ borderColor: formColor }}
                             >

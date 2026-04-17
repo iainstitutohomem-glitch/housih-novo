@@ -58,7 +58,7 @@ export const MetricsDashboard = () => {
     }, [filteredTasks, companies]);
 
     return (
-        <div className="flex-1 w-full max-w-7xl mx-auto space-y-6 text-gray-800 font-sans pb-8">
+        <div className="flex-1 w-full space-y-6 text-gray-800 font-sans pb-8">
             {/* 1. Progress Bar */}
             <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-sm">
                 <div className="w-48 text-xl font-bold leading-tight text-gray-800">
