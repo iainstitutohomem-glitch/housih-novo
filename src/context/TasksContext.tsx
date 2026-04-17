@@ -13,6 +13,7 @@ export interface Task {
     checklist: any[];
     observations: string;
     assignee: string[];
+    attachments: any[];
 }
 
 export interface Company {

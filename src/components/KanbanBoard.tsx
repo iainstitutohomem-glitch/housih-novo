@@ -66,7 +66,7 @@ export const KanbanBoard = () => {
             {/* Inject Global Filters */}
             <TaskFilterBar />
 
-            <div className="flex flex-1 gap-6 overflow-x-auto pb-4 items-start h-full">
+            <div className="flex flex-1 gap-6 overflow-x-auto pb-4 h-full">
                 <DragDropContext onDragEnd={onDragEnd}>
                     {columns.map((col) => (
                         <Droppable key={col.id} droppableId={col.id}>
