@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Calendar } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
@@ -111,37 +111,68 @@ export const KanbanBoard = () => {
                                                                     onMouseLeave={handleMouseLeave}
                                                                     onClick={(e) => e.stopPropagation()}
                                                                 >
-                                                                    <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold border border-primary-200 overflow-hidden relative">
-                                                                        {(() => {
-                                                                            const member = teamMembers.find(m => m.name === task.assignee);
-                                                                            if (member?.avatar_url) {
-                                                                                return <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />;
-                                                                            }
-                                                                            return task.assignee ? task.assignee.charAt(0).toUpperCase() : '?';
-                                                                        })()}
+                                                                    <div className="flex -space-x-2 overflow-hidden items-center group/av">
+                                                                        {task.assignee && task.assignee.length > 0 ? (
+                                                                            task.assignee.slice(0, 3).map((name, i) => {
+                                                                                const member = teamMembers.find(m => m.name === name);
+                                                                                return (
+                                                                                    <div key={i} className="w-6 h-6 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold border-2 border-white overflow-hidden relative transition-transform hover:translate-y-[-2px] z-[1]">
+                                                                                        {member?.avatar_url ? (
+                                                                                            <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                                                        ) : (
+                                                                                            <span className="text-[10px]">{name.charAt(0).toUpperCase()}</span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                );
+                                                                            })
+                                                                        ) : (
+                                                                            <div className="w-6 h-6 rounded-full bg-gray-50 text-gray-300 flex items-center justify-center border border-dashed border-gray-200">
+                                                                                ?
+                                                                            </div>
+                                                                        )}
+                                                                        {task.assignee && task.assignee.length > 3 && (
+                                                                            <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-bold border-2 border-white z-[0]">
+                                                                                +{task.assignee.length - 3}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                    <span className="text-gray-600 font-medium truncate max-w-[80px]">{task.assignee || 'Sem resp.'}</span>
+                                                                    <span className="text-gray-500 font-medium truncate max-w-[80px] text-[10px]">
+                                                                        {task.assignee && task.assignee.length > 0 ? task.assignee[0] + (task.assignee.length > 1 ? ` +${task.assignee.length - 1}` : '') : 'Sem resp.'}
+                                                                    </span>
                                                                     
                                                                     {/* Transfer Popover */}
                                                                     {transferringTaskId === task.id && (
                                                                         <>
                                                                             {/* Invisible Bridge to bridge the gap */}
                                                                             <div className="absolute left-0 bottom-full w-full h-4 bg-transparent" />
-                                                                            <div className="absolute left-0 bottom-full mb-1 bg-white rounded-xl shadow-2xl border border-gray-100 p-3 z-50 w-48 animate-in fade-in slide-in-from-bottom-2">
-                                                                                <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wide">Transferir chamado?</p>
-                                                                                <select 
-                                                                                    className="w-full p-2 text-xs bg-gray-50 border border-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-primary-500/20"
-                                                                                    value={task.assignee || ''}
-                                                                                    onChange={async (e) => {
-                                                                                        await updateTask(task.id, { assignee: e.target.value });
-                                                                                        setTransferringTaskId(null);
-                                                                                    }}
-                                                                                >
-                                                                                    <option value="">Selecionar...</option>
-                                                                                    {teamMembers.map(m => (
-                                                                                        <option key={m.id} value={m.name}>{m.name}</option>
-                                                                                    ))}
-                                                                                </select>
+                                                                            <div className="absolute left-0 bottom-full mb-1 bg-white rounded-xl shadow-2xl border border-gray-100 p-2 z-50 w-52 animate-in fade-in slide-in-from-bottom-2">
+                                                                                <p className="text-[10px] font-bold text-gray-400 mb-2 px-1 uppercase tracking-wide">Gerenciar Responsáveis</p>
+                                                                                <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1">
+                                                                                    {teamMembers.map(m => {
+                                                                                        const isSelected = task.assignee?.includes(m.name);
+                                                                                        return (
+                                                                                            <button 
+                                                                                                key={m.id}
+                                                                                                onClick={async (e) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    const next = isSelected 
+                                                                                                        ? task.assignee.filter(a => a !== m.name)
+                                                                                                        : [...(task.assignee || []), m.name];
+                                                                                                    await updateTask(task.id, { assignee: next });
+                                                                                                }}
+                                                                                                className={`w-full flex items-center gap-2 p-1.5 rounded-lg text-left transition-colors ${isSelected ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50 text-gray-600'}`}
+                                                                                            >
+                                                                                                <div className={`w-3 h-3 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-primary-600 border-primary-600' : 'border-gray-300'}`}>
+                                                                                                    {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-sm" />}
+                                                                                                </div>
+                                                                                                <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
+                                                                                                    {m.avatar_url ? <img src={m.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-200" />}
+                                                                                                </div>
+                                                                                                <span className="text-[11px] font-medium truncate">{m.name}</span>
+                                                                                            </button>
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
                                                                             </div>
                                                                         </>
                                                                     )}

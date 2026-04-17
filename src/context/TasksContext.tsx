@@ -12,7 +12,7 @@ export interface Task {
     due_date: string;
     checklist: any[];
     observations: string;
-    assignee: string;
+    assignee: string[];
 }
 
 export interface Company {
@@ -108,7 +108,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             if (filters.empresa !== 'Todas' && task.company_id !== filters.empresa && task.title !== filters.empresa) return false;
             if (filters.prioridade !== 'Todas' && task.priority !== filters.prioridade) return false;
             if (filters.status !== 'Todos' && task.status !== filters.status) return false;
-            if (filters.responsavel !== 'Todos' && task.assignee !== filters.responsavel) return false;
+            if (filters.responsavel !== 'Todos' && !task.assignee.includes(filters.responsavel)) return false;
 
             if (filters.dataInicio || filters.dataFim) {
                 if (!task.due_date) return false;
@@ -237,17 +237,19 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         else if (data) {
             setTasks([data[0], ...tasks]);
 
-            // Notificar destinatário se houver um responsável definido
-            if (task.assignee) {
-                const recipient = teamMembers.find(m => m.name === task.assignee);
-                if (recipient?.email && recipient.email !== session?.user?.email) {
-                    await createNotification({
-                        recipient_email: recipient.email,
-                        task_id: data[0].id,
-                        task_title: data[0].title,
-                        type: 'transfer',
-                        message: `Atribuiu uma nova tarefa a você: "${data[0].title}"`
-                    });
+            // Notificar destinatários (todos na lista)
+            if (task.assignee && task.assignee.length > 0) {
+                for (const assigneeName of task.assignee) {
+                    const recipient = teamMembers.find(m => m.name === assigneeName);
+                    if (recipient?.email && recipient.email !== session?.user?.email) {
+                        await createNotification({
+                            recipient_email: recipient.email,
+                            task_id: data[0].id,
+                            task_title: data[0].title,
+                            type: 'transfer',
+                            message: `Atribuiu uma nova tarefa a você: "${data[0].title}"`
+                        });
+                    }
                 }
             }
         }
@@ -261,17 +263,22 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             const updatedTask = data[0];
             setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
 
-            // 1. Notificar transferência se mudou o responsável
-            if (task.assignee && task.assignee !== oldTask?.assignee) {
-                const recipient = teamMembers.find(m => m.name === task.assignee);
-                if (recipient?.email && recipient.email !== session?.user?.email) {
-                    await createNotification({
-                        recipient_email: recipient.email,
-                        task_id: taskId,
-                        task_title: updatedTask.title,
-                        type: 'transfer',
-                        message: `transferiu uma tarefa para Você: "${updatedTask.title}"`
-                    });
+            // 1. Notificar novos responsáveis
+            if (task.assignee && task.assignee.length > 0) {
+                const oldAssignees = (oldTask?.assignee as any) || [];
+                const newAssignees = task.assignee.filter(name => !oldAssignees.includes(name));
+
+                for (const name of newAssignees) {
+                    const recipient = teamMembers.find(m => m.name === name);
+                    if (recipient?.email && recipient.email !== session?.user?.email) {
+                        await createNotification({
+                            recipient_email: recipient.email,
+                            task_id: taskId,
+                            task_title: updatedTask.title,
+                            type: 'transfer',
+                            message: `transferiu uma tarefa para Você: "${updatedTask.title}"`
+                        });
+                    }
                 }
             }
 

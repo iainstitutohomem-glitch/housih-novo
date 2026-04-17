@@ -7,7 +7,7 @@ export const TaskModal = () => {
 
     const [title, setTitle] = useState('');
     const [company, setCompany] = useState('Nenhuma');
-    const [assignee, setAssignee] = useState('');
+    const [assignees, setAssignees] = useState<string[]>([]);
     const [status, setStatus] = useState('Não Iniciado');
     const [dueDate, setDueDate] = useState('');
     const [priority, setPriority] = useState('Média');
@@ -22,7 +22,7 @@ export const TaskModal = () => {
         if (editingTask) {
             setTitle(editingTask.title || '');
             setCompany(editingTask.company_id || 'Nenhuma');
-            setAssignee(editingTask.assignee || '');
+            setAssignees(editingTask.assignee || []);
             setStatus(editingTask.status || 'Não Iniciado');
             setDueDate(editingTask.due_date ? editingTask.due_date.split('T')[0] : '');
             setPriority(editingTask.priority || 'Média');
@@ -31,7 +31,7 @@ export const TaskModal = () => {
         } else {
             setTitle('');
             setCompany('Nenhuma');
-            setAssignee('');
+            setAssignees([]);
             setStatus('Não Iniciado');
             setDueDate('');
             setPriority('Média');
@@ -46,7 +46,7 @@ export const TaskModal = () => {
         const taskData = {
             title,
             company_id: company === 'Nenhuma' ? null : company,
-            assignee,
+            assignee: assignees,
             status,
             priority,
             due_date: dueDate ? new Date(dueDate).toISOString() : new Date().toISOString(),
@@ -113,22 +113,48 @@ export const TaskModal = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responsável</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <User size={18} className="text-gray-400" />
-                                    </div>
-                                    <select
-                                        value={assignee}
-                                        onChange={(e) => setAssignee(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 pl-10 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all appearance-none cursor-pointer"
-                                    >
-                                        <option value="">Sem Responsável</option>
-                                        {teamMembers && teamMembers.map(member => (
-                                            <option key={member.id} value={member.name}>{member.name}</option>
-                                        ))}
-                                    </select>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responsáveis</label>
+                                <div className="space-y-2 max-h-40 overflow-y-auto p-3 bg-gray-50 border border-gray-200 rounded-xl custom-scrollbar">
+                                    {teamMembers && teamMembers.map(member => (
+                                        <label key={member.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer group">
+                                            <input 
+                                                type="checkbox" 
+                                                className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+                                                checked={assignees.includes(member.name)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setAssignees([...assignees, member.name]);
+                                                    } else {
+                                                        setAssignees(assignees.filter(a => a !== member.name));
+                                                    }
+                                                }}
+                                            />
+                                            <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
+                                                {member.avatar_url ? (
+                                                    <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-[10px] font-bold text-primary-600">{member.name.charAt(0)}</span>
+                                                )}
+                                            </div>
+                                            <span className="text-sm text-gray-700 group-hover:text-primary-700 font-medium">{member.name}</span>
+                                        </label>
+                                    ))}
+                                    {(!teamMembers || teamMembers.length === 0) && (
+                                        <p className="text-xs text-gray-400 italic text-center py-2">Nenhum membro da equipe encontrado.</p>
+                                    )}
                                 </div>
+                                {assignees.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        {assignees.map(name => (
+                                            <span key={name} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-100 text-primary-700 rounded-md text-[10px] font-bold">
+                                                {name}
+                                                <button onClick={() => setAssignees(assignees.filter(a => a !== name))} className="hover:text-primary-900">
+                                                    <X size={10} />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Status</label>
@@ -349,7 +375,7 @@ export const TaskModal = () => {
                                     const taskData = {
                                         title,
                                         company_id: company === 'Nenhuma' ? null : company,
-                                        assignee,
+                                        assignee: assignees,
                                         status: 'Concluído',
                                         priority,
                                         due_date: dueDate ? new Date(dueDate).toISOString() : new Date().toISOString(),

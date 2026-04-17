@@ -232,14 +232,20 @@ export const MetricsDashboard = () => {
                                         </td>
                                         <td className="px-6 py-4 text-gray-800 font-medium">{task.title}</td>
                                         <td className="px-6 py-4 text-gray-600">
-                                            {task.assignee ? (
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
-                                                        {task.assignee.charAt(0)}
-                                                    </div>
-                                                    {task.assignee}
+                                            {task.assignee && task.assignee.length > 0 ? (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {task.assignee.map((name, i) => (
+                                                        <div key={i} className="flex items-center gap-1.5 bg-gray-100 px-2 py-1 rounded-md text-[11px] font-medium border border-gray-200">
+                                                            <div className="w-4 h-4 rounded-full bg-primary-600 text-white flex items-center justify-center text-[9px] font-bold">
+                                                                {name.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            {name}
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ) : '-'}
+                                            ) : (
+                                                <span className="text-gray-400 italic">Sem resp.</span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 font-medium">
                                             <span className="flex items-center gap-2">
