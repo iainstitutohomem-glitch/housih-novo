@@ -211,7 +211,12 @@ export const TaskModal = () => {
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Checklist</label>
                         <div className="space-y-4 mb-3">
                             {checklist.map((item) => {
-                                const isOverdue = item.due_date && new Date(item.due_date) < new Date() && !item.done;
+                                const now = new Date();
+                                now.setHours(0, 0, 0, 0);
+                                const itemDate = item.due_date ? new Date(item.due_date) : null;
+                                if (itemDate) itemDate.setHours(0, 0, 0, 0);
+                                
+                                const isOverdue = itemDate && itemDate < now && !item.done;
                                 const itemAssignees = item.assignees || [];
                                 
                                 return (

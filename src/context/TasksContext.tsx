@@ -316,6 +316,50 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     }
                 });
             }
+
+            // 3. Notificar responsáveis de checklist
+            if (task.checklist) {
+                const oldChecklist = (oldTask?.checklist as any[]) || [];
+                const newChecklist = task.checklist as any[];
+
+                for (const newItem of newChecklist) {
+                    const oldItem = oldChecklist.find(c => c.id === newItem.id);
+                    const oldNames = oldItem?.assignees || [];
+                    const newNames = newItem?.assignees || [];
+                    
+                    // Novos adicionados
+                    const addedNames = newNames.filter((n: string) => !oldNames.includes(n));
+                    for (const name of addedNames) {
+                        const recipient = teamMembers.find(m => m.name === name);
+                        if (recipient?.email && recipient.email !== session?.user?.email) {
+                            await createNotification({
+                                recipient_email: recipient.email,
+                                task_id: taskId,
+                                task_title: updatedTask.title,
+                                type: 'transfer',
+                                message: `adicionou você a um checklist na tarefa: "${updatedTask.title}"`
+                            });
+                        }
+                    }
+
+                    // Mudança de data para quem já era responsável
+                    if (oldItem && newItem.due_date !== oldItem.due_date) {
+                        const existingNames = newNames.filter((n: string) => oldNames.includes(n));
+                        for (const name of existingNames) {
+                            const recipient = teamMembers.find(m => m.name === name);
+                            if (recipient?.email && recipient.email !== session?.user?.email) {
+                                await createNotification({
+                                    recipient_email: recipient.email,
+                                    task_id: taskId,
+                                    task_title: updatedTask.title,
+                                    type: 'transfer',
+                                    message: `alterou o prazo de um checklist que você é responsável: "${updatedTask.title}"`
+                                });
+                            }
+                        }
+                    }
+                }
+            }
         }
     };
 
