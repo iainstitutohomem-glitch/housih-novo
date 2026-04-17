@@ -91,7 +91,7 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
             });
 
             const result = await chat.sendMessage({ message: userMsg });
-            const text = result.text;
+            const text = result.text || '';
 
             setMessages(prev => [...prev, { role: 'assistant', content: text }]);
         } catch (error: any) {
