@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../lib/supabase';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Download, Camera, FileText, CheckCircle2, Clock, XCircle, AlertCircle } from 'lucide-react';
+import { Camera, FileText, CheckCircle2, XCircle } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 
@@ -42,7 +42,7 @@ export const SharedReportPage = () => {
 
     useEffect(() => {
         const fetchReport = async () => {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('shared_reports')
                 .select('*')
                 .eq('id', id)

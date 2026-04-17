@@ -57,6 +57,25 @@ export const MetricsDashboard = () => {
         setTimeout(() => setIsCopied(false), 2000);
     };
 
+    const totalTasks = filteredTasks.length;
+    const completedTasks = filteredTasks.filter(t => t.status === 'Concluído').length;
+    const completionPercentage = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+
+    const statusData = useMemo(() => {
+        const counts: Record<string, number> = {};
+        filteredTasks.forEach(t => counts[t.status] = (counts[t.status] || 0) + 1);
+        return Object.keys(counts).map(key => ({ name: key, value: counts[key] }));
+    }, [filteredTasks]);
+
+    const companyData = useMemo(() => {
+        const counts: Record<string, number> = {};
+        filteredTasks.forEach(t => {
+            const companyName = companies.find(c => c.id === t.company_id)?.name || 'Nenhuma';
+            counts[companyName] = (counts[companyName] || 0) + 1;
+        });
+        return Object.keys(counts).map(key => ({ name: key, value: counts[key] }));
+    }, [filteredTasks, companies]);
+
     return (
         <div className="flex-1 w-full space-y-6 text-gray-800 font-sans pb-8">
             {/* Share Modal */}
@@ -207,9 +226,9 @@ export const MetricsDashboard = () => {
                                     labelLine={false}
                                     label={renderCustomizedLabel}
                                 >
-                                    {statusData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#ccc'} />
-                                    ))}
+                                {statusData.map((entry: any, index: number) => (
+                                    <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#ccc'} />
+                                ))}
                                 </Pie>
                                 <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #eee', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                             </PieChart>
@@ -218,7 +237,7 @@ export const MetricsDashboard = () => {
                     <div className="flex-1 w-full sm:pl-4 flex flex-col gap-3 justify-center mt-4 sm:mt-0">
                         {statusData.length === 0 && <p className="text-gray-400 text-sm">Nenhum dado.</p>}
                         {Object.entries(STATUS_COLORS).map(([status, color]) => {
-                            if (!statusData.find(d => d.name === status)) return null;
+                            if (!statusData.find((d: any) => d.name === status)) return null;
                             return (
                                 <div key={status} className="flex items-center gap-3">
                                     <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: color }} />
@@ -246,10 +265,10 @@ export const MetricsDashboard = () => {
                                     labelLine={false}
                                     label={renderCustomizedLabel}
                                 >
-                                    {companyData.map((entry, index) => {
-                                        const c = companies.find(c => c.id === entry.name || c.name === entry.name);
-                                        return <Cell key={`cell-${index}`} fill={c?.color || '#ccc'} />
-                                    })}
+                                {companyData.map((entry: any, index: number) => {
+                                    const c = companies.find((co: any) => co.id === entry.name || co.name === entry.name);
+                                    return <Cell key={`cell-${index}`} fill={c?.color || '#ccc'} />
+                                })}
                                 </Pie>
                                 <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #eee', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                             </PieChart>
@@ -257,8 +276,8 @@ export const MetricsDashboard = () => {
                     </div>
                     <div className="flex-1 w-full sm:pl-4 flex flex-col gap-2 justify-center max-h-[100%] overflow-y-auto mt-4 sm:mt-0 pr-2">
                         {companyData.length === 0 && <p className="text-gray-400 text-sm">Nenhum dado.</p>}
-                        {companyData.map(c => {
-                            const comp = companies.find(co => co.name === c.name);
+                        {companyData.map((c: any) => {
+                            const comp = companies.find((co: any) => co.name === c.name);
                             return (
                                 <div key={c.name} className="flex items-center gap-3">
                                     <div className="w-4 h-4 rounded-full shadow-sm flex-shrink-0" style={{ backgroundColor: comp?.color || '#ccc' }} />
