@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Building2, PieChart, Users, LogOut, Plus, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Building2, PieChart, Users, LogOut, Plus, MessageSquare, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useTasks } from '../context/TasksContext';
@@ -99,28 +99,48 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 };
 
 const GroupList = () => {
-    const { conversations, setActiveConversation, activeConversation } = useChat();
+    const { conversations, setActiveConversation, activeConversation, deleteGroup } = useChat();
     const groups = conversations.filter(c => c.type === 'group');
+
+    const handleDelete = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        if (window.confirm("Tem certeza que deseja excluir este grupo? Todas as mensagens serão perdidas.")) {
+            await deleteGroup(id);
+        }
+    };
 
     if (groups.length === 0) {
         return <p className="text-[10px] text-gray-400 italic px-2">Nenhum grupo ativo</p>;
     }
 
+    const GENERAL_GROUP_ID = '00000000-0000-0000-0000-000000000000';
+
     return (
         <div className="space-y-1">
             {groups.map(group => (
-                <button
-                    key={group.id}
-                    onClick={() => setActiveConversation(group)}
-                    className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors group text-left ${activeConversation?.id === group.id ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50 text-gray-700'
-                        }`}
-                >
-                    <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${activeConversation?.id === group.id ? 'bg-primary-100' : 'bg-gray-100 group-hover:bg-primary-100'
-                        }`}>
-                        <MessageSquare size={16} className={activeConversation?.id === group.id ? 'text-primary-600' : 'text-gray-400 group-hover:text-primary-600'} />
-                    </div>
-                    <span className="text-xs font-medium truncate">{group.name}</span>
-                </button>
+                <div key={group.id} className="group relative">
+                    <button
+                        onClick={() => setActiveConversation(group)}
+                        className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors text-left ${activeConversation?.id === group.id ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50 text-gray-700'
+                            }`}
+                    >
+                        <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${activeConversation?.id === group.id ? 'bg-primary-100' : 'bg-gray-100 group-hover:bg-primary-100'
+                            }`}>
+                            <MessageSquare size={16} className={activeConversation?.id === group.id ? 'text-primary-600' : 'text-gray-400 group-hover:text-primary-600'} />
+                        </div>
+                        <span className="text-xs font-medium truncate flex-1 pr-6">{group.name}</span>
+                    </button>
+                    
+                    {group.id !== GENERAL_GROUP_ID && (
+                        <button
+                            onClick={(e) => handleDelete(e, group.id)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded-md hover:bg-red-50"
+                            title="Excluir Grupo"
+                        >
+                            <Trash2 size={12} />
+                        </button>
+                    )}
+                </div>
             ))}
         </div>
     );

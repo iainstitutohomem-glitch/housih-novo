@@ -33,6 +33,7 @@ interface ChatContextType {
     sendMessage: (content: string, type?: 'text' | 'file' | 'task', metadata?: any) => Promise<void>;
     startPrivateChat: (recipientEmail: string) => Promise<void>;
     createGroup: (name: string, participantEmails: string[]) => Promise<void>;
+    deleteGroup: (id: string) => Promise<void>;
     uploadFile: (file: File) => Promise<{ url: string; name: string }>;
     loading: boolean;
 }
@@ -261,6 +262,23 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     };
 
+    const deleteGroup = async (id: string) => {
+        const { error } = await supabase
+            .from('chat_conversations')
+            .delete()
+            .eq('id', id);
+
+        if (!error) {
+            setConversations(prev => prev.filter(c => c.id !== id));
+            if (activeConversation?.id === id) {
+                setActiveConversation(null);
+            }
+        } else {
+            console.error("Error deleting group:", error);
+            alert("Erro ao excluir grupo: Verifique se você tem permissão.");
+        }
+    };
+
     const sendMessage = async (content: string, type: 'text' | 'file' | 'task' = 'text', metadata: any = {}) => {
         const userEmail = session?.user?.email;
         if (!activeConversation || !userEmail) {
@@ -333,7 +351,19 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     return (
-        <ChatContext.Provider value={{ conversations, messages, onlineUsers, activeConversation, setActiveConversation, sendMessage, startPrivateChat, createGroup, uploadFile, loading }}>
+        <ChatContext.Provider value={{ 
+            conversations, 
+            messages, 
+            onlineUsers, 
+            activeConversation, 
+            setActiveConversation, 
+            sendMessage, 
+            startPrivateChat, 
+            createGroup, 
+            deleteGroup,
+            uploadFile, 
+            loading 
+        }}>
             {children}
         </ChatContext.Provider>
     );
