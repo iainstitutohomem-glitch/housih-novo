@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useTasks } from '../context/TasksContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { TaskFilterBar } from './TaskFilterBar';
+import { Eye, Link, Copy, Check, X, Share2 } from 'lucide-react';
+import { useState } from 'react';
 
 
 const STATUS_COLORS: Record<string, string> = {
@@ -33,32 +35,91 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 };
 
 export const MetricsDashboard = () => {
-    const { filteredTasks, companies, teamMembers } = useTasks();
+    const { filteredTasks, companies, teamMembers, createSharedReport } = useTasks();
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [reportTitle, setReportTitle] = useState('Relatório de Performance');
+    const [generatedLink, setGeneratedLink] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
 
-    const totalTasks = filteredTasks.length;
+    const handleCreateReport = async () => {
+        setIsGenerating(true);
+        const reportId = await createSharedReport(reportTitle, filteredTasks, {});
+        if (reportId) {
+            setGeneratedLink(`${window.location.origin}/shared/${reportId}`);
+        }
+        setIsGenerating(false);
+    };
 
-    const completedTasks = filteredTasks.filter(t => t.status === 'Concluído').length;
-
-    const completionPercentage = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
-
-    const statusData = useMemo(() => {
-        const counts: Record<string, number> = {};
-        filteredTasks.forEach(t => counts[t.status] = (counts[t.status] || 0) + 1);
-        return Object.keys(counts).map(key => ({ name: key, value: counts[key] }));
-    }, [filteredTasks]);
-
-    // Use actual DB company colors for the charts or pie charts
-    const companyData = useMemo(() => {
-        const counts: Record<string, number> = {};
-        filteredTasks.forEach(t => {
-            const companyName = companies.find(c => c.id === t.company_id)?.name || 'Nenhuma';
-            counts[companyName] = (counts[companyName] || 0) + 1;
-        });
-        return Object.keys(counts).map(key => ({ name: key, value: counts[key] }));
-    }, [filteredTasks, companies]);
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(generatedLink);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
 
     return (
         <div className="flex-1 w-full space-y-6 text-gray-800 font-sans pb-8">
+            {/* Share Modal */}
+            {isShareModalOpen && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                                <Share2 className="text-primary-600" size={24} /> Criar Link Público
+                            </h3>
+                            <button onClick={() => { setIsShareModalOpen(false); setGeneratedLink(''); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <X size={20} className="text-gray-400" />
+                            </button>
+                        </div>
+                        
+                        <div className="p-8 space-y-6">
+                            {!generatedLink ? (
+                                <>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Título do Relatório</label>
+                                        <input 
+                                            type="text" 
+                                            value={reportTitle}
+                                            onChange={(e) => setReportTitle(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                                            placeholder="Ex: Entrega Março - Cliente X"
+                                        />
+                                    </div>
+                                    <button 
+                                        onClick={handleCreateReport}
+                                        disabled={isGenerating}
+                                        className="w-full bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary-600/20 transition-all flex items-center justify-center gap-3"
+                                    >
+                                        {isGenerating ? 'Gerando Link...' : 'Gerar Snapshot Agora'}
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="space-y-4 animate-in slide-in-from-bottom-4">
+                                    <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-center gap-3">
+                                        <Check className="text-green-500" size={24} />
+                                        <p className="text-xs font-bold text-green-700">Relatório Estático gerado com sucesso!</p>
+                                    </div>
+                                    <div className="relative group">
+                                        <input 
+                                            readOnly 
+                                            value={generatedLink}
+                                            className="w-full bg-gray-50 border border-gray-200 py-4 px-4 rounded-xl text-xs font-medium text-gray-500 overflow-hidden pr-24"
+                                        />
+                                        <button 
+                                            onClick={copyToClipboard}
+                                            className="absolute right-2 top-2 bottom-2 px-4 bg-white border border-gray-200 rounded-lg text-xs font-black text-primary-600 hover:bg-primary-600 hover:text-white transition-all shadow-sm flex items-center gap-2"
+                                        >
+                                            {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                                            {isCopied ? 'Copiado' : 'Copiar'}
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 text-center italic">Este link é público e não expira. Compartilhe com cuidado.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* 1. Progress Bar */}
             <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-sm">
                 <div className="w-48 text-xl font-bold leading-tight text-gray-800">
@@ -78,7 +139,17 @@ export const MetricsDashboard = () => {
             </div>
 
             {/* 2. Global Filters Bar */}
-            <TaskFilterBar />
+            <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                    <TaskFilterBar />
+                </div>
+                <button 
+                    onClick={() => setIsShareModalOpen(true)}
+                    className="flex-shrink-0 bg-white border border-gray-200 hover:border-primary-500 hover:text-primary-600 text-gray-600 px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-sm transition-all flex items-center justify-center gap-3 active:scale-95"
+                >
+                    <Eye size={18} /> Visualização
+                </button>
+            </div>
 
             {/* 3. Status Summary Chart (Horizontal) */}
             <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm">

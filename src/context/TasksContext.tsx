@@ -84,6 +84,7 @@ interface TasksContextType {
     openModal: (task?: Task) => void;
     closeModal: () => void;
     session: any;
+    createSharedReport: (title: string, data: any, filters: any) => Promise<string | null>;
 }
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
@@ -480,11 +481,35 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         };
     }, [session]);
 
+    const createSharedReport = async (title: string, data: any, filters: any) => {
+        try {
+            const { data: report, error } = await supabase
+                .from('shared_reports')
+                .insert({
+                    title,
+                    report_data: data,
+                    filters,
+                    companies_data: companies,
+                    team_data: teamMembers,
+                    created_by: session?.user?.id
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            return report.id;
+        } catch (error) {
+            console.error('Error creating shared report:', error);
+            return null;
+        }
+    };
+
     return (
         <TasksContext.Provider value={{
             tasks, filteredTasks, filters, setFilters, companies, teamMembers, fetchTasks, updateTaskStatus, addTask, updateTask, deleteTask, loading,
             isModalOpen, editingTask, openModal, closeModal, addCompany, updateCompany, deleteCompany, addTeamMember, updateTeamMember, deleteTeamMember,
-            notifications, fetchNotifications, markNotificationAsRead, deleteNotification, clearAllNotifications, session
+            notifications, fetchNotifications, markNotificationAsRead, deleteNotification, clearAllNotifications, session,
+            createSharedReport
         }}>
             {children}
         </TasksContext.Provider>

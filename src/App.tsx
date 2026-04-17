@@ -15,6 +15,7 @@ import { ChatDrawer } from './components/Chat/ChatDrawer';
 import { ChatProvider } from './context/ChatContext';
 import { AIChatDrawer } from './components/AIChatDrawer';
 import { Sparkles } from 'lucide-react';
+import { SharedReportPage } from './components/SharedReportPage';
 
 const NovaTarefaButton = () => {
   const { openModal } = useTasks();
@@ -109,6 +110,7 @@ function App() {
             <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans overflow-hidden">
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/shared/:id" element={<SharedReportPage />} />
                 <Route path="*" element={
                   <ProtectedRoute>
                     <DashboardLayout>
