@@ -46,7 +46,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     </button>
                 </div>
 
-                <nav className="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
+                <nav className="flex-1 space-y-2 overflow-y-auto no-scrollbar">
                     {navItems.map((item) => (
                         <NavLink
                             key={item.to}
@@ -140,7 +140,7 @@ const TeamPresenceSidebar = () => {
                 Equipe Online
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
             </h3>
-            <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+            <div className="space-y-1 max-h-48 overflow-y-auto no-scrollbar pr-1">
                 {eligibleMembers.map((member) => (
                     <button
                         key={member.id}
