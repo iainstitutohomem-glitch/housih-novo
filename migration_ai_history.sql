@@ -22,14 +22,3 @@ on public.ai_chat_history
 for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
-
--- 4. Ativar Realtime para atualizações instantâneas
-do $$
-begin
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'ai_chat_history') then
-    alter publication supabase_realtime add table ai_chat_history;
-  end if;
-exception
-  when others then
-    raise notice 'Realtime já configurado ou indisponível.';
-end $$;
