@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Sparkles, Bot, User, Loader2 } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -74,15 +74,15 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                 throw new Error('Chave de API do Gemini não configurada.');
             }
 
-            const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-
+            const ai = new GoogleGenAI({ apiKey });
+            
             const history = messages.map(m => ({
                 role: m.role === 'user' ? 'user' : 'model',
                 parts: [{ text: m.content }]
             }));
 
-            const chat = model.startChat({
+            const chat = ai.chats.create({
+                model: "gemini-2.5-flash-latest",
                 history: [
                     { role: 'user', parts: [{ text: getSystemContext() }] },
                     { role: 'model', parts: [{ text: 'Entendido. Estou pronto para analisar seus dados do CRM Housih. O que deseja saber?' }] },
@@ -90,9 +90,8 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                 ],
             });
 
-            const result = await chat.sendMessage(userMsg);
-            const response = await result.response;
-            const text = response.text();
+            const result = await chat.sendMessage({ message: userMsg });
+            const text = result.text;
 
             setMessages(prev => [...prev, { role: 'assistant', content: text }]);
         } catch (error: any) {
