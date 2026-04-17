@@ -75,7 +75,7 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
             }
 
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
             const history = messages.map(m => ({
                 role: m.role === 'user' ? 'user' : 'model',
