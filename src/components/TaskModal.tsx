@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, Users, UserPlus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const TaskModal = () => {
@@ -12,7 +12,13 @@ export const TaskModal = () => {
     const [dueDate, setDueDate] = useState('');
     const [priority, setPriority] = useState('Média');
     const [observations, setObservations] = useState('');
-    const [checklist, setChecklist] = useState<any[]>([]);
+    const [checklist, setChecklist] = useState<{
+        id: number;
+        text: string;
+        done: boolean;
+        due_date?: string | null;
+        assignees?: string[];
+    }[]>([]);
     const [attachments, setAttachments] = useState<{ name: string, data: string }[]>([]);
     const [newChecklistItem, setNewChecklistItem] = useState('');
     const [mentionSearch, setMentionSearch] = useState('');
@@ -226,13 +232,13 @@ export const TaskModal = () => {
                                                 {/* Botão Data */}
                                                 <div className="relative">
                                                     <button 
-                                                        onClick={() => setActiveChecklistMenu(activeChecklistMenu?.id === item.id && activeChecklistMenu.type === 'date' ? null : { id: item.id, type: 'date' })}
+                                                        onClick={() => setActiveChecklistMenu(activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'date' ? null : { id: item.id, type: 'date' })}
                                                         className={`p-1.5 rounded-lg hover:bg-gray-100 transition-colors ${item.due_date ? (isOverdue ? 'text-red-500' : 'text-primary-600 bg-primary-50') : 'text-gray-400'}`}
                                                         title="Definir data"
                                                     >
                                                         <Calendar size={14} />
                                                     </button>
-                                                    {activeChecklistMenu?.id === item.id && activeChecklistMenu.type === 'date' && (
+                                                    {activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'date' && (
                                                         <div className="absolute bottom-full right-0 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] animate-in zoom-in-95 duration-200">
                                                             <input 
                                                                 type="date" 
@@ -250,13 +256,13 @@ export const TaskModal = () => {
                                                 {/* Botão Responsáveis */}
                                                 <div className="relative">
                                                     <button 
-                                                        onClick={() => setActiveChecklistMenu(activeChecklistMenu?.id === item.id && activeChecklistMenu.type === 'users' ? null : { id: item.id, type: 'users' })}
+                                                        onClick={() => setActiveChecklistMenu(activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'users' ? null : { id: item.id, type: 'users' })}
                                                         className={`p-1.5 rounded-lg hover:bg-gray-100 transition-colors ${itemAssignees.length > 0 ? 'text-primary-600 bg-primary-50' : 'text-gray-400'}`}
                                                         title="Adicionar responsáveis"
                                                     >
                                                         <UserPlus size={14} />
                                                     </button>
-                                                    {activeChecklistMenu?.id === item.id && activeChecklistMenu.type === 'users' && (
+                                                    {activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'users' && (
                                                         <div className="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] animate-in zoom-in-95 duration-200">
                                                             <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
                                                                 {teamMembers.map(member => (
@@ -308,7 +314,7 @@ export const TaskModal = () => {
                                                     </div>
                                                 )}
                                                 <div className="flex -space-x-1.5 overflow-hidden">
-                                                    {itemAssignees.map(name => {
+                                                    {itemAssignees.map((name: string) => {
                                                         const member = teamMembers.find(m => m.name === name);
                                                         return (
                                                             <div key={name} className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-primary-50 text-primary-700 rounded-md text-[10px] font-bold border border-primary-100">
