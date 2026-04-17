@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTasks } from '../context/TasksContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { TaskFilterBar } from './TaskFilterBar';
-import { Eye, Link, Copy, Check, X, Share2 } from 'lucide-react';
+import { Eye, Copy, Check, X, Share2 } from 'lucide-react';
 import { useState } from 'react';
 
 
