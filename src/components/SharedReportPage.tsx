@@ -64,14 +64,14 @@ export const SharedReportPage = () => {
                 backgroundColor: '#f9fafb', 
                 cacheBust: true,
                 pixelRatio: 2,
-                // Ensure the canvas doesn't clip
+                // Ensure the canvas doesn't clip and hides scrollbars
                 style: {
                     borderRadius: '0',
                     transform: 'none',
                     margin: '0',
                     padding: '40px',
                     height: 'auto',
-                    overflow: 'visible'
+                    overflow: 'hidden'
                 }
             });
             const link = document.createElement('a');
@@ -98,7 +98,7 @@ export const SharedReportPage = () => {
                     margin: '0',
                     padding: '40px',
                     height: 'auto',
-                    overflow: 'visible'
+                    overflow: 'hidden'
                 }
             });
             const pdf = new jsPDF('p', 'mm', 'a4');
@@ -151,7 +151,7 @@ export const SharedReportPage = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans p-4 lg:p-8 pb-24 h-auto overflow-y-auto">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans p-4 lg:p-8 pb-24 h-auto overflow-y-auto no-scrollbar">
             {/* Subtle Controls */}
             <div className="fixed bottom-6 right-6 flex gap-2 z-50 animate-in fade-in slide-in-from-bottom-4">
                 <button onClick={exportToImage} className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-all shadow-xl hover:border-primary-500 hover:text-primary-600 active:scale-95">
@@ -293,8 +293,8 @@ export const SharedReportPage = () => {
 
                     {/* 5. Table - EXACTLY MATCHING DASHBOARD */}
                     <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl overflow-hidden shadow-sm">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm whitespace-nowrap">
+                        <div className="overflow-x-auto no-scrollbar">
+                            <table className="w-full text-left text-sm whitespace-nowrap scroll-smooth">
                                 <thead className="bg-gray-50/80 text-gray-600 border-b border-gray-100">
                                     <tr>
                                         <th className="px-6 py-4 font-semibold border-r border-gray-100">Empresa</th>
