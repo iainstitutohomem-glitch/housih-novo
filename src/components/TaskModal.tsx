@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, User } from 'lucide-react';
+import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2 } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const TaskModal = () => {
