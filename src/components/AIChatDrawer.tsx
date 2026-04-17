@@ -52,50 +52,40 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
     }, [messages, loading]);
 
     const getSystemContext = () => {
-        // Otimização: Limitar o número de tarefas detalhadas para 40
-        // para evitar exceder o limite de tokens e causar erro "High Demand"
-        const maxDetailedTasks = 40;
-        const detailedTasks = tasks.slice(0, maxDetailedTasks);
-        const remainingTasksCount = Math.max(0, tasks.length - maxDetailedTasks);
+        // Otimização de Alta Densidade: Converter objetos em strings compactas
+        // para economizar tokens e permitir análise de 100% das tarefas.
+        const compactedTasks = tasks.map(t => {
+            const empresa = companies.find(c => c.id === t.company_id)?.name || 'N/A';
+            const resp = Array.isArray(t.assignee) ? t.assignee.join(',') : t.assignee;
+            const data = t.due_date ? t.due_date.substring(0, 10) : 'S/D';
+            return `${t.title} | ${empresa} | ${resp} | ${t.status} | ${t.priority} | ${data}`;
+        }).join('\n');
 
-        const data = {
-            resumo_sistema: {
-                total_tarefas: tasks.length,
-                status: {
-                    concluidas: tasks.filter((t: any) => t.status === 'Concluído').length,
-                    atrasadas: tasks.filter((t: any) => t.status === 'Atrasado').length,
-                    em_andamento: tasks.filter((t: any) => t.status === 'Em Andamento').length,
-                    nao_iniciadas: tasks.filter((t: any) => t.status === 'Não Iniciado').length,
-                },
-                empresas: companies.slice(0, 20).map((c: any) => ({ id: c.id, nome: c.name, cor: c.color })),
-                membros: teamMembers.map((m: any) => ({ id: m.id, nome: m.name })),
-                tarefas_recentes_detalhadas: detailedTasks.map((t: any) => ({
-                    titulo: t.title,
-                    empresa: companies.find((c: any) => c.id === t.company_id)?.name || 'Nenhuma',
-                    responsavel: Array.isArray(t.assignee) ? t.assignee.join(', ') : t.assignee,
-                    status: t.status,
-                    prioridade: t.priority,
-                    data_entrega: t.due_date ? t.due_date.substring(0, 10) : 'Sem data'
-                })),
-                outras_tarefas_resumo: remainingTasksCount > 0 ? `Existem mais ${remainingTasksCount} tarefas não listadas detalhadamente.` : "Todas as tarefas listadas."
+        const dataResumo = {
+            total: tasks.length,
+            status: {
+                concluidas: tasks.filter((t: any) => t.status === 'Concluído').length,
+                atrasadas: tasks.filter((t: any) => t.status === 'Atrasado').length,
+                em_andamento: tasks.filter((t: any) => t.status === 'Em Andamento').length,
+                nao_iniciadas: tasks.filter((t: any) => t.status === 'Não Iniciado').length,
             }
         };
 
-        return `Você é o Assistente Housih, um analista de dados especialista em produtividade e gestão de projetos. 
-        Seu objetivo é analisar os dados abaixo e fornecer insights acionáveis, resumos precisos e responder perguntas sobre o estado do projeto.
-        
-        Você está conversando com o(a) **${userName}**. Refira-se a ele(a) pelo nome de forma amigável quando apropriado.
+        return `Você é o Assistente Housih, um analista de dados especialista em gestão.
+        Seu objetivo é analisar os dados abaixo e fornecer insights acionáveis e resumos precisos para o(a) **${userName}**.
 
-        REGRAS CRÍTICAS:
-        1. NUNCA use o termo "CRM". Refira-se ao sistema como "Sistema Housih" ou "Plataforma".
-        2. Use negrito (**texto**) para destacar pontos importantes, métricas ou nomes.
-        3. Seja direto e profissional, mas amigável.
-        4. Use tabelas ou listas sempre que for mostrar muitos dados.
-        5. Identifique gargalos (como muitos atrasos ou uma pessoa sobrecarregada).
-        6. Se não souber de algo baseado nos dados, diga que não tem essa informação.
-        
-        DADOS ATUAIS DO SISTEMA:
-        ${JSON.stringify(data, null, 2)}
+        REGRAS CRÍTICAS DE RESPOSTA:
+        1. ANALISE TODOS OS DADOS. Não limite sua análise.
+        2. SILÊNCIO TÉCNICO: Jamais mencione o número de tarefas que está processando ou limites de dados.
+        3. FOCO EM INSIGHTS: Não gere tabelas de "Detalhamento por Empresa" com contagem de tarefas processadas. Foque no conteúdo e no que precisa ser feito.
+        4. NUNCA use o termo "CRM". Refira-se ao projeto como "Sistema Housih".
+        5. Use negrito (**texto**) para nomes e métricas importantes.
+
+        RESUMO GERAL:
+        ${JSON.stringify(dataResumo)}
+
+        LISTA COMPLETA DE TAREFAS (Título | Empresa | Responsável | Status | Prioridade | Entrega):
+        ${compactedTasks}
         `;
     };
 
