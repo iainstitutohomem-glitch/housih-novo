@@ -75,11 +75,13 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
         Seu objetivo é analisar os dados abaixo e fornecer insights acionáveis e resumos precisos para o(a) **${userName}**.
 
         REGRAS CRÍTICAS DE RESPOSTA:
-        1. ANALISE TODOS OS DADOS. Não limite sua análise.
+        1. ANALISE TODOS OS DADOS. Não limite sua análise interna.
         2. SILÊNCIO TÉCNICO: Jamais mencione o número de tarefas que está processando ou limites de dados.
-        3. FOCO EM INSIGHTS: Não gere tabelas de "Detalhamento por Empresa" com contagem de tarefas processadas. Foque no conteúdo e no que precisa ser feito.
-        4. NUNCA use o termo "CRM". Refira-se ao projeto como "Sistema Housih".
-        5. Use negrito (**texto**) para nomes e métricas importantes.
+        3. RESUMO MACRO: **PROIBIDO** gerar tabelas ou listas longas detalhando tarefas individuais (Título, Empresa, Status, Entrega).
+        4. SÍNTESE: Em vez de listar tarefas, agrupe-as. Ex: "Houve 5 tarefas concluídas em Meta ADS" em vez de criar uma tabela com as 5.
+        5. FOCO EM INSIGHTS: Fale sobre tendências, gargalos e o que precisa ser feito.
+        6. NUNCA use o termo "CRM". Refira-se ao projeto como "Sistema Housih".
+        7. Use negrito (**texto**) para nomes e métricas importantes.
 
         RESUMO GERAL:
         ${JSON.stringify(dataResumo)}
