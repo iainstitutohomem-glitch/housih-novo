@@ -95,7 +95,7 @@ export const Login = () => {
                         {isSignUp && (
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">
-                                    Seu Nome (Aparecerá no CRM)
+                                    Seu Nome (Aparecerá no Sistema)
                                 </label>
                                 <div className="mt-1">
                                     <input

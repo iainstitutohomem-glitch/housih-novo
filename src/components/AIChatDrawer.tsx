@@ -1,7 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { X, Send, Sparkles, Bot, User, Loader2 } from 'lucide-react';
-import { useTasks } from '../context/TasksContext';
 import { GoogleGenAI } from '@google/genai';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -11,7 +9,7 @@ interface Message {
 export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
     const { tasks, companies, teamMembers } = useTasks();
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'assistant', content: 'Olá! Sou seu Assistente Housih. Como posso ajudar com a análise do seu CRM hoje?' }
+        { role: 'assistant', content: 'Olá! Sou seu Assistente Housih. Como posso ajudar com a análise do seu **Sistema** hoje?' }
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -25,7 +23,7 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
 
     const getSystemContext = () => {
         const data = {
-            resumo_crm: {
+            resumo_sistema: {
                 total_tarefas: tasks.length,
                 status: {
                     concluidas: tasks.filter(t => t.status === 'Concluído').length,
@@ -46,16 +44,18 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
             }
         };
 
-        return `Você é o Assistente Housih, um analista de dados especialista em produtividade e CRM. 
+        return `Você é o Assistente Housih, um analista de dados especialista em produtividade e gestão de projetos. 
         Seu objetivo é analisar os dados abaixo e fornecer insights acionáveis, resumos precisos e responder perguntas sobre o estado do projeto.
         
-        REGRAS:
-        1. Seja direto e profissional, mas amigável.
-        2. Use tabelas ou listas sempre que for mostrar muitos dados.
-        3. Identifique gargalos (como muitos atrasos ou uma pessoa sobrecarregada).
-        4. Se não souber de algo baseado nos dados, diga que não tem essa informação.
+        REGRAS CRÍTICAS:
+        1. NUNCA use o termo "CRM". Refira-se ao sistema como "Sistema Housih" ou "Plataforma".
+        2. Use negrito (**texto**) para destacar pontos importantes, métricas ou nomes.
+        3. Seja direto e profissional, mas amigável.
+        4. Use tabelas ou listas sempre que for mostrar muitos dados.
+        5. Identifique gargalos (como muitos atrasos ou uma pessoa sobrecarregada).
+        6. Se não souber de algo baseado nos dados, diga que não tem essa informação.
         
-        DADOS ATUAIS DO CRM:
+        DADOS ATUAIS DO SISTEMA:
         ${JSON.stringify(data, null, 2)}
         `;
     };
@@ -82,10 +82,10 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
             }));
 
             const chat = ai.chats.create({
-                model: "gemini-2.5-flash-latest",
+                model: "gemini-2.5-flash",
                 history: [
                     { role: 'user', parts: [{ text: getSystemContext() }] },
-                    { role: 'model', parts: [{ text: 'Entendido. Estou pronto para analisar seus dados do CRM Housih. O que deseja saber?' }] },
+                    { role: 'model', parts: [{ text: 'Entendido. Estou pronto para analisar seus dados do Sistema Housih. O que deseja saber?' }] },
                     ...history.slice(1) // Pular a saudação inicial
                 ],
             });
@@ -142,8 +142,8 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                                 ? 'bg-primary-600 text-white rounded-tr-none' 
                                 : 'bg-white text-gray-700 shadow-sm border border-gray-100 rounded-tl-none'
                             }`}>
-                                <div className="whitespace-pre-wrap prose prose-sm max-w-none">
-                                    {msg.content}
+                                <div className="prose prose-sm max-w-none prose-p:leading-relaxed dark:prose-invert">
+                                    <ReactMarkdown>{msg.content}</ReactMarkdown>
                                 </div>
                             </div>
                         </div>
@@ -180,7 +180,7 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                         </button>
                     </div>
                     <p className="text-[10px] text-gray-400 text-center mt-2">
-                        O Assistente IA analisa apenas os dados atuais do seu CRM.
+                        O Assistente IA analisa apenas os dados atuais do seu Sistema.
                     </p>
                 </div>
             </div>
