@@ -13,6 +13,8 @@ import { Plus, Menu } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { ChatDrawer } from './components/Chat/ChatDrawer';
 import { ChatProvider } from './context/ChatContext';
+import { AIChatDrawer } from './components/AIChatDrawer';
+import { Sparkles } from 'lucide-react';
 
 const NovaTarefaButton = () => {
   const { openModal } = useTasks();
@@ -44,6 +46,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAIOpen, setIsAIOpen] = useState(false);
 
   const getTitle = () => {
     switch (location.pathname) {
@@ -71,6 +74,13 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             </h1>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
+            <button 
+              onClick={() => setIsAIOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-primary-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-500/20 hover:scale-105 transition-all active:scale-95"
+            >
+              <Sparkles size={16} />
+              <span className="hidden md:inline text-[10px] uppercase tracking-wider">IA Assistente</span>
+            </button>
             <NotificationBell />
             <NovaTarefaButton />
           </div>
@@ -82,6 +92,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
           {children}
         </div>
         <ChatDrawer />
+        <AIChatDrawer isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
       </main>
     </div>
   );
