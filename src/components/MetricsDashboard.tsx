@@ -2,8 +2,6 @@ import { useMemo } from 'react';
 import { useTasks } from '../context/TasksContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { TaskFilterBar } from './TaskFilterBar';
-import { Eye, Copy, Check, X, Share2 } from 'lucide-react';
-import { useState } from 'react';
 
 
 const STATUS_COLORS: Record<string, string> = {
@@ -35,7 +33,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 };
 
 export const MetricsDashboard = () => {
-    const { filteredTasks, companies } = useTasks();
+    const { filteredTasks, companies, teamMembers } = useTasks();
 
     const totalTasks = filteredTasks.length;
     const completedTasks = filteredTasks.filter(t => t.status === 'Concluído').length;
@@ -233,8 +231,8 @@ export const MetricsDashboard = () => {
                                         <td className="px-6 py-4 text-gray-600">
                                             {task.assignee && task.assignee.length > 0 ? (
                                                 <div className="flex flex-wrap gap-2">
-                                                    {task.assignee.map((name, i) => {
-                                                        const member = teamMembers.find(m => m.name === name);
+                                                    {task.assignee.map((name: string, i: number) => {
+                                                        const member = teamMembers.find((m: any) => m.name === name);
                                                         return (
                                                             <div key={i} className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-full text-[11px] font-medium border border-gray-200 shadow-sm">
                                                                 <div className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center overflow-hidden border border-gray-100 flex-shrink-0">
