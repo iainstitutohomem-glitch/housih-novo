@@ -186,8 +186,6 @@ export const SharedReportPage = () => {
                             const percentage = totalTasks === 0 ? 0 : (count / totalTasks) * 100;
                             const label = status === 'Concluído' ? 'Finalizado' : status === 'Atrasado' ? 'Em atraso' : status;
 
-                            if (count === 0) return null;
-
                             return (
                                 <div key={status} className="flex items-center gap-4 group">
                                     <div
