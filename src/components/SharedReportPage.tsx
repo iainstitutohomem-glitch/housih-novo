@@ -95,7 +95,7 @@ export const SharedReportPage = () => {
     };
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col gap-4">
+        <div className="fixed inset-0 w-full h-full flex items-center justify-center bg-white z-[9999] flex-col gap-4">
             <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-rotate" />
             <p className="font-medium text-gray-500">Gerando visualização do relatório...</p>
         </div>
@@ -132,7 +132,7 @@ export const SharedReportPage = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans p-4 lg:p-8 pb-24 no-scrollbar">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans p-4 lg:p-8 pb-24 h-auto overflow-y-auto">
             {/* Subtle Controls */}
             <div className="fixed bottom-6 right-6 flex gap-2 z-50 animate-in fade-in slide-in-from-bottom-4">
                 <button onClick={exportToImage} className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-all shadow-xl hover:border-primary-500 hover:text-primary-600 active:scale-95">
@@ -143,7 +143,7 @@ export const SharedReportPage = () => {
                 </button>
             </div>
 
-            <div ref={reportRef} className="max-w-full space-y-6">
+            <div ref={reportRef} className="max-w-full space-y-6 bg-gray-50/50 p-8 rounded-[40px]">
                 {/* Header matching site style */}
                 <div className="bg-white/40 backdrop-blur-md border-b border-gray-200/50 -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 mb-8 px-4 lg:px-8 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex items-center gap-4">
