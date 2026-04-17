@@ -33,7 +33,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 };
 
 export const MetricsDashboard = () => {
-    const { filteredTasks, companies } = useTasks();
+    const { filteredTasks, companies, teamMembers } = useTasks();
 
     const totalTasks = filteredTasks.length;
 
@@ -234,14 +234,21 @@ export const MetricsDashboard = () => {
                                         <td className="px-6 py-4 text-gray-600">
                                             {task.assignee && task.assignee.length > 0 ? (
                                                 <div className="flex flex-wrap gap-2">
-                                                    {task.assignee.map((name, i) => (
-                                                        <div key={i} className="flex items-center gap-1.5 bg-gray-100 px-2 py-1 rounded-md text-[11px] font-medium border border-gray-200">
-                                                            <div className="w-4 h-4 rounded-full bg-primary-600 text-white flex items-center justify-center text-[9px] font-bold">
-                                                                {name.charAt(0).toUpperCase()}
+                                                    {task.assignee.map((name, i) => {
+                                                        const member = teamMembers.find(m => m.name === name);
+                                                        return (
+                                                            <div key={i} className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-full text-[11px] font-medium border border-gray-200 shadow-sm">
+                                                                <div className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center overflow-hidden border border-gray-100 flex-shrink-0">
+                                                                    {member?.avatar_url ? (
+                                                                        <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <span className="text-[9px] font-bold">{name.charAt(0).toUpperCase()}</span>
+                                                                    )}
+                                                                </div>
+                                                                {name}
                                                             </div>
-                                                            {name}
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             ) : (
                                                 <span className="text-gray-400 italic">Sem resp.</span>
