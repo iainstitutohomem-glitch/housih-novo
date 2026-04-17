@@ -74,8 +74,9 @@ export const SharedReportPage = () => {
                     overflow: 'hidden'
                 }
             });
+            const sanitizedTitle = (report?.title || 'Relatorio').replace(/[^a-z0-9]/gi, '_').toLowerCase();
             const link = document.createElement('a');
-            link.download = `Relatório_Housih_${report?.title || id?.slice(0, 8)}.png`;
+            link.download = `${sanitizedTitle}.png`;
             link.href = dataUrl;
             link.click();
         } catch (err) {
@@ -107,7 +108,9 @@ export const SharedReportPage = () => {
             const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
             
             pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
-            pdf.save(`Relatório_Housih_${report?.title || id?.slice(0, 8)}.pdf`);
+            
+            const sanitizedTitle = (report?.title || 'Relatorio').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            pdf.save(`${sanitizedTitle}.pdf`);
         } catch (err) {
             console.error('PDF export failed', err);
         }
