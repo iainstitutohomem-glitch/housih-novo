@@ -24,10 +24,22 @@
   @apply bg-dark-800/80 backdrop-blur-md shadow-lg border border-dark-700/50;
 }
 
+/* Custom Stealth Scrollbar Utility */
 .no-scrollbar::-webkit-scrollbar {
-  display: none;
+  width: 4px;
+  height: 4px;
+}
+.no-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.no-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+.no-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
 }
 .no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
 }

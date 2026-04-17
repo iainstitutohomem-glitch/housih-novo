@@ -118,7 +118,7 @@ export const TeamManager = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 overflow-y-auto pb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 overflow-y-auto no-scrollbar pb-8">
                 {teamMembers.map(member => (
                     <div key={member.id} className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-white/50 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col items-center text-center">
                         {user?.email === 'institutohomem@gmail.com' && (

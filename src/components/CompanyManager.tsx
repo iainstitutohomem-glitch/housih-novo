@@ -217,7 +217,7 @@ export const CompanyManager = () => {
             )}
 
             {!isAdding && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto pb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto no-scrollbar pb-8">
                     {companies.map(company => (
                         <div key={company.id} className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-white/50 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all group relative">
                             <div className="absolute top-4 right-4 flex gap-2">
