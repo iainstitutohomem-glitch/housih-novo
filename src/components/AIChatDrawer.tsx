@@ -84,7 +84,7 @@ export const AIChatDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                 parts: [{ text: m.content }]
             }));
 
-            const models = ["gemini-2.5-flash", "gemini-1.5-flash"];
+            const models = ["gemini-3-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"];
             let text = "";
             let success = false;
 
