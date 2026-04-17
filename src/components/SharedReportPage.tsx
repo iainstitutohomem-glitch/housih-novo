@@ -104,50 +104,77 @@ export const SharedReportPage = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gray-100 no-scrollbar py-8 px-4">
-            {/* Action Bar */}
-            <div className="max-w-6xl mx-auto mb-6 flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm">
-                <div className="flex items-center gap-3">
-                    <img src="/logo.png" alt="Housih" className="h-6" />
-                    <div className="h-4 w-px bg-gray-200" />
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-2 py-1 bg-gray-50 rounded-lg">Relatório Gerencial</span>
-                </div>
-                <div className="flex gap-2">
-                    <button onClick={exportToImage} className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all">
-                        <Camera size={16} /> JPEG
-                    </button>
-                    <button onClick={exportToPDF} className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-primary-600/20">
-                        <FileText size={16} /> PDF
-                    </button>
-                </div>
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans p-4 lg:p-8 pb-20 no-scrollbar">
+            {/* Subtle Controls */}
+            <div className="fixed bottom-6 right-6 flex gap-2 z-50 animate-in fade-in slide-in-from-bottom-4">
+                <button onClick={exportToImage} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-all shadow-lg hover:border-primary-500 hover:text-primary-600 active:scale-95">
+                    <Camera size={16} /> Salvar JPEG
+                </button>
+                <button onClick={exportToPDF} className="flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-primary-600/20 active:scale-95">
+                    <FileText size={16} /> Salvar PDF
+                </button>
             </div>
 
-            {/* Main Content for Export */}
-            <div ref={reportRef} className="max-w-6xl mx-auto bg-gray-50 p-8 rounded-3xl shadow-xl overflow-hidden no-scrollbar">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-                    <div>
-                        <h1 className="text-4xl font-black text-gray-900 tracking-tight leading-none mb-2">{report.title}</h1>
-                        <p className="text-gray-500 font-medium">Relatório gerado em {new Date(report.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+            <div ref={reportRef} className="max-w-full space-y-6">
+                {/* Header matching site style */}
+                <div className="bg-white/40 backdrop-blur-md border-b border-gray-200/50 -mx-4 lg:-mx-8 -mt-4 lg:-mt-8 mb-8 px-4 lg:px-8 py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex items-center gap-4">
+                        <img src="/logo.png" alt="Housih" className="h-6" />
+                        <div className="h-6 w-px bg-gray-200" />
+                        <h1 className="text-xl lg:text-2xl font-semibold text-gray-800 tracking-tight">
+                            {report.title}
+                        </h1>
                     </div>
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-                        <div className="text-right">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Status Final</p>
-                            <p className="text-2xl font-black text-primary-600">{completionPercentage}% Concluído</p>
-                        </div>
-                        <div className="w-12 h-12 rounded-full border-4 border-primary-500 border-t-transparent animate-spin-slow flex items-center justify-center">
-                            <CheckCircle2 className="text-primary-500" size={24} />
-                        </div>
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-white/60 px-3 py-1.5 rounded-lg border border-white/40">
+                        Snapshot: {new Date(report.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                     </div>
                 </div>
 
-                {/* Metrics */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                    <div className="bg-white/80 backdrop-blur-md rounded-3xl p-8 border border-white shadow-sm flex items-center gap-8">
-                        <div className="w-48 h-48">
+                {/* 1. Progress Bar - Matching Dashboard */}
+                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-sm">
+                    <div className="w-48 text-xl font-bold leading-tight text-gray-800">
+                        Progresso de Entregas
+                    </div>
+                    <div className="flex-1 w-full flex items-center gap-4">
+                        <div className="flex-1 h-4 bg-gray-100/50 rounded-full overflow-hidden border border-gray-200/20">
+                            <div 
+                                className="h-full bg-gradient-to-r from-primary-500 to-primary-600 transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(249,115,22,0.3)]"
+                                style={{ width: `${completionPercentage}%` }}
+                            />
+                        </div>
+                        <span className="text-2xl font-black text-primary-600 w-16 text-right tabular-nums">{completionPercentage}%</span>
+                    </div>
+                </div>
+
+                {/* 3. Status Summary - Matching Dashboard */}
+                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm">
+                    <div className="flex items-center gap-2 mb-6">
+                        <div className="w-1.5 h-6 bg-primary-500 rounded-full"></div>
+                        <h3 className="font-bold text-gray-800 uppercase tracking-widest text-xs">Resumo por Status</h3>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        {Object.entries(STATUS_COLORS).map(([status, color]) => {
+                            const count = tasks.filter((t: any) => t.status === status).length;
+                            return (
+                                <div key={status} className="bg-white/60 p-4 rounded-xl border border-white/40 shadow-sm flex flex-col gap-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }}></div>
+                                        <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider truncate">{status}</span>
+                                    </div>
+                                    <span className="text-2xl font-black text-gray-800">{count}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* 4. Donut Charts - Matching Dashboard */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center h-80">
+                        <div className="w-full sm:w-1/2 h-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={statusData} cx="50%" cy="50%" innerRadius="55%" outerRadius="85%" strokeWidth={3} stroke="#fff" dataKey="value" labelLine={false} label={renderCustomizedLabel}>
+                                    <Pie data={statusData} cx="50%" cy="50%" innerRadius="60%" outerRadius="90%" stroke="#fff" strokeWidth={3} dataKey="value" labelLine={false} label={renderCustomizedLabel}>
                                         {statusData.map((entry: any, index: number) => (
                                             <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#ccc'} />
                                         ))}
@@ -156,95 +183,86 @@ export const SharedReportPage = () => {
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
-                        <div className="flex-1 space-y-4">
-                            {Object.entries(STATUS_COLORS).map(([status, color]) => {
-                                const count = tasks.filter((t: any) => t.status === status).length;
-                                if (count === 0) return null;
-                                return (
-                                    <div key={status} className="flex items-center justify-between group">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-                                            <span className="text-sm font-bold text-gray-700">{status}</span>
-                                        </div>
-                                        <span className="text-sm font-black text-gray-400 group-hover:text-gray-900 transition-colors">{count}</span>
-                                    </div>
-                                );
-                            })}
+                        <div className="flex-1 w-full sm:pl-4 flex flex-col gap-3 justify-center">
+                            {statusData.map((d: any) => (
+                                <div key={d.name} className="flex items-center gap-3">
+                                    <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: STATUS_COLORS[d.name] }} />
+                                    <span className="text-sm font-medium text-gray-700">{d.name} ({((d.value / totalTasks) * 100).toFixed(0)}%)</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="bg-white/80 backdrop-blur-md rounded-3xl p-8 border border-white shadow-sm flex flex-col justify-center">
-                         <div className="grid grid-cols-2 gap-6">
-                            <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100 text-center">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total de Tarefas</p>
-                                <p className="text-4xl font-black text-gray-900 leading-none">{totalTasks}</p>
-                            </div>
-                            <div className="p-6 bg-green-50 rounded-2xl border border-green-100 text-center">
-                                <p className="text-[10px] font-black text-green-400 uppercase tracking-widest mb-1">Entregas</p>
-                                <p className="text-4xl font-black text-green-600 leading-none">{completedTasks}</p>
-                            </div>
-                         </div>
-                         <div className="mt-6 p-6 bg-primary-50 rounded-2xl border border-primary-100">
-                             <div className="flex justify-between items-center mb-2">
-                                 <span className="text-xs font-bold text-primary-700">Produtividade Global</span>
-                                 <span className="text-xs font-black text-primary-900">{completionPercentage}%</span>
-                             </div>
-                             <div className="h-2 w-full bg-primary-200 rounded-full overflow-hidden">
-                                 <div className="h-full bg-primary-600 transition-all duration-1000" style={{ width: `${completionPercentage}%` }} />
-                             </div>
-                         </div>
+                    <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center h-80">
+                        <div className="w-full sm:w-1/2 h-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={statusData /* Placeholder to match dashboard layout */} cx="50%" cy="50%" innerRadius="60%" outerRadius="90%" stroke="#fff" strokeWidth={3} dataKey="value" labelLine={false} label={renderCustomizedLabel}>
+                                        {statusData.map((entry: any, index: number) => (
+                                            <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#ccc'} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="flex-1 w-full sm:pl-4 flex flex-col gap-3 justify-center">
+                             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">Relatório Consolidado</p>
+                             <p className="text-sm text-gray-600 leading-relaxed italic">"Este snapshot contém todas as {totalTasks} tarefas monitoradas para o período selecionado."</p>
+                        </div>
                     </div>
                 </div>
 
-                {/* Table */}
-                <div className="bg-white/80 backdrop-blur-md rounded-3xl border border-white shadow-sm overflow-hidden no-scrollbar">
-                    <div className="overflow-x-auto">
+                {/* 5. Table - Matching Dashboard */}
+                <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto no-scrollbar">
                         <table className="w-full text-left text-sm whitespace-nowrap">
-                            <thead className="bg-gray-50 text-gray-400 font-bold uppercase tracking-widest text-[10px]">
+                            <thead className="bg-gray-50/80 text-gray-600 border-b border-gray-100">
                                 <tr>
-                                    <th className="px-8 py-5 border-r border-gray-100">Empresa</th>
-                                    <th className="px-8 py-5">Tarefa</th>
-                                    <th className="px-8 py-5">Responsável</th>
-                                    <th className="px-8 py-5">Status</th>
-                                    <th className="px-8 py-5">Entrega</th>
+                                    <th className="px-6 py-4 font-semibold border-r border-gray-100">Empresa</th>
+                                    <th className="px-6 py-4 font-semibold border-r border-gray-100">Tarefa</th>
+                                    <th className="px-6 py-4 font-semibold">Responsáveis</th>
+                                    <th className="px-6 py-4 font-semibold">Status</th>
+                                    <th className="px-6 py-4 font-semibold">Previsão</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50 font-medium text-gray-700">
+                            <tbody className="divide-y divide-gray-100 bg-white/40">
                                 {tasks.map((task: any) => {
-                                    const comp = companies.find((c: any) => c.id === task.company_id);
+                                    const comp = companies.find((c: any) => c.id === task.company_id || c.name === task.company_name);
                                     return (
-                                        <tr key={task.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="w-56 p-0 border-r border-gray-50">
-                                                <div className="px-8 py-5 flex items-center gap-3">
-                                                    <div className="w-2 h-8 rounded-full" style={{ backgroundColor: comp?.color || '#ccc' }} />
-                                                    <span className="font-bold">{comp?.name || 'Nenhuma'}</span>
+                                        <tr key={task.id} className="hover:bg-white/60 transition-colors group">
+                                            <td className="px-6 py-4 border-r border-gray-100/50">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: comp?.color || '#ccc' }} />
+                                                    <span className="font-bold text-gray-800">{comp?.name || '---'}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-5 font-bold text-gray-900">{task.title}</td>
-                                            <td className="px-8 py-5">
+                                            <td className="px-6 py-4 border-r border-gray-100/50">
+                                                <span className="font-medium text-gray-700">{task.title}</span>
+                                            </td>
+                                            <td className="px-6 py-4">
                                                 <div className="flex -space-x-2">
                                                     {task.assignee?.map((name: string, i: number) => {
                                                         const m = team.find((t: any) => t.name === name);
                                                         return (
-                                                            <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden" title={name}>
-                                                                {m?.avatar_url ? (
-                                                                    <img src={m.avatar_url} className="w-full h-full object-cover" alt="" />
-                                                                ) : (
-                                                                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-400 bg-gray-200">{name.charAt(0)}</div>
-                                                                )}
+                                                            <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm" title={name}>
+                                                                {m?.avatar_url ? <img src={m.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold bg-primary-100 text-primary-600">{name.charAt(0)}</div>}
                                                             </div>
                                                         );
                                                     })}
                                                 </div>
                                             </td>
-                                            <td className="px-8 py-5">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_COLORS[task.status] }} />
-                                                    <span className="text-xs font-bold" style={{ color: STATUS_COLORS[task.status] }}>{task.status}</span>
-                                                </div>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                                    task.status === 'Concluído' ? 'bg-green-100 text-green-600' :
+                                                    task.status === 'Atrasado' ? 'bg-red-100 text-red-600' :
+                                                    'bg-amber-100 text-amber-600'
+                                                }`}>
+                                                    {task.status}
+                                                </span>
                                             </td>
-                                            <td className="px-8 py-5 text-gray-400 tabular-nums">
-                                                {task.due_date ? new Date(task.due_date).toLocaleDateString('pt-BR') : '-'}
+                                            <td className="px-6 py-4 text-gray-400 tabular-nums font-medium">
+                                                {task.due_date ? new Date(task.due_date).toLocaleDateString() : '---'}
                                             </td>
                                         </tr>
                                     );
@@ -252,11 +270,6 @@ export const SharedReportPage = () => {
                             </tbody>
                         </table>
                     </div>
-                </div>
-
-                <div className="mt-12 text-center text-gray-400 flex items-center justify-center gap-2 text-xs font-medium">
-                    <CheckCircle2 size={14} />
-                    Este documento é uma representação estática e fidedigna do status do projeto em {new Date(report.created_at).toLocaleTimeString('pt-BR')} do dia {new Date(report.created_at).toLocaleDateString()}.
                 </div>
             </div>
         </div>

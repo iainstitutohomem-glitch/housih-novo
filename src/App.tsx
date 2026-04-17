@@ -14,7 +14,7 @@ import { useState, type ReactNode } from 'react';
 import { ChatDrawer } from './components/Chat/ChatDrawer';
 import { ChatProvider } from './context/ChatContext';
 import { AIChatDrawer } from './components/AIChatDrawer';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Eye, Share2, X, Check, Copy } from 'lucide-react';
 import { SharedReportPage } from './components/SharedReportPage';
 
 const NovaTarefaButton = () => {
@@ -46,8 +46,29 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
+  const { createSharedReport, filteredTasks } = useTasks();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [reportTitle, setReportTitle] = useState('Relatório de Performance');
+  const [generatedLink, setGeneratedLink] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCreateReport = async () => {
+      setIsGenerating(true);
+      const reportId = await createSharedReport(reportTitle, filteredTasks, {});
+      if (reportId) {
+          setGeneratedLink(`${window.location.origin}/shared/${reportId}`);
+      }
+      setIsGenerating(false);
+  };
+
+  const copyToClipboard = () => {
+      navigator.clipboard.writeText(generatedLink);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+  };
 
   const getTitle = () => {
     switch (location.pathname) {
@@ -75,6 +96,14 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             </h1>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
+            {location.pathname === '/dashboard' && (
+              <button 
+                onClick={() => setIsShareModalOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-[10px] font-bold uppercase tracking-wider hover:border-primary-500 hover:text-primary-600 transition-all active:scale-95"
+              >
+                <Eye size={16} /> Visualizar
+              </button>
+            )}
             <button 
               onClick={() => setIsAIOpen(true)}
               className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-primary-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-500/20 hover:scale-105 transition-all active:scale-95"
@@ -94,6 +123,68 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
         </div>
         <ChatDrawer />
         <AIChatDrawer isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
+
+        {/* Share Modal */}
+        {isShareModalOpen && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
+                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                            <Share2 className="text-primary-600" size={24} /> Criar Relatório Público
+                        </h3>
+                        <button onClick={() => { setIsShareModalOpen(false); setGeneratedLink(''); }} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                            <X size={20} className="text-gray-400" />
+                        </button>
+                    </div>
+                    
+                    <div className="p-8 space-y-6">
+                        {!generatedLink ? (
+                            <>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Título do Relatório</label>
+                                    <input 
+                                        type="text" 
+                                        value={reportTitle}
+                                        onChange={(e) => setReportTitle(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                                        placeholder="Ex: Entrega Março - Cliente X"
+                                    />
+                                </div>
+                                <button 
+                                    onClick={handleCreateReport}
+                                    disabled={isGenerating}
+                                    className="w-full bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary-600/20 transition-all flex items-center justify-center gap-3"
+                                >
+                                    {isGenerating ? 'Gerando Link...' : 'Gerar Snapshot Agora'}
+                                </button>
+                            </>
+                        ) : (
+                            <div className="space-y-4 animate-in slide-in-from-bottom-4">
+                                <div className="p-4 bg-green-50 border border-green-100 rounded-2xl flex items-center gap-3">
+                                    <Check className="text-green-500" size={24} />
+                                    <p className="text-xs font-bold text-green-700">Relatório Estático gerado com sucesso!</p>
+                                </div>
+                                <div className="relative group">
+                                    <input 
+                                        readOnly 
+                                        value={generatedLink}
+                                        className="w-full bg-gray-50 border border-gray-200 py-4 px-4 rounded-xl text-xs font-medium text-gray-500 overflow-hidden pr-24"
+                                    />
+                                    <button 
+                                        onClick={copyToClipboard}
+                                        className="absolute right-2 top-2 bottom-2 px-4 bg-white border border-gray-200 rounded-lg text-xs font-black text-primary-600 hover:bg-primary-600 hover:text-white transition-all shadow-sm flex items-center gap-2"
+                                    >
+                                        {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                                        {isCopied ? 'Copiado' : 'Copiar'}
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-gray-400 text-center italic">Este link é público e não expira. Compartilhe com cuidado.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
       </main>
     </div>
   );
