@@ -15,6 +15,18 @@ const columns = [
 export const KanbanBoard = () => {
     const { filteredTasks, updateTaskStatus, loading, companies, openModal, teamMembers, updateTask } = useTasks();
     const [transferringTaskId, setTransferringTaskId] = useState<string | null>(null);
+    const leaveTimeoutRef = useRef<any>(null);
+
+    const handleMouseEnter = (taskId: string) => {
+        if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
+        setTransferringTaskId(taskId);
+    };
+
+    const handleMouseLeave = () => {
+        leaveTimeoutRef.current = setTimeout(() => {
+            setTransferringTaskId(null);
+        }, 300); // 300ms de tolerância
+    };
 
     const onDragEnd = (result: any) => {
         if (!result.destination) return;
@@ -95,8 +107,8 @@ export const KanbanBoard = () => {
                                                             <div className="flex justify-between items-center text-xs mt-3">
                                                                 <div 
                                                                     className="flex items-center gap-2 relative group-avatar"
-                                                                    onMouseEnter={() => setTransferringTaskId(task.id)}
-                                                                    onMouseLeave={() => setTransferringTaskId(null)}
+                                                                    onMouseEnter={() => handleMouseEnter(task.id)}
+                                                                    onMouseLeave={handleMouseLeave}
                                                                     onClick={(e) => e.stopPropagation()}
                                                                 >
                                                                     <div className="w-6 h-6 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold border border-primary-200 overflow-hidden relative">
@@ -112,22 +124,26 @@ export const KanbanBoard = () => {
                                                                     
                                                                     {/* Transfer Popover */}
                                                                     {transferringTaskId === task.id && (
-                                                                        <div className="absolute left-0 bottom-full mb-2 bg-white rounded-xl shadow-2xl border border-gray-100 p-3 z-50 w-48 animate-in fade-in slide-in-from-bottom-2">
-                                                                            <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wide">Transferir chamado?</p>
-                                                                            <select 
-                                                                                className="w-full p-2 text-xs bg-gray-50 border border-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-primary-500/20"
-                                                                                value={task.assignee || ''}
-                                                                                onChange={async (e) => {
-                                                                                    await updateTask(task.id, { assignee: e.target.value });
-                                                                                    setTransferringTaskId(null);
-                                                                                }}
-                                                                            >
-                                                                                <option value="">Selecionar...</option>
-                                                                                {teamMembers.map(m => (
-                                                                                    <option key={m.id} value={m.name}>{m.name}</option>
-                                                                                ))}
-                                                                            </select>
-                                                                        </div>
+                                                                        <>
+                                                                            {/* Invisible Bridge to bridge the gap */}
+                                                                            <div className="absolute left-0 bottom-full w-full h-4 bg-transparent" />
+                                                                            <div className="absolute left-0 bottom-full mb-1 bg-white rounded-xl shadow-2xl border border-gray-100 p-3 z-50 w-48 animate-in fade-in slide-in-from-bottom-2">
+                                                                                <p className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wide">Transferir chamado?</p>
+                                                                                <select 
+                                                                                    className="w-full p-2 text-xs bg-gray-50 border border-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-primary-500/20"
+                                                                                    value={task.assignee || ''}
+                                                                                    onChange={async (e) => {
+                                                                                        await updateTask(task.id, { assignee: e.target.value });
+                                                                                        setTransferringTaskId(null);
+                                                                                    }}
+                                                                                >
+                                                                                    <option value="">Selecionar...</option>
+                                                                                    {teamMembers.map(m => (
+                                                                                        <option key={m.id} value={m.name}>{m.name}</option>
+                                                                                    ))}
+                                                                                </select>
+                                                                            </div>
+                                                                        </>
                                                                     )}
                                                                 </div>
 
