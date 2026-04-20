@@ -29,6 +29,7 @@ export const TaskModal = () => {
     const [mentionSearch, setMentionSearch] = useState('');
     const [showMentionList, setShowMentionList] = useState(false);
     const [activeChecklistMenu, setActiveChecklistMenu] = useState<{ id: number, type: 'date' | 'users' } | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (editingTask) {
@@ -72,25 +73,33 @@ export const TaskModal = () => {
     }, [editingTask, isModalOpen, boards, boardColumns, activeBoardId]);
 
     const handleSave = async () => {
-        if (!title.trim()) return;
-        const taskData = {
-            title,
-            company_id: company === 'Nenhuma' ? null : company,
-            assignee: assignees,
-            status,
-            board_id: boardId,
-            column_id: columnId,
-            priority,
-            due_date: dueDate ? new Date(`${dueDate}T12:00:00`).toISOString() : new Date().toISOString(),
-            observations,
-            checklist,
-            attachments
-        };
+        if (!title.trim() || isSubmitting) return;
+        setIsSubmitting(true);
+        try {
+            const taskData = {
+                title,
+                company_id: company === 'Nenhuma' ? null : company,
+                assignee: assignees,
+                status,
+                board_id: boardId,
+                column_id: columnId,
+                priority,
+                due_date: dueDate ? new Date(`${dueDate}T12:00:00`).toISOString() : new Date().toISOString(),
+                observations,
+                checklist,
+                attachments
+            };
 
-        if (editingTask) {
-            await updateTask(editingTask.id, taskData);
-        } else {
-            await addTask(taskData);
+            if (editingTask) {
+                await updateTask(editingTask.id, taskData);
+            } else {
+                await addTask(taskData);
+            }
+            closeModal();
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -574,29 +583,40 @@ export const TaskModal = () => {
                         </button>
                         {editingTask && status !== 'Concluído' && (
                             <button
+                                disabled={isSubmitting}
                                 onClick={async () => {
-                                    setStatus('Concluído');
-                                    const taskData = {
-                                        title,
-                                        company_id: company === 'Nenhuma' ? null : company,
-                                        assignee: assignees,
-                                        status: 'Concluído',
-                                        priority,
-                                        due_date: dueDate ? new Date(`${dueDate}T12:00:00`).toISOString() : new Date().toISOString(),
-                                        observations,
-                                        checklist,
-                                        attachments
-                                    };
-                                    await updateTask(editingTask.id, taskData);
-                                    closeModal();
+                                    if (isSubmitting) return;
+                                    setIsSubmitting(true);
+                                    try {
+                                        setStatus('Concluído');
+                                        const taskData = {
+                                            title,
+                                            company_id: company === 'Nenhuma' ? null : company,
+                                            assignee: assignees,
+                                            status: 'Concluído',
+                                            priority,
+                                            due_date: dueDate ? new Date(`${dueDate}T12:00:00`).toISOString() : new Date().toISOString(),
+                                            observations,
+                                            checklist,
+                                            attachments
+                                        };
+                                        await updateTask(editingTask.id, taskData);
+                                        closeModal();
+                                    } finally {
+                                        setIsSubmitting(false);
+                                    }
                                 }}
-                                className="px-5 py-2.5 text-sm font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 rounded-xl transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
+                                className="px-5 py-2.5 text-sm font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 rounded-xl transition-all flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50"
                             >
                                 <CheckCircle2 size={16} /> Finalizar Tarefa
                             </button>
                         )}
-                        <button onClick={handleSave} className="px-5 py-2.5 text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-xl shadow-sm shadow-primary-600/30 transition-all active:scale-95 w-full sm:w-auto">
-                            {editingTask ? 'Salvar Alterações' : 'Salvar Tarefa'}
+                        <button 
+                            onClick={handleSave} 
+                            disabled={isSubmitting}
+                            className="px-5 py-2.5 text-sm font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-xl shadow-sm shadow-primary-600/30 transition-all active:scale-95 w-full sm:w-auto disabled:opacity-50"
+                        >
+                            {isSubmitting ? 'Salvando...' : (editingTask ? 'Salvar Alterações' : 'Salvar Tarefa')}
                         </button>
                     </div>
                 </div>

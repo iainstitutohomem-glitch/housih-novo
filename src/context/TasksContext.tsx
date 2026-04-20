@@ -181,34 +181,39 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (!error && data) setBoardColumns(data);
     };
 
-    const fetchTasks = async () => {
-        setLoading(true);
+    const fetchTasks = async (silent = false) => {
+        if (!silent) setLoading(true);
         const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
         if (error) {
             console.error("Fetch tasks error:", error);
-            alert("Erro ao buscar tarefas: " + error.message);
+            if (!silent) alert("Erro ao buscar tarefas: " + error.message);
         } else if (data) {
-            const now = new Date();
-            now.setHours(0, 0, 0, 0);
+            // Only run overdue check on non-silent (page load) fetches
+            if (!silent) {
+                const now = new Date();
+                now.setHours(0, 0, 0, 0);
 
-            const updatedData = data.map((t: any) => {
-                if (t.due_date && t.status !== 'Concluído' && t.status !== 'Cancelado') {
-                    const dueDate = new Date(t.due_date);
-                    dueDate.setHours(0, 0, 0, 0);
+                const updatedData = data.map((t: any) => {
+                    if (t.due_date && t.status !== 'Concluído' && t.status !== 'Cancelado') {
+                        const dueDate = new Date(t.due_date);
+                        dueDate.setHours(0, 0, 0, 0);
 
-                    if (dueDate < now && t.status !== 'Atrasado') {
-                        t.status = 'Atrasado';
-                        supabase.from('tasks').update({ status: 'Atrasado' }).eq('id', t.id).then();
-                    } else if (dueDate >= now && t.status === 'Atrasado') {
-                        t.status = 'Não Iniciado';
-                        supabase.from('tasks').update({ status: 'Não Iniciado' }).eq('id', t.id).then();
+                        if (dueDate < now && t.status !== 'Atrasado') {
+                            t.status = 'Atrasado';
+                            supabase.from('tasks').update({ status: 'Atrasado' }).eq('id', t.id).then();
+                        } else if (dueDate >= now && t.status === 'Atrasado') {
+                            t.status = 'Não Iniciado';
+                            supabase.from('tasks').update({ status: 'Não Iniciado' }).eq('id', t.id).then();
+                        }
                     }
-                }
-                return t;
-            });
-            setTasks(updatedData);
+                    return t;
+                });
+                setTasks(updatedData);
+            } else {
+                setTasks(data);
+            }
         }
-        setLoading(false);
+        if (!silent) setLoading(false);
     };
 
     const fetchCompanies = async () => {
@@ -544,7 +549,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         // Subscrição Realtime para atualizações automáticas
         const taskSubscription = supabase
             .channel('db-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchTasks())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchTasks(true))
             .on('postgres_changes', { event: '*', schema: 'public', table: 'board_columns' }, () => fetchBoardColumns())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, () => fetchBoards())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members' }, () => fetchTeam())
