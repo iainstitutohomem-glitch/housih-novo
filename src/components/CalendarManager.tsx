@@ -29,15 +29,15 @@ export const CalendarManager = () => {
                         <Sparkles size={14} /> Em Breve: Google Calendar
                     </div>
                     <h1 className="text-4xl lg:text-5xl font-black mb-6 leading-tight">
-                        Sua agenda inteligente integrada.
+                        Gestão de Prazos e Reuniões.
                     </h1>
                     <p className="text-primary-50 text-lg mb-8 leading-relaxed opacity-90">
                         Estamos preparando uma integração completa com o Google Calendar. 
-                        Em breve você poderá gerenciar reuniões, prazos e compromissos diretamente aqui no CRM, sincronizado com seu celular.
+                        Em breve você poderá gerenciar reuniões, prazos e compromissos internos diretamente aqui no sistema, sincronizado com seu celular.
                     </p>
                     <div className="flex flex-wrap gap-4">
                         <button className="px-6 py-3 bg-white text-primary-700 rounded-xl font-bold hover:scale-105 transition-all active:scale-95 flex items-center gap-2">
-                            Entrar com Google <ExternalLink size={18} />
+                            Conectar Agenda Google <ExternalLink size={18} />
                         </button>
                     </div>
                 </div>
@@ -49,14 +49,14 @@ export const CalendarManager = () => {
                     <div className="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-4">
                         <CalendarIcon size={32} className="text-primary-600" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800">Visualização do Calendário</h3>
-                    <p className="text-gray-500 max-w-xs mt-2">O layout do calendário mensal aparecerá aqui assim que a conexão for estabelecida.</p>
+                    <h3 className="text-xl font-bold text-gray-800">Visualização da Agenda</h3>
+                    <p className="text-gray-500 max-w-xs mt-2">O layout mensal de compromissos aparecerá aqui assim que a conexão for estabelecida.</p>
                 </div>
 
                 <div className="space-y-6">
                     <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 leading-relaxed">
                         <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-4">
-                            <Clock size={18} className="text-primary-600" /> Próximos Compromissos
+                            <Clock size={18} className="text-primary-600" /> Próximas Pautas
                         </h3>
                         <div className="space-y-4">
                             <div className="flex gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100 opacity-50 grayscale italic">
@@ -79,10 +79,11 @@ export const CalendarManager = () => {
                     <div className="bg-primary-50 rounded-3xl p-6 border border-primary-100">
                         <h4 className="font-bold text-primary-900 mb-2">Dica Pro</h4>
                         <p className="text-sm text-primary-700 opacity-80 leading-relaxed">
-                            Ao conectar sua conta Google, você poderá disparar links do Meet automaticamente para os clientes cadastrados nas empresas do sistema.
+                            Ao conectar sua conta Google, você poderá disparar links do Meet automaticamente para os participantes das tarefas e reuniões do sistema.
                         </p>
                     </div>
                 </div>
+
             </div>
         </div>
     );
