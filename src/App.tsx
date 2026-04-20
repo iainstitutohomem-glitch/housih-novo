@@ -10,6 +10,7 @@ import { TeamManager } from './components/TeamManager';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationBell } from './components/NotificationBell';
 import { BoardManager } from './components/BoardManager';
+import { CalendarManager } from './components/CalendarManager';
 import { Plus, Menu } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { ChatDrawer } from './components/Chat/ChatDrawer';
@@ -77,6 +78,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
       case '/companies': return 'Gestão de Empresas';
       case '/team': return 'Nossa Equipe';
       case '/boards': return 'Config. de Quadros';
+      case '/agenda': return 'Agenda';
       default: return 'Visão Geral';
     }
   };
@@ -214,6 +216,7 @@ function App() {
                         <Route path="/companies" element={<CompanyManager />} />
                         <Route path="/team" element={<TeamManager />} />
                         <Route path="/boards" element={<BoardManager />} />
+                        <Route path="/agenda" element={<CalendarManager />} />
                       </Routes>
                     </DashboardLayout>
                   </ProtectedRoute>

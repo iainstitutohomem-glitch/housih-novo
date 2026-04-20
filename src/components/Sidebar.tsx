@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Building2, PieChart, Users, LogOut, Plus, MessageSquare, Trash2, Settings2 } from 'lucide-react';
+import { LayoutDashboard, Building2, PieChart, Users, LogOut, Plus, MessageSquare, Trash2, Settings2, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useTasks } from '../context/TasksContext';
@@ -12,8 +12,9 @@ interface SidebarProps {
 }
 
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
-    const { signOut } = useAuth();
+    const { session, signOut } = useAuth();
     const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+    const isAdmin = session?.user?.email === 'institutohomem@gmail.com';
 
     const navItems = [
         { to: '/dashboard', icon: <PieChart size={20} />, label: 'Visão Geral' },
@@ -22,6 +23,10 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         { to: '/team', icon: <Users size={20} />, label: 'Equipe' },
         { to: '/boards', icon: <Settings2 size={20} />, label: 'Config. Quadros' },
     ];
+
+    if (isAdmin) {
+        navItems.splice(2, 0, { to: '/agenda', icon: <Calendar size={20} />, label: 'Agenda' });
+    }
 
     return (
         <>
