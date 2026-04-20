@@ -70,7 +70,6 @@ export interface FilterState {
     dataInicio: string;
     dataFim: string;
     busca: string;
-    board_id: string; // "Todas" para Dashboard, ou ID específico
 }
 
 interface TasksContextType {
@@ -135,14 +134,11 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         status: 'Todos',
         dataInicio: '',
         dataFim: '',
-        busca: '',
-        board_id: 'Todas'
+        busca: ''
     });
 
     const filteredTasks = useMemo(() => {
         return tasks.filter(task => {
-            if (activeBoardId !== 'Todas' && task.board_id !== activeBoardId) return false;
-            if (filters.board_id !== 'Todas' && task.board_id !== filters.board_id) return false;
             if (filters.empresa !== 'Todas' && task.company_id !== filters.empresa && task.title !== filters.empresa) return false;
             if (filters.prioridade !== 'Todas' && task.priority !== filters.prioridade) return false;
             if (filters.status !== 'Todos' && task.status !== filters.status) return false;

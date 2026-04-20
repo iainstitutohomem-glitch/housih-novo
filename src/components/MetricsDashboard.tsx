@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useTasks } from '../context/TasksContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { TaskFilterBar } from './TaskFilterBar';
@@ -33,62 +33,67 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 };
 
 export const MetricsDashboard = () => {
-    const { filteredTasks, companies, teamMembers, filters, setFilters, boardColumns, boards, activeBoardId } = useTasks();
+    const { filteredTasks: globalFilteredTasks, companies, teamMembers, filters, boardColumns, boards } = useTasks();
+    const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
 
-    const currentBoardId = filters.board_id !== 'Todas' ? filters.board_id : activeBoardId;
+    // Initial default: Find "Geral" board or first board
+    useEffect(() => {
+        if (boards.length > 0 && !selectedBoardId) {
+            const geralBoard = boards.find(b => b.name.toLowerCase() === 'geral') || boards[0];
+            setSelectedBoardId(geralBoard.id);
+        }
+    }, [boards, selectedBoardId]);
+
+    // Local filter for the dashboard: Take global filters (search, company, etc.) and add board filter
+    const dashboardTasks = useMemo(() => {
+        if (!selectedBoardId) return [];
+        return globalFilteredTasks.filter(t => t.board_id === selectedBoardId);
+    }, [globalFilteredTasks, selectedBoardId]);
 
     const dynamicColumns = useMemo(() => {
-        if (currentBoardId === 'Todas') return [];
-        return boardColumns.filter(c => c.board_id === currentBoardId);
-    }, [boardColumns, currentBoardId]);
+        if (!selectedBoardId) return [];
+        return boardColumns.filter(c => c.board_id === selectedBoardId);
+    }, [boardColumns, selectedBoardId]);
 
     const displayColors = useMemo(() => {
         const colors: Record<string, string> = { ...STATUS_COLORS };
-        dynamicColumns.forEach(col => {
-            if (col.dot_color) colors[col.title] = col.dot_color;
-        });
+        if (selectedBoardId) {
+            dynamicColumns.forEach(col => {
+                if (col.dot_color) colors[col.title] = col.dot_color;
+            });
+        }
         return colors;
-    }, [dynamicColumns]);
+    }, [dynamicColumns, selectedBoardId]);
 
-    const totalTasks = filteredTasks.length;
-    const completedTasks = filteredTasks.filter(t => t.status === 'Concluído').length;
+    const totalTasks = dashboardTasks.length;
+    const completedTasks = dashboardTasks.filter(t => t.status === 'Concluído').length;
     const completionPercentage = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
     const statusData = useMemo(() => {
         const counts: Record<string, number> = {};
-        filteredTasks.forEach(t => counts[t.status] = (counts[t.status] || 0) + 1);
+        dashboardTasks.forEach(t => counts[t.status] = (counts[t.status] || 0) + 1);
         return Object.keys(counts).map(key => ({ name: key, value: counts[key] }));
-    }, [filteredTasks]);
+    }, [dashboardTasks]);
 
     const companyData = useMemo(() => {
         const counts: Record<string, number> = {};
-        filteredTasks.forEach(t => {
+        dashboardTasks.forEach(t => {
             const companyName = companies.find(c => c.id === t.company_id)?.name || 'Nenhuma';
             counts[companyName] = (counts[companyName] || 0) + 1;
         });
         return Object.keys(counts).map(key => ({ name: key, value: counts[key] }));
-    }, [filteredTasks, companies]);
+    }, [dashboardTasks, companies]);
 
     return (
         <div className="flex-1 w-full space-y-6 text-gray-800 font-sans pb-8">
             {/* Board Selection Tabs */}
             <div className="flex flex-wrap gap-2 mb-2">
-                <button
-                    onClick={() => setFilters({ ...filters, board_id: 'Todas' })}
-                    className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm border ${
-                        filters.board_id === 'Todas'
-                            ? 'bg-primary-500 text-white border-primary-600'
-                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                    }`}
-                >
-                    Visão Geral (Todas)
-                </button>
                 {boards.map(board => (
                     <button
                         key={board.id}
-                        onClick={() => setFilters({ ...filters, board_id: board.id })}
+                        onClick={() => setSelectedBoardId(board.id)}
                         className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm border ${
-                            filters.board_id === board.id
+                            selectedBoardId === board.id
                                 ? 'bg-primary-500 text-white border-primary-600'
                                 : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                         }`}
@@ -122,8 +127,9 @@ export const MetricsDashboard = () => {
             {/* 3. Status Summary Chart (Horizontal) */}
             <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm">
                 <div className="space-y-3">
-                    {(currentBoardId === 'Todas' ? Object.keys(STATUS_COLORS) : dynamicColumns.map(c => c.title)).map((status) => {
-                        const count = filteredTasks.filter(t => t.status === status).length;
+                    {dynamicColumns.map((col) => {
+                        const status = col.title;
+                        const count = dashboardTasks.filter(t => t.status === status).length;
                         const percentage = totalTasks === 0 ? 0 : (count / totalTasks) * 100;
                         const label = status === 'Concluído' ? 'Finalizado' : status === 'Atrasado' ? 'Em atraso' : status;
                         const color = displayColors[status] || '#9ca3af';
@@ -254,9 +260,9 @@ export const MetricsDashboard = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {filteredTasks.length === 0 ? (
+                            {dashboardTasks.length === 0 ? (
                                 <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-400">Nenhuma tarefa encontrada.</td></tr>
-                            ) : filteredTasks.map(task => {
+                            ) : dashboardTasks.map(task => {
                                 const comp = companies.find(c => c.id === task.company_id);
                                 return (
                                     <tr key={task.id} className="hover:bg-gray-50/50 transition-colors">
