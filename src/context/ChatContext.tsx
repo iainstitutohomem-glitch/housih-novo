@@ -136,7 +136,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const channel = supabase
             .channel('chat-convs')
             .on('postgres_changes' as any, { event: '*', table: 'chat_conversations' }, () => fetchConversations())
-            .on('postgres_changes' as any, { event: '*', table: 'chat_participants', filter: `user_email=eq.${session.user.email}` }, () => fetchConversations())
+            .on('postgres_changes' as any, { event: '*', table: 'chat_participants', filter: `user_email=eq.${session.user.email.toLowerCase()}` }, () => fetchConversations())
             .subscribe();
 
         return () => {
@@ -259,7 +259,13 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 };
                 setConversations(prev => [newConv, ...prev]);
                 setActiveConversation(newConv);
+            } else {
+                console.error("Error inserting participants:", pError);
+                alert("Erro ao adicionar participantes: " + pError.message);
             }
+        } else {
+            console.error("Error creating group conversation:", cError);
+            alert("Erro ao criar conversa do grupo: " + cError.message);
         }
     };
 
