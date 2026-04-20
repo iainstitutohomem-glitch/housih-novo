@@ -67,7 +67,7 @@ export const KanbanBoard = () => {
                 <TaskFilterBar />
             </div>
 
-            <div className="flex-1 flex gap-6 overflow-x-auto px-6 pb-6 h-full mt-4 no-scrollbar">
+            <div className="flex-1 flex gap-6 overflow-x-auto px-6 pb-6 h-full mt-4 pretty-scrollbar">
                 <DragDropContext onDragEnd={onDragEnd}>
                     {columns.map((col) => (
                         <Droppable key={col.id} droppableId={col.id}>

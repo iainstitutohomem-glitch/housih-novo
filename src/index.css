@@ -32,3 +32,24 @@
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
+/* Beauty Horizontal Scrollbar for Kanban */
+.pretty-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+.pretty-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  margin: 0 24px;
+}
+.pretty-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(249, 115, 22, 0.2); /* Primary 500 with low opacity */
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: all 0.3s ease;
+}
+.pretty-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(249, 115, 22, 0.5); /* Primary 500 when hovered */
+  background-clip: padding-box;
+}

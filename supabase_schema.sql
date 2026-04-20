@@ -16,9 +16,10 @@ CREATE TABLE tasks (
   checklist JSONB DEFAULT '[]'::JSONB,
   observations TEXT,
   due_date TIMESTAMPTZ,
-  assignee TEXT, -- Ou usar references auth.users(id) se houver usuários cadastrados no Auth
-  status TEXT DEFAULT 'Não Iniciado', -- Não Iniciado, Em Andamento, Concluído, Cancelado, Atrasado
-  priority TEXT DEFAULT 'Média', -- Alta, Média, Baixa
+  assignee JSONB DEFAULT '[]'::JSONB,
+  attachments JSONB DEFAULT '[]'::JSONB,
+  status TEXT DEFAULT 'Não Iniciado',
+  priority TEXT DEFAULT 'Média',
   company_id UUID REFERENCES companies(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
