@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Building2, PieChart, Users, LogOut, Plus, MessageSquare, Trash2, Settings2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
