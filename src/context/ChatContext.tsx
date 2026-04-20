@@ -242,10 +242,16 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             .insert({ id: newId, type: 'group', name })
 
         if (!cError) {
-            const participants = [
-                { conversation_id: newId, user_email: userEmail.toLowerCase() },
-                ...participantEmails.map(email => ({ conversation_id: newId, user_email: email.toLowerCase() }))
-            ];
+            // Garantir que não haja e-mails duplicados (ex: se o usuário se selecionar na lista)
+            const uniqueEmails = Array.from(new Set([
+                userEmail.toLowerCase(),
+                ...participantEmails.map(email => email.toLowerCase())
+            ]));
+
+            const participants = uniqueEmails.map(email => ({ 
+                conversation_id: newId, 
+                user_email: email 
+            }));
 
             const { error: pError } = await supabase.from('chat_participants').insert(participants);
 
