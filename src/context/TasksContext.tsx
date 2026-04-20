@@ -2,6 +2,21 @@ import { createContext, useContext, useState, useEffect, useMemo, type Dispatch,
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
+export interface Board {
+    id: string;
+    name: string;
+    is_default: boolean;
+}
+
+export interface BoardColumn {
+    id: string;
+    board_id: string;
+    title: string;
+    color: string;
+    dot_color: string;
+    order_index: number;
+}
+
 export interface Task {
     id: string;
     title: string;
@@ -14,6 +29,8 @@ export interface Task {
     observations: string;
     assignee: string[];
     attachments: any[];
+    board_id: string | null;
+    column_id: string | null;
 }
 
 export interface Company {
@@ -53,6 +70,7 @@ export interface FilterState {
     dataInicio: string;
     dataFim: string;
     busca: string;
+    board_id: string; // "Todas" para Dashboard, ou ID específico
 }
 
 interface TasksContextType {
@@ -62,8 +80,12 @@ interface TasksContextType {
     setFilters: Dispatch<SetStateAction<FilterState>>;
     companies: Company[];
     teamMembers: TeamMember[];
+    boards: Board[];
+    boardColumns: BoardColumn[];
+    activeBoardId: string;
+    setActiveBoardId: (id: string) => void;
     fetchTasks: () => Promise<void>;
-    updateTaskStatus: (taskId: string, newStatus: string) => Promise<void>;
+    updateTaskStatus: (taskId: string, columnId: string, statusName: string) => Promise<void>;
     addTask: (task: Partial<Task>) => Promise<void>;
     updateTask: (taskId: string, task: Partial<Task>) => Promise<void>;
     deleteTask: (taskId: string) => Promise<void>;
@@ -85,6 +107,12 @@ interface TasksContextType {
     closeModal: () => void;
     session: any;
     createSharedReport: (title: string, data: any, filters: any) => Promise<string | null>;
+    addBoard: (name: string) => Promise<void>;
+    updateBoard: (id: string, name: string) => Promise<void>;
+    deleteBoard: (id: string) => Promise<void>;
+    addColumn: (boardId: string, column: Partial<BoardColumn>) => Promise<void>;
+    updateColumn: (columnId: string, updates: Partial<BoardColumn>) => Promise<void>;
+    deleteColumn: (columnId: string) => Promise<void>;
 }
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
@@ -95,7 +123,10 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [companies, setCompanies] = useState<Company[]>([]);
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [boards, setBoards] = useState<Board[]>([]);
+    const [boardColumns, setBoardColumns] = useState<BoardColumn[]>([]);
     const [loading, setLoading] = useState(true);
+    const [activeBoardId, setActiveBoardId] = useState<string>('Todas');
 
     const [filters, setFilters] = useState<FilterState>({
         empresa: 'Todas',
@@ -104,11 +135,14 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         status: 'Todos',
         dataInicio: '',
         dataFim: '',
-        busca: ''
+        busca: '',
+        board_id: 'Todas'
     });
 
     const filteredTasks = useMemo(() => {
         return tasks.filter(task => {
+            if (activeBoardId !== 'Todas' && task.board_id !== activeBoardId) return false;
+            if (filters.board_id !== 'Todas' && task.board_id !== filters.board_id) return false;
             if (filters.empresa !== 'Todas' && task.company_id !== filters.empresa && task.title !== filters.empresa) return false;
             if (filters.prioridade !== 'Todas' && task.priority !== filters.prioridade) return false;
             if (filters.status !== 'Todos' && task.status !== filters.status) return false;
@@ -139,6 +173,23 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setEditingTask(null);
     };
 
+    const fetchBoards = async () => {
+        const { data, error } = await supabase.from('boards').select('*').order('created_at', { ascending: true });
+        if (!error && data) {
+            setBoards(data);
+            if (activeBoardId === 'Todas' && data.length > 0) {
+                const def = data.find(b => b.is_default) || data[0];
+                // Se estivermos na dashboard, mantemos 'Todas', se não, setamos o padrão
+                // Por agora, vamos apenas carregar a lista
+            }
+        }
+    };
+
+    const fetchBoardColumns = async () => {
+        const { data, error } = await supabase.from('board_columns').select('*').order('order_index', { ascending: true });
+        if (!error && data) setBoardColumns(data);
+    };
+
     const fetchTasks = async () => {
         setLoading(true);
         const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
@@ -158,7 +209,6 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                         t.status = 'Atrasado';
                         supabase.from('tasks').update({ status: 'Atrasado' }).eq('id', t.id).then();
                     } else if (dueDate >= now && t.status === 'Atrasado') {
-                        // Resgata tarefas que foram marcadas como atrasadas erroneamente
                         t.status = 'Não Iniciado';
                         supabase.from('tasks').update({ status: 'Não Iniciado' }).eq('id', t.id).then();
                     }
@@ -185,11 +235,11 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     };
 
-    const updateTaskStatus = async (taskId: string, newStatus: string) => {
-        setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
-        const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
+    const updateTaskStatus = async (taskId: string, columnId: string, statusName: string) => {
+        setTasks(tasks.map(t => t.id === taskId ? { ...t, column_id: columnId, status: statusName } : t));
+        const { error } = await supabase.from('tasks').update({ column_id: columnId, status: statusName }).eq('id', taskId);
         if (error) {
-            console.error("Update task error:", error);
+            console.error("Update task status error:", error);
             alert("Erro ao mover tarefa: " + error.message);
             fetchTasks();
         }
@@ -454,9 +504,47 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     };
 
+    const addBoard = async (name: string) => {
+        const { error } = await supabase.from('boards').insert([{ name }]);
+        if (error) alert(error.message);
+        else fetchBoards();
+    };
+
+    const updateBoard = async (id: string, name: string) => {
+        const { error } = await supabase.from('boards').update({ name }).eq('id', id);
+        if (error) alert(error.message);
+        else fetchBoards();
+    };
+
+    const deleteBoard = async (id: string) => {
+        const { error } = await supabase.from('boards').delete().eq('id', id);
+        if (error) alert(error.message);
+        else fetchBoards();
+    };
+
+    const addColumn = async (boardId: string, column: Partial<BoardColumn>) => {
+        const { error } = await supabase.from('board_columns').insert([{ ...column, board_id: boardId }]);
+        if (error) alert(error.message);
+        else fetchBoardColumns();
+    };
+
+    const updateColumn = async (columnId: string, updates: Partial<BoardColumn>) => {
+        const { error } = await supabase.from('board_columns').update(updates).eq('id', columnId);
+        if (error) alert(error.message);
+        else fetchBoardColumns();
+    };
+
+    const deleteColumn = async (columnId: string) => {
+        const { error } = await supabase.from('board_columns').delete().eq('id', columnId);
+        if (error) alert(error.message);
+        else fetchBoardColumns();
+    };
+
     useEffect(() => {
         if (!session) return;
 
+        fetchBoards();
+        fetchBoardColumns();
         fetchTasks();
         fetchCompanies();
         fetchTeam();
@@ -466,6 +554,8 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const taskSubscription = supabase
             .channel('db-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchTasks())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'board_columns' }, () => fetchBoardColumns())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, () => fetchBoards())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members' }, () => fetchTeam())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, () => fetchCompanies())
             .on('postgres_changes', {
@@ -509,7 +599,9 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             tasks, filteredTasks, filters, setFilters, companies, teamMembers, fetchTasks, updateTaskStatus, addTask, updateTask, deleteTask, loading,
             isModalOpen, editingTask, openModal, closeModal, addCompany, updateCompany, deleteCompany, addTeamMember, updateTeamMember, deleteTeamMember,
             notifications, fetchNotifications, markNotificationAsRead, deleteNotification, clearAllNotifications, session,
-            createSharedReport
+            createSharedReport,
+            boards, boardColumns, activeBoardId, setActiveBoardId,
+            addBoard, updateBoard, deleteBoard, addColumn, updateColumn, deleteColumn
         }}>
             {children}
         </TasksContext.Provider>

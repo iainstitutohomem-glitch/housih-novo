@@ -33,7 +33,22 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 };
 
 export const MetricsDashboard = () => {
-    const { filteredTasks, companies, teamMembers } = useTasks();
+    const { filteredTasks, companies, teamMembers, filters, boardColumns, activeBoardId } = useTasks();
+
+    const currentBoardId = filters.board_id !== 'Todas' ? filters.board_id : activeBoardId;
+
+    const dynamicColumns = useMemo(() => {
+        if (currentBoardId === 'Todas') return [];
+        return boardColumns.filter(c => c.board_id === currentBoardId);
+    }, [boardColumns, currentBoardId]);
+
+    const displayColors = useMemo(() => {
+        const colors: Record<string, string> = { ...STATUS_COLORS };
+        dynamicColumns.forEach(col => {
+            if (col.dot_color) colors[col.title] = col.dot_color;
+        });
+        return colors;
+    }, [dynamicColumns]);
 
     const totalTasks = filteredTasks.length;
     const completedTasks = filteredTasks.filter(t => t.status === 'Concluído').length;
@@ -80,16 +95,18 @@ export const MetricsDashboard = () => {
             {/* 3. Status Summary Chart (Horizontal) */}
             <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 shadow-sm">
                 <div className="space-y-3">
-                    {Object.entries(STATUS_COLORS).map(([status, color]) => {
+                    {(currentBoardId === 'Todas' ? Object.keys(STATUS_COLORS) : dynamicColumns.map(c => c.title)).map((status) => {
                         const count = filteredTasks.filter(t => t.status === status).length;
                         const percentage = totalTasks === 0 ? 0 : (count / totalTasks) * 100;
                         const label = status === 'Concluído' ? 'Finalizado' : status === 'Atrasado' ? 'Em atraso' : status;
+                        const color = displayColors[status] || '#9ca3af';
 
                         return (
                             <div key={status} className="flex items-center gap-4 group">
                                 <div
-                                    className="w-32 py-1.5 px-3 rounded text-white text-xs font-bold shadow-sm transition-transform group-hover:scale-105"
+                                    className="w-32 py-1.5 px-3 rounded text-white text-xs font-bold shadow-sm transition-transform group-hover:scale-105 truncate"
                                     style={{ backgroundColor: color }}
+                                    title={label}
                                 >
                                     {label}
                                 </div>
@@ -134,7 +151,7 @@ export const MetricsDashboard = () => {
                                     label={renderCustomizedLabel}
                                 >
                                 {statusData.map((entry: any, index: number) => (
-                                    <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#ccc'} />
+                                    <Cell key={`cell-${index}`} fill={displayColors[entry.name] || '#ccc'} />
                                 ))}
                                 </Pie>
                                 <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #eee', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
@@ -143,17 +160,14 @@ export const MetricsDashboard = () => {
                     </div>
                     <div className="flex-1 w-full sm:pl-4 flex flex-col gap-3 justify-center mt-4 sm:mt-0">
                         {statusData.length === 0 && <p className="text-gray-400 text-sm">Nenhum dado.</p>}
-                        {Object.entries(STATUS_COLORS).map(([status, color]) => {
-                            if (!statusData.find((d: any) => d.name === status)) return null;
-                            return (
-                                <div key={status} className="flex items-center gap-3">
-                                    <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: color }} />
-                                    <span className="text-sm font-medium text-gray-700">
-                                        {status} ({((statusData.find(d => d.name === status)?.value || 0) / totalTasks * 100).toFixed(0)}%)
-                                    </span>
-                                </div>
-                            )
-                        })}
+                        {statusData.map((data: any) => (
+                            <div key={data.name} className="flex items-center gap-3">
+                                <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: displayColors[data.name] || '#ccc' }} />
+                                <span className="text-sm font-medium text-gray-700 truncate">
+                                    {data.name} ({((data.value / (totalTasks || 1)) * 100).toFixed(0)}%)
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </div>
 

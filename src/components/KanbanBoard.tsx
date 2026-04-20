@@ -4,18 +4,27 @@ import { Calendar } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 import { TaskFilterBar } from './TaskFilterBar';
 
-const columns = [
-    { id: 'Não Iniciado', title: 'Não Iniciado', color: 'bg-gray-100 text-gray-600', dot: '#9ca3af' },
-    { id: 'Em Andamento', title: 'Em Andamento', color: 'bg-amber-100 text-amber-700', dot: '#fbbf24' },
-    { id: 'Concluído', title: 'Concluído', color: 'bg-green-100 text-green-700', dot: '#4ade80' },
-    { id: 'Cancelado', title: 'Cancelado', color: 'bg-purple-100 text-purple-700', dot: '#c084fc' },
-    { id: 'Atrasado', title: 'Atrasado', color: 'bg-red-100 text-red-700', dot: '#ef4444' }
-];
-
 export const KanbanBoard = () => {
-    const { filteredTasks, updateTaskStatus, loading, companies, openModal, teamMembers, updateTask } = useTasks();
+    const { 
+        filteredTasks, updateTaskStatus, loading, companies, 
+        openModal, teamMembers, updateTask,
+        boards, boardColumns, activeBoardId, setActiveBoardId
+    } = useTasks();
     const [transferringTaskId, setTransferringTaskId] = useState<string | null>(null);
     const leaveTimeoutRef = useRef<any>(null);
+
+    // Determinar o quadro atual se não houver um selecionado (ou se estiver em "Todas")
+    const currentBoard = useMemo(() => {
+        if (activeBoardId === 'Todas') {
+            return boards.find(b => b.is_default) || boards[0];
+        }
+        return boards.find(b => b.id === activeBoardId);
+    }, [boards, activeBoardId]);
+
+    const currentColumns = useMemo(() => {
+        if (!currentBoard) return [];
+        return boardColumns.filter(col => col.board_id === currentBoard.id);
+    }, [boardColumns, currentBoard]);
 
     const handleMouseEnter = (taskId: string) => {
         if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
@@ -33,7 +42,10 @@ export const KanbanBoard = () => {
         const { source, destination, draggableId } = result;
 
         if (source.droppableId !== destination.droppableId) {
-            updateTaskStatus(draggableId, destination.droppableId);
+            const destColumn = currentColumns.find(c => c.id === destination.droppableId);
+            if (destColumn) {
+                updateTaskStatus(draggableId, destColumn.id, destColumn.title);
+            }
         }
     };
 
@@ -64,33 +76,53 @@ export const KanbanBoard = () => {
     return (
         <div className="flex flex-col h-full w-full bg-transparent overflow-hidden">
             <div className="px-6 pt-6 flex-shrink-0">
+                <div className="flex justify-between items-center mb-2">
+                    <div className="flex gap-2">
+                        {boards.map(b => (
+                            <button
+                                key={b.id}
+                                onClick={() => setActiveBoardId(b.id)}
+                                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${
+                                    (activeBoardId === b.id || (activeBoardId === 'Todas' && b.is_default))
+                                    ? 'bg-primary-500 text-white shadow-primary-200'
+                                    : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
+                                }`}
+                            >
+                                {b.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
                 <TaskFilterBar />
             </div>
 
-            <div className="flex-1 flex gap-6 overflow-x-auto px-6 pb-6 h-full mt-4 pretty-scrollbar">
+            <div className="flex-1 flex gap-6 overflow-x-auto px-6 pb-6 h-full mt-2 pretty-scrollbar">
                 <DragDropContext onDragEnd={onDragEnd}>
-                    {columns.map((col) => (
-                        <Droppable key={col.id} droppableId={col.id}>
-                            {(provided) => (
-                                <div
-                                    {...provided.droppableProps}
-                                    ref={provided.innerRef}
-                                    className="flex flex-col min-w-[280px] lg:min-w-[320px] max-w-[320px] shrink-0 bg-slate-100/50 border border-white/50 rounded-2xl p-4 shadow-sm h-full max-h-full overflow-hidden"
-                                >
-                                    <div className="flex items-center justify-between mb-4 flex-shrink-0">
-                                        <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: col.dot }}></div>
-                                            {col.title}
-                                        </h3>
-                                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${col.color}`}>
-                                            {filteredTasks.filter((t) => t.status === col.id).length}
-                                        </span>
-                                    </div>
+                    {currentColumns.map((col) => {
+                        const tasksInCol = filteredTasks.filter((t) => 
+                            t.column_id === col.id || (t.board_id === col.board_id && t.status === col.title)
+                        );
 
-                                    <div className="flex flex-col gap-3 flex-1 overflow-y-auto no-scrollbar pr-1 min-h-[500px]">
-                                        {filteredTasks
-                                            .filter((t) => t.status === col.id)
-                                            .map((task, index) => (
+                        return (
+                            <Droppable key={col.id} droppableId={col.id}>
+                                {(provided) => (
+                                    <div
+                                        {...provided.droppableProps}
+                                        ref={provided.innerRef}
+                                        className="flex flex-col min-w-[280px] lg:min-w-[320px] max-w-[320px] shrink-0 bg-slate-100/50 border border-white/50 rounded-2xl p-4 shadow-sm h-full max-h-full overflow-hidden"
+                                    >
+                                        <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                                            <h3 className="font-semibold text-gray-700 flex items-center gap-2">
+                                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: col.dot_color || '#ccc' }}></div>
+                                                {col.title}
+                                            </h3>
+                                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${col.color || 'bg-gray-100 text-gray-600'}`}>
+                                                {tasksInCol.length}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex flex-col gap-3 flex-1 overflow-y-auto no-scrollbar pr-1 min-h-[500px]">
+                                            {tasksInCol.map((task, index) => (
                                                 <Draggable key={task.id} draggableId={task.id} index={index}>
                                                     {(provided, snapshot) => (
                                                         <div
@@ -197,12 +229,13 @@ export const KanbanBoard = () => {
                                                     )}
                                                 </Draggable>
                                             ))}
-                                        {provided.placeholder}
+                                            {provided.placeholder}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                        </Droppable>
-                    ))}
+                                )}
+                            </Droppable>
+                        );
+                    })}
                 </DragDropContext>
             </div>
         </div>

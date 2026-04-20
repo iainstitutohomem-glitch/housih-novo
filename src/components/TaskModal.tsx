@@ -3,12 +3,17 @@ import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2,
 import { useTasks } from '../context/TasksContext';
 
 export const TaskModal = () => {
-    const { isModalOpen, closeModal, editingTask, addTask, updateTask, deleteTask, companies, teamMembers, session } = useTasks();
+    const { 
+        isModalOpen, closeModal, editingTask, addTask, updateTask, deleteTask, 
+        companies, teamMembers, session, boards, boardColumns, activeBoardId 
+    } = useTasks();
 
     const [title, setTitle] = useState('');
     const [company, setCompany] = useState('Nenhuma');
     const [assignees, setAssignees] = useState<string[]>([]);
     const [status, setStatus] = useState('Não Iniciado');
+    const [boardId, setBoardId] = useState<string | null>(null);
+    const [columnId, setColumnId] = useState<string | null>(null);
     const [dueDate, setDueDate] = useState('');
     const [priority, setPriority] = useState('Média');
     const [observations, setObservations] = useState('');
@@ -30,8 +35,9 @@ export const TaskModal = () => {
             setTitle(editingTask.title || '');
             setCompany(editingTask.company_id || 'Nenhuma');
             setAssignees(editingTask.assignee || []);
-            setAssignees(editingTask.assignee || []);
             setStatus(editingTask.status || 'Não Iniciado');
+            setBoardId(editingTask.board_id);
+            setColumnId(editingTask.column_id);
             if (editingTask.due_date) {
                 const d = new Date(editingTask.due_date);
                 const y = d.getUTCFullYear();
@@ -50,13 +56,20 @@ export const TaskModal = () => {
             setCompany('Nenhuma');
             setAssignees([]);
             setStatus('Não Iniciado');
+            
+            const defBoard = activeBoardId !== 'Todas' ? activeBoardId : (boards.find(b => b.is_default)?.id || boards[0]?.id || null);
+            setBoardId(defBoard);
+            
+            const defCol = boardColumns.find(c => c.board_id === defBoard)?.id || null;
+            setColumnId(defCol);
+
             setDueDate('');
             setPriority('Média');
             setObservations('');
             setChecklist([]);
             setAttachments([]);
         }
-    }, [editingTask, isModalOpen]);
+    }, [editingTask, isModalOpen, boards, boardColumns, activeBoardId]);
 
     const handleSave = async () => {
         if (!title.trim()) return;
@@ -65,6 +78,8 @@ export const TaskModal = () => {
             company_id: company === 'Nenhuma' ? null : company,
             assignee: assignees,
             status,
+            board_id: boardId,
+            column_id: columnId,
             priority,
             due_date: dueDate ? new Date(`${dueDate}T12:00:00`).toISOString() : new Date().toISOString(),
             observations,
@@ -77,6 +92,21 @@ export const TaskModal = () => {
         } else {
             await addTask(taskData);
         }
+    };
+
+    const handleBoardChange = (newId: string) => {
+        setBoardId(newId);
+        const firstCol = boardColumns.find(c => c.board_id === newId);
+        if (firstCol) {
+            setColumnId(firstCol.id);
+            setStatus(firstCol.title);
+        }
+    };
+
+    const handleColumnChange = (newColId: string) => {
+        setColumnId(newColId);
+        const col = boardColumns.find(c => c.id === newColId);
+        if (col) setStatus(col.title);
     };
 
     const handleSendObservation = async () => {
@@ -100,6 +130,8 @@ export const TaskModal = () => {
     };
 
     if (!isModalOpen) return null;
+
+    const availableColumns = boardColumns.filter(c => c.board_id === boardId);
 
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -129,6 +161,28 @@ export const TaskModal = () => {
                                     <option value="Nenhuma">Nenhuma</option>
                                     {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Quadro</label>
+                                    <select
+                                        value={boardId || ''}
+                                        onChange={(e) => handleBoardChange(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
+                                        <option value="" disabled>Selecionar...</option>
+                                        {boards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Etapa (Coluna)</label>
+                                    <select
+                                        value={columnId || ''}
+                                        onChange={(e) => handleColumnChange(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
+                                        <option value="" disabled>Selecionar...</option>
+                                        {availableColumns.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                                    </select>
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responsáveis</label>
@@ -174,19 +228,6 @@ export const TaskModal = () => {
                                     </div>
                                 )}
                             </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Status</label>
-                                <select
-                                    value={status}
-                                    onChange={(e) => setStatus(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
-                                    <option>Não Iniciado</option>
-                                    <option>Em Andamento</option>
-                                    <option>Concluído</option>
-                                    <option>Cancelado</option>
-                                    <option>Atrasado</option>
-                                </select>
-                            </div>
                         </div>
                         <div className="space-y-4">
                             <div>
@@ -213,6 +254,10 @@ export const TaskModal = () => {
                                     <option>Média</option>
                                     <option>Baixa</option>
                                 </select>
+                            </div>
+                            <div className="hidden">
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Status Legislado</label>
+                                <input readOnly value={status} className="w-full bg-gray-200 border border-gray-200 text-gray-400 py-2.5 px-4 rounded-xl outline-none text-xs" />
                             </div>
                         </div>
                     </div>

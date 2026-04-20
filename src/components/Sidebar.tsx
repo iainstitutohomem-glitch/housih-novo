@@ -20,6 +20,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         { to: '/kanban', icon: <LayoutDashboard size={20} />, label: 'Kanban' },
         { to: '/companies', icon: <Building2 size={20} />, label: 'Empresas' },
         { to: '/team', icon: <Users size={20} />, label: 'Equipe' },
+        { to: '/boards', icon: <Settings2 size={20} />, label: 'Config. Quadros' },
     ];
 
     return (

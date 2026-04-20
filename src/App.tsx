@@ -9,7 +9,8 @@ import { TaskModal } from './components/TaskModal';
 import { TeamManager } from './components/TeamManager';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationBell } from './components/NotificationBell';
-import { Plus, Menu } from 'lucide-react';
+import { BoardManager } from './components/BoardManager';
+import { Plus, Menu, Settings2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { ChatDrawer } from './components/Chat/ChatDrawer';
 import { ChatProvider } from './context/ChatContext';
@@ -75,6 +76,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
       case '/kanban': return 'Quadro Kanban';
       case '/companies': return 'Gestão de Empresas';
       case '/team': return 'Nossa Equipe';
+      case '/boards': return 'Config. de Quadros';
       default: return 'Visão Geral';
     }
   };
@@ -211,6 +213,7 @@ function App() {
                         <Route path="/kanban" element={<KanbanBoard />} />
                         <Route path="/companies" element={<CompanyManager />} />
                         <Route path="/team" element={<TeamManager />} />
+                        <Route path="/boards" element={<BoardManager />} />
                       </Routes>
                     </DashboardLayout>
                   </ProtectedRoute>
