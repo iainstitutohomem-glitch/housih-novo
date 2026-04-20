@@ -33,7 +33,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 };
 
 export const MetricsDashboard = () => {
-    const { filteredTasks, companies, teamMembers, filters, boardColumns, activeBoardId } = useTasks();
+    const { filteredTasks, companies, teamMembers, filters, setFilters, boardColumns, boards, activeBoardId } = useTasks();
 
     const currentBoardId = filters.board_id !== 'Todas' ? filters.board_id : activeBoardId;
 
@@ -71,6 +71,33 @@ export const MetricsDashboard = () => {
 
     return (
         <div className="flex-1 w-full space-y-6 text-gray-800 font-sans pb-8">
+            {/* Board Selection Tabs */}
+            <div className="flex flex-wrap gap-2 mb-2">
+                <button
+                    onClick={() => setFilters({ ...filters, board_id: 'Todas' })}
+                    className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm border ${
+                        filters.board_id === 'Todas'
+                            ? 'bg-primary-500 text-white border-primary-600'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    }`}
+                >
+                    Visão Geral (Todas)
+                </button>
+                {boards.map(board => (
+                    <button
+                        key={board.id}
+                        onClick={() => setFilters({ ...filters, board_id: board.id })}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm border ${
+                            filters.board_id === board.id
+                                ? 'bg-primary-500 text-white border-primary-600'
+                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                        }`}
+                    >
+                        {board.name}
+                    </button>
+                ))}
+            </div>
+
             {/* 1. Progress Bar */}
             <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-8 shadow-sm">
                 <div className="w-48 text-xl font-bold leading-tight text-gray-800">

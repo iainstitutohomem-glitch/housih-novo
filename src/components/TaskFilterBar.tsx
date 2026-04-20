@@ -23,12 +23,6 @@ export const TaskFilterBar = () => {
             {/* Segunda Linha: Outros Filtros */}
             <div className="flex flex-wrap gap-3 items-center">
                 <div className="flex-1 min-w-[140px]">
-                    <select value={filters.board_id} onChange={(e) => setFilters({ ...filters, board_id: e.target.value })} className="w-full bg-gray-50/50 border border-gray-200 text-gray-600 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 appearance-none text-xs cursor-pointer hover:bg-white transition-colors">
-                        <option value="Todas">Quadro (Todos)</option>
-                        {boards.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </select>
-                </div>
-                <div className="flex-1 min-w-[140px]">
                     <select value={filters.empresa} onChange={(e) => setFilters({ ...filters, empresa: e.target.value })} className="w-full bg-gray-50/50 border border-gray-200 text-gray-600 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 appearance-none text-xs cursor-pointer hover:bg-white transition-colors">
                         <option value="Todas">Empresas (Todas)</option>
                         {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
