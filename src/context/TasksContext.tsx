@@ -31,6 +31,7 @@ export interface Task {
     attachments: any[];
     board_id: string | null;
     column_id: string | null;
+    order_index: number;
 }
 
 export interface Company {
@@ -112,6 +113,7 @@ interface TasksContextType {
     addColumn: (boardId: string, column: Partial<BoardColumn>) => Promise<void>;
     updateColumn: (columnId: string, updates: Partial<BoardColumn>) => Promise<void>;
     deleteColumn: (columnId: string) => Promise<void>;
+    updateTaskOrder: (taskId: string, newOrder: number, columnId?: string, statusName?: string) => Promise<void>;
 }
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
@@ -183,7 +185,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     const fetchTasks = async (silent = false) => {
         if (!silent) setLoading(true);
-        const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabase.from('tasks').select('*').order('order_index', { ascending: true });
         if (error) {
             console.error("Fetch tasks error:", error);
             if (!silent) alert("Erro ao buscar tarefas: " + error.message);
@@ -284,7 +286,13 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     const addTask = async (task: Partial<Task>) => {
-        const { data, error } = await supabase.from('tasks').insert([task]).select();
+        // Lógica de "Novo no Topo": Encontrar o menor order_index da coluna e subtrair 1000
+        const colId = task.column_id;
+        const colTasks = tasks.filter(t => t.column_id === colId);
+        const minOrder = colTasks.length > 0 ? Math.min(...colTasks.map(t => t.order_index || 0)) : 0;
+        const newOrder = minOrder - 1000;
+
+        const { data, error } = await supabase.from('tasks').insert([{ ...task, order_index: newOrder }]).select();
         if (error) alert("Erro ao salvar tarefa: " + error.message);
         else if (data) {
             setTasks([data[0], ...tasks]);
@@ -535,6 +543,25 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (error) alert(error.message);
         else fetchBoardColumns();
     };
+    
+    const updateTaskOrder = async (taskId: string, newOrder: number, columnId?: string, statusName?: string) => {
+        // Atualização otimista
+        setTasks(prev => prev.map(t => 
+            t.id === taskId 
+                ? { ...t, order_index: newOrder, ...(columnId ? { column_id: columnId } : {}), ...(statusName ? { status: statusName } : {}) } 
+                : t
+        ).sort((a, b) => (a.order_index || 0) - (b.order_index || 0)));
+
+        const updates: any = { order_index: newOrder };
+        if (columnId) updates.column_id = columnId;
+        if (statusName) updates.status = statusName;
+
+        const { error } = await supabase.from('tasks').update(updates).eq('id', taskId);
+        if (error) {
+            console.error("Error updating task order:", error);
+            fetchTasks(true);
+        }
+    };
 
     useEffect(() => {
         if (!session) return;
@@ -597,7 +624,8 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             notifications, fetchNotifications, markNotificationAsRead, deleteNotification, clearAllNotifications, session,
             createSharedReport,
             boards, boardColumns, activeBoardId, setActiveBoardId,
-            addBoard, updateBoard, deleteBoard, addColumn, updateColumn, deleteColumn
+            addBoard, updateBoard, deleteBoard, addColumn, updateColumn, deleteColumn,
+            updateTaskOrder
         }}>
             {children}
         </TasksContext.Provider>

@@ -8,7 +8,8 @@ export const KanbanBoard = () => {
     const { 
         filteredTasks, updateTaskStatus, loading, companies, 
         openModal, teamMembers, updateTask,
-        boards, boardColumns, activeBoardId, setActiveBoardId
+        boards, boardColumns, activeBoardId, setActiveBoardId,
+        updateTaskOrder
     } = useTasks();
     const [transferringTaskId, setTransferringTaskId] = useState<string | null>(null);
     const leaveTimeoutRef = useRef<any>(null);
@@ -37,14 +38,43 @@ export const KanbanBoard = () => {
         }, 300); // 300ms de tolerância
     };
 
-    const onDragEnd = (result: any) => {
+    const onDragEnd = async (result: any) => {
         if (!result.destination) return;
         const { source, destination, draggableId } = result;
 
+        const destColId = destination.droppableId;
+        const destColumn = currentColumns.find(c => c.id === destColId);
+        if (!destColumn) return;
+
+        // Get all tasks currently in the destination column, sorted by order_index
+        const tasksInDest = filteredTasks
+            .filter(t => t.column_id === destColId || (t.board_id === destColumn.board_id && t.status === destColumn.title))
+            .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+        let newOrder: number;
+
+        if (tasksInDest.length === 0) {
+            newOrder = 0;
+        } else if (destination.index === 0) {
+            // Dragged to top
+            newOrder = (tasksInDest[0].order_index || 0) - 1000;
+        } else if (destination.index >= tasksInDest.length) {
+            // Dragged to bottom
+            newOrder = (tasksInDest[tasksInDest.length - 1].order_index || 0) + 1000;
+        } else {
+            // Dragged between two tasks
+            const prevTask = tasksInDest[destination.index - 1];
+            const nextTask = tasksInDest[destination.index];
+            newOrder = ((prevTask.order_index || 0) + (nextTask.order_index || 0)) / 2;
+        }
+
+        // If moved to a different column, update both status/column and order
         if (source.droppableId !== destination.droppableId) {
-            const destColumn = currentColumns.find((c: any) => c.id === destination.droppableId);
-            if (destColumn) {
-                updateTaskStatus(draggableId, destColumn.id, destColumn.title);
+            await updateTaskOrder(draggableId, newOrder, destColumn.id, destColumn.title);
+        } else {
+            // Same column reordering
+            if (source.index !== destination.index) {
+                await updateTaskOrder(draggableId, newOrder);
             }
         }
     };
@@ -98,10 +128,10 @@ export const KanbanBoard = () => {
 
             <div className="flex-1 flex gap-6 overflow-x-auto px-6 pb-6 h-full mt-2 pretty-scrollbar">
                 <DragDropContext onDragEnd={onDragEnd}>
-                    {currentColumns.map((col) => {
-                        const tasksInCol = filteredTasks.filter((t) => 
-                            t.column_id === col.id || (t.board_id === col.board_id && t.status === col.title)
-                        );
+                        {currentColumns.map((col) => {
+                            const tasksInCol = filteredTasks
+                                .filter((t) => t.column_id === col.id || (t.board_id === col.board_id && t.status === col.title))
+                                .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
                         return (
                             <Droppable key={col.id} droppableId={col.id}>
