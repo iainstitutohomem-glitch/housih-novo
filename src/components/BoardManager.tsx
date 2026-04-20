@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTasks } from '../context/TasksContext';
 import type { BoardColumn } from '../context/TasksContext';
-import { Plus, Trash2, GripVertical, Save, X, Settings2 } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Save, X, Settings2, Pencil } from 'lucide-react';
 
 export const BoardManager = () => {
     const { 
@@ -149,6 +149,7 @@ export const BoardManager = () => {
 
 const ColumnItem = ({ column, onUpdate, onDelete }: { column: BoardColumn, onUpdate: (u: any) => void, onDelete: () => void }) => {
     const [title, setTitle] = useState(column.title);
+    const colorInputRef = useRef<HTMLInputElement>(null);
 
     const handleTitleChange = (newTitle: string) => {
         setTitle(newTitle);
@@ -156,6 +157,11 @@ const ColumnItem = ({ column, onUpdate, onDelete }: { column: BoardColumn, onUpd
 
     const handleSave = () => {
         onUpdate({ title });
+    };
+
+    const handleCustomColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newColor = e.target.value;
+        onUpdate({ dot_color: newColor });
     };
 
     const colors = [
@@ -184,6 +190,23 @@ const ColumnItem = ({ column, onUpdate, onDelete }: { column: BoardColumn, onUpd
                     onBlur={handleSave}
                     className="w-full bg-transparent border-none focus:ring-0 text-sm font-medium text-gray-700 outline-none"
                 />
+            </div>
+
+            <div className="flex items-center gap-1.5 pr-2 border-r border-gray-100 mr-1">
+                <input 
+                    type="color"
+                    ref={colorInputRef}
+                    onChange={handleCustomColorChange}
+                    className="sr-only"
+                    value={column.dot_color || '#9ca3af'}
+                />
+                <button
+                    onClick={() => colorInputRef.current?.click()}
+                    title="Cor personalizada"
+                    className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
+                >
+                    <Pencil size={16} />
+                </button>
             </div>
 
             <div className="flex items-center gap-1">
