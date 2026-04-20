@@ -1,4 +1,3 @@
-import React from 'react';
 import { Calendar as CalendarIcon, Clock, Lock, Sparkles, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
