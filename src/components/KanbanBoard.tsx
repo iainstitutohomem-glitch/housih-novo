@@ -6,7 +6,7 @@ import { TaskFilterBar } from './TaskFilterBar';
 
 export const KanbanBoard = () => {
     const { 
-        filteredTasks, updateTaskStatus, loading, companies, 
+        filteredTasks, loading, companies, 
         openModal, teamMembers, updateTask,
         boards, boardColumns, activeBoardId, setActiveBoardId,
         updateTaskOrder
