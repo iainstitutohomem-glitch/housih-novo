@@ -7,6 +7,7 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     signOut: () => Promise<void>;
+    signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -14,6 +15,7 @@ const AuthContext = createContext<AuthContextType>({
     user: null,
     loading: true,
     signOut: async () => { },
+    signInWithGoogle: async () => { },
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -43,8 +45,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await supabase.auth.signOut();
     };
 
+    const signInWithGoogle = async () => {
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                scopes: 'https://www.googleapis.com/auth/calendar.events.readonly',
+                redirectTo: window.location.origin + '/agenda',
+                queryParams: {
+                    access_type: 'offline',
+                    prompt: 'consent',
+                },
+            }
+        });
+        if (error) alert("Erro ao conectar com Google: " + error.message);
+    };
+
     return (
-        <AuthContext.Provider value={{ session, user, loading, signOut }}>
+        <AuthContext.Provider value={{ session, user, loading, signOut, signInWithGoogle }}>
             {children}
         </AuthContext.Provider>
     );
