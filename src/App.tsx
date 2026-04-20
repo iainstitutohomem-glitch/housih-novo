@@ -10,7 +10,7 @@ import { TeamManager } from './components/TeamManager';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationBell } from './components/NotificationBell';
 import { BoardManager } from './components/BoardManager';
-import { Plus, Menu, Settings2 } from 'lucide-react';
+import { Plus, Menu } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { ChatDrawer } from './components/Chat/ChatDrawer';
 import { ChatProvider } from './context/ChatContext';

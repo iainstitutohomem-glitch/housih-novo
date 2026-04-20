@@ -177,11 +177,6 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const { data, error } = await supabase.from('boards').select('*').order('created_at', { ascending: true });
         if (!error && data) {
             setBoards(data);
-            if (activeBoardId === 'Todas' && data.length > 0) {
-                const def = data.find(b => b.is_default) || data[0];
-                // Se estivermos na dashboard, mantemos 'Todas', se não, setamos o padrão
-                // Por agora, vamos apenas carregar a lista
-            }
         }
     };
 

@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useTasks, Board, BoardColumn } from '../context/TasksContext';
+import { useTasks } from '../context/TasksContext';
+import type { BoardColumn } from '../context/TasksContext';
 import { Plus, Trash2, GripVertical, Save, X, Settings2 } from 'lucide-react';
 
 export const BoardManager = () => {
     const { 
-        boards, boardColumns, addBoard, updateBoard, deleteBoard, 
+        boards, boardColumns, addBoard, deleteBoard, 
         addColumn, updateColumn, deleteColumn 
     } = useTasks();
     const [selectedBoardId, setSelectedBoardId] = useState<string | null>(boards[0]?.id || null);
@@ -41,12 +42,6 @@ export const BoardManager = () => {
                     </h1>
                     <p className="text-gray-500 text-sm">Crie e personalize seus fluxos de trabalho (Kanban)</p>
                 </div>
-                
-                <button 
-                    onClick={() => setIsGroupModalOpen(true)}
-                    className="hidden" // Placeholder logic
-                >
-                </button>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -130,7 +125,7 @@ export const BoardManager = () => {
                                         <p className="text-gray-400 text-sm">Nenhuma coluna definida.</p>
                                     </div>
                                 )}
-                                {columns.map((col, index) => (
+                                {columns.map((col) => (
                                     <ColumnItem 
                                         key={col.id} 
                                         column={col} 
@@ -154,16 +149,13 @@ export const BoardManager = () => {
 
 const ColumnItem = ({ column, onUpdate, onDelete }: { column: BoardColumn, onUpdate: (u: any) => void, onDelete: () => void }) => {
     const [title, setTitle] = useState(column.title);
-    const [hasChanges, setHasChanges] = useState(false);
 
     const handleTitleChange = (newTitle: string) => {
         setTitle(newTitle);
-        setHasChanges(true);
     };
 
     const handleSave = () => {
         onUpdate({ title });
-        setHasChanges(false);
     };
 
     const colors = [

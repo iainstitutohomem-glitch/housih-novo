@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Calendar } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
@@ -42,7 +42,7 @@ export const KanbanBoard = () => {
         const { source, destination, draggableId } = result;
 
         if (source.droppableId !== destination.droppableId) {
-            const destColumn = currentColumns.find(c => c.id === destination.droppableId);
+            const destColumn = currentColumns.find((c: any) => c.id === destination.droppableId);
             if (destColumn) {
                 updateTaskStatus(draggableId, destColumn.id, destColumn.title);
             }

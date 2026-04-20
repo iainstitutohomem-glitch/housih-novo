@@ -2,7 +2,7 @@ import { Search } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const TaskFilterBar = () => {
-    const { filters, setFilters, companies, teamMembers } = useTasks();
+    const { filters, setFilters, companies, teamMembers, boards } = useTasks();
 
     return (
         <div className="flex flex-col gap-4 bg-white/80 backdrop-blur-md border border-white/40 p-5 rounded-2xl shadow-sm mb-6 w-full">
@@ -25,7 +25,7 @@ export const TaskFilterBar = () => {
                 <div className="flex-1 min-w-[140px]">
                     <select value={filters.board_id} onChange={(e) => setFilters({ ...filters, board_id: e.target.value })} className="w-full bg-gray-50/50 border border-gray-200 text-gray-600 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 appearance-none text-xs cursor-pointer hover:bg-white transition-colors">
                         <option value="Todas">Quadro (Todos)</option>
-                        {boards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        {boards.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
                     </select>
                 </div>
                 <div className="flex-1 min-w-[140px]">
