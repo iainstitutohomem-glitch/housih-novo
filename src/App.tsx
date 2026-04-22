@@ -16,7 +16,7 @@ import { useState, type ReactNode } from 'react';
 import { ChatDrawer } from './components/Chat/ChatDrawer';
 import { ChatProvider } from './context/ChatContext';
 import { AIChatDrawer } from './components/AIChatDrawer';
-import { Sparkles, Eye, Share2, X, Check, Copy } from 'lucide-react';
+import { Sparkles, Eye, Share2, X, Check, Copy, LogOut } from 'lucide-react';
 import { SharedReportPage } from './components/SharedReportPage';
 
 const NovaTarefaButton = () => {
@@ -48,6 +48,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
+  const { signOut } = useAuth();
   const { createSharedReport, filteredTasks } = useTasks();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
