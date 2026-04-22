@@ -14,8 +14,7 @@ import {
     MapPin,
     Eye,
     Bell,
-    Clock,
-    Layout
+    Clock
 } from 'lucide-react';
 import { 
     format, 
