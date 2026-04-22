@@ -48,8 +48,8 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
-  const { signOut } = useAuth();
-  const { createSharedReport, filteredTasks } = useTasks();
+  const { session, signOut } = useAuth();
+  const { createSharedReport, filteredTasks, teamMembers } = useTasks();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -117,9 +117,9 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
               <span className="hidden md:inline text-[10px] uppercase tracking-wider">IA Assistente</span>
             </button>
             <div className="hidden lg:flex items-center mr-2">
-                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-sm hover:scale-110 transition-all cursor-help" title={(useAuth() as any).session?.user?.email}>
+                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-sm hover:scale-110 transition-all cursor-help" title={session?.user?.email}>
                     <img 
-                        src={(useAuth() as any).session?.user?.user_metadata?.avatar_url || (useAuth() as any).session?.user?.user_metadata?.picture} 
+                        src={teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase())?.avatar_url || session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture} 
                         alt="Profile" 
                         className="w-full h-full object-cover"
                     />
