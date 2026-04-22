@@ -494,11 +494,19 @@ const BookingModal = ({ onClose, team, providerToken, allEvents, onSuccess }: { 
                 ...externalEmails.split(',').map(e => ({ email: e.trim() })).filter(e => e.email)
             ];
 
+            const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
             const eventData = {
                 summary: title,
                 description,
-                start: { dateTime: `${selectedDate}T${startTime}:00Z` }, // Ajustar timezone se necessário
-                end: { dateTime: `${selectedDate}T${endTime}:00Z` },
+                start: { 
+                    dateTime: `${selectedDate}T${startTime}:00`,
+                    timeZone: userTimeZone
+                },
+                end: { 
+                    dateTime: `${selectedDate}T${endTime}:00`,
+                    timeZone: userTimeZone
+                },
                 attendees,
                 conferenceData: {
                     createRequest: {
