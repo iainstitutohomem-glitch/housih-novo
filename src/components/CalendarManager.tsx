@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
     Calendar as CalendarIcon, 
     ChevronLeft, 
@@ -9,7 +9,10 @@ import {
     CheckCircle2,
     X,
     MapPin,
-    AlignLeft
+    AlignLeft,
+    Plus,
+    Users,
+    AlertCircle
 } from 'lucide-react';
 import { 
     format, 
@@ -24,10 +27,14 @@ import {
     startOfDay, 
     addMonths,
     isPast,
-    differenceInMinutes
+    differenceInMinutes,
+    addMinutes,
+    isWithinInterval
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '../context/AuthContext';
+import { useTasks } from '../context/TasksContext';
+import { supabase } from '../lib/supabase';
 
 interface GoogleEvent {
     id: string;
@@ -37,37 +44,77 @@ interface GoogleEvent {
     end: { dateTime?: string; date?: string };
     hangoutLink?: string;
     location?: string;
+    owner_email?: string; // Virtual field for team events
 }
 
 type ViewMode = 'day' | 'week' | 'month';
 
 export const CalendarManager = () => {
     const { session, signInWithGoogle } = useAuth();
-    const [events, setEvents] = useState<GoogleEvent[]>([]);
+    const { teamMembers } = useTasks();
+    const [localEvents, setLocalEvents] = useState<GoogleEvent[]>([]);
+    const [teamEvents, setTeamEvents] = useState<GoogleEvent[]>([]);
     const [viewDate, setViewDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<ViewMode>('month');
     const [isLoading, setIsLoading] = useState(false);
-    const [, setError] = useState<string | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<GoogleEvent | null>(null);
+    const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
 
     const isAdmin = session?.user?.email === 'institutohomem@gmail.com';
     const providerToken = session?.provider_token;
+    const userEmail = session?.user?.email;
 
-    // Atualiza o marcador de tempo atual a cada minuto
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-        return () => clearInterval(timer);
-    }, []);
+    // Sincroniza eventos locais para o cache do Supabase para que outros vejam
+    const syncToCache = async (events: GoogleEvent[]) => {
+        if (!userEmail || !session?.user?.id) return;
 
-    const fetchEvents = useCallback(async () => {
+        const cacheData = events.map(e => ({
+            id: e.id,
+            user_id: session.user.id,
+            summary: e.summary,
+            description: e.description || '',
+            start_time: e.start.dateTime || e.start.date,
+            end_time: e.end.dateTime || e.end.date,
+            hangout_link: e.hangoutLink || '',
+            location: e.location || '',
+            owner_email: userEmail,
+            updated_at: new Date().toISOString()
+        }));
+
+        if (cacheData.length > 0) {
+            await supabase.from('team_events_cache').upsert(cacheData);
+        }
+    };
+
+    // Busca eventos da equipe (cache)
+    const fetchTeamEvents = useCallback(async () => {
+        const { data, error } = await supabase
+            .from('team_events_cache')
+            .select('*')
+            .neq('owner_email', userEmail || '');
+
+        if (!error && data) {
+            const formatted: GoogleEvent[] = data.map(d => ({
+                id: d.id,
+                summary: d.summary,
+                description: d.description,
+                start: { dateTime: d.start_time },
+                end: { dateTime: d.end_time },
+                hangoutLink: d.hangout_link,
+                location: d.location,
+                owner_email: d.owner_email
+            }));
+            setTeamEvents(formatted);
+        }
+    }, [userEmail]);
+
+    // Busca eventos pessoais (Google Live)
+    const fetchLocalEvents = useCallback(async () => {
         if (!providerToken) return;
         
         setIsLoading(true);
-        setError(null);
-
         try {
-            // Busca um intervalo maior para cobrir as trocas de vista
             const start = startOfMonth(viewDate).toISOString();
             const end = endOfMonth(viewDate).toISOString();
 
@@ -77,30 +124,44 @@ export const CalendarManager = () => {
                 headers: { 'Authorization': `Bearer ${providerToken}` }
             });
 
-            if (!response.ok) {
-                if (response.status === 401) throw new Error("Sessão expirada. Reconecte o Google.");
-                throw new Error("Erro ao carregar agenda.");
+            if (response.ok) {
+                const data = await response.json();
+                const fetched = data.items || [];
+                setLocalEvents(fetched);
+                syncToCache(fetched); // Sincroniza com o time
             }
-
-            const data = await response.json();
-            setEvents(data.items || []);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            console.error("Calendar fetch error:", err);
         } finally {
             setIsLoading(false);
         }
-    }, [viewDate, providerToken]);
+    }, [viewDate, providerToken, userEmail]);
 
     useEffect(() => {
-        if (providerToken && isAdmin) fetchEvents();
-    }, [fetchEvents, providerToken, isAdmin]);
+        if (providerToken) {
+            fetchLocalEvents();
+            fetchTeamEvents();
+        }
+    }, [fetchLocalEvents, fetchTeamEvents, providerToken]);
 
-    if (!isAdmin) return <AccessDenied />;
+    // Mescla eventos locais e da equipe
+    const allEvents = useMemo(() => {
+        // Marcamos os eventos locais com o email do usuário logado
+        const localWithEmail = localEvents.map(e => ({ ...e, owner_email: userEmail }));
+        return [...localWithEmail, ...teamEvents];
+    }, [localEvents, teamEvents, userEmail]);
+
+    // Atualiza o marcador de tempo atual
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+        return () => clearInterval(timer);
+    }, []);
+
     if (!providerToken) return <ConnectGoogle onConnect={signInWithGoogle} />;
 
     return (
-        <div className="h-full flex flex-col space-y-6 animate-in fade-in duration-500 pb-20 lg:pb-0">
-            {/* Header / Nav */}
+        <div className="h-full flex flex-col space-y-4 lg:space-y-6 animate-in fade-in duration-500 pb-20 lg:pb-0">
+            {/* Header */}
             <header className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center text-white shadow-lg">
@@ -112,7 +173,7 @@ export const CalendarManager = () => {
                         </h2>
                         <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                             <span className={`w-1.5 h-1.5 rounded-full ${isLoading ? 'bg-orange-400 animate-pulse' : 'bg-green-500'}`} />
-                            {isLoading ? 'Sincronizando...' : 'Google Calendar Ativo'}
+                            {isLoading ? 'Sincronizando Equipe...' : 'Rede Housih Conectada'}
                         </div>
                     </div>
                 </div>
@@ -132,32 +193,57 @@ export const CalendarManager = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button onClick={() => setViewDate(d => addMonths(d, -1))} className="p-2.5 hover:bg-gray-100 rounded-xl bg-gray-50 text-gray-600 transition-all border border-gray-200/50">
-                        <ChevronLeft size={18} />
+                    <button 
+                        onClick={() => setIsBookingModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all shadow-lg shadow-primary-200 mr-2"
+                    >
+                        <Plus size={16} /> Nova Pauta
                     </button>
-                    <button onClick={() => setViewDate(new Date())} className="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-primary-500 transition-all">Hoje</button>
-                    <button onClick={() => setViewDate(d => addMonths(d, 1))} className="p-2.5 hover:bg-gray-100 rounded-xl bg-gray-50 text-gray-600 transition-all border border-gray-200/50">
-                        <ChevronRight size={18} />
-                    </button>
+                    <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                        <button onClick={() => setViewDate(d => addMonths(d, -1))} className="p-2 hover:bg-white rounded-lg text-gray-400 transition-all">
+                            <ChevronLeft size={16} />
+                        </button>
+                        <button onClick={() => setViewDate(new Date())} className="px-3 py-1 text-[9px] font-black uppercase text-gray-500">Hoje</button>
+                        <button onClick={() => setViewDate(d => addMonths(d, 1))} className="p-2 hover:bg-white rounded-lg text-gray-400 transition-all">
+                            <ChevronRight size={16} />
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            {/* Main Content Area */}
+            {/* View Area */}
             <div className="flex-1 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-                {viewMode === 'month' && <MonthView date={viewDate} events={events} onEventClick={setSelectedEvent} />}
-                {viewMode === 'week' && <TimeGridView date={viewDate} days={7} events={events} onEventClick={setSelectedEvent} currentTime={currentTime} />}
-                {viewMode === 'day' && <TimeGridView date={viewDate} days={1} events={events} onEventClick={setSelectedEvent} currentTime={currentTime} />}
+                {viewMode === 'month' && <MonthView date={viewDate} events={allEvents} onEventClick={setSelectedEvent} team={teamMembers} />}
+                {(viewMode === 'week' || viewMode === 'day') && (
+                    <TimeGridView 
+                        date={viewDate} 
+                        days={viewMode === 'week' ? 7 : 1} 
+                        events={allEvents} 
+                        onEventClick={setSelectedEvent} 
+                        currentTime={currentTime} 
+                        team={teamMembers}
+                    />
+                )}
             </div>
 
-            {/* Event Details Modal */}
-            {selectedEvent && <EventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} />}
+            {/* Modals */}
+            {selectedEvent && <EventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} team={teamMembers} />}
+            {isBookingModalOpen && (
+                <BookingModal 
+                    onClose={() => setIsBookingModalOpen(null)} 
+                    team={teamMembers} 
+                    providerToken={providerToken}
+                    allEvents={allEvents}
+                    onSuccess={fetchLocalEvents}
+                />
+            )}
         </div>
     );
 };
 
-// --- Sub-Components Para Vistas ---
+// --- Sub-Components ---
 
-const MonthView = ({ date, events, onEventClick }: { date: Date, events: GoogleEvent[], onEventClick: (e: GoogleEvent) => void }) => {
+const MonthView = ({ date, events, onEventClick, team }: { date: Date, events: GoogleEvent[], onEventClick: (e: GoogleEvent) => void, team: any[] }) => {
     const start = startOfWeek(startOfMonth(date));
     const end = endOfWeek(endOfMonth(date));
     const days = eachDayOfInterval({ start, end });
@@ -169,29 +255,33 @@ const MonthView = ({ date, events, onEventClick }: { date: Date, events: GoogleE
                     <div key={d} className="text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">{d}</div>
                 ))}
             </div>
-            <div className="flex-1 grid grid-cols-7 grid-rows-5 sm:grid-rows-6">
+            <div className="flex-1 grid grid-cols-7">
                 {days.map((day, i) => {
                     const dayEvents = events.filter(e => isSameDay(new Date(e.start.dateTime || e.start.date || ''), day));
                     const isOutside = !isSameMonth(day, date);
                     const isToday = isSameDay(day, new Date());
 
                     return (
-                        <div key={i} className={`border-r border-b border-gray-50 p-1 flex flex-col gap-1 min-h-[100px] transition-colors hover:bg-gray-50/30 ${isOutside ? 'opacity-30' : ''}`}>
+                        <div key={i} className={`border-r border-b border-gray-50 p-1 flex flex-col gap-1 min-h-[120px] transition-colors hover:bg-gray-50/30 ${isOutside ? 'opacity-30 grayscale' : ''}`}>
                             <span className={`text-[10px] font-black p-1.5 w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-primary-600 text-white' : 'text-gray-400'}`}>
                                 {format(day, 'd')}
                             </span>
-                            <div className="flex-1 space-y-1 overflow-y-auto no-scrollbar">
+                            <div className="flex-1 space-y-1 overflow-y-auto no-scrollbar pb-2">
                                 {dayEvents.map(e => {
+                                    const member = team.find(m => m.email?.toLowerCase() === e.owner_email?.toLowerCase());
                                     const isPastEvent = isPast(new Date(e.end?.dateTime || e.end?.date || ''));
                                     return (
                                         <button 
                                             key={e.id}
                                             onClick={() => onEventClick(e)}
-                                            className={`w-full text-left px-2 py-1 rounded-lg text-[9px] font-bold truncate border-l-4 transition-all hover:scale-[1.02] ${
+                                            className={`w-full flex items-center gap-1.5 text-left pl-1.5 pr-1 py-1 rounded-lg text-[9px] font-bold border-l-4 transition-all hover:scale-[1.02] group ${
                                                 isPastEvent ? 'opacity-40 grayscale' : ''
                                             } ${e.hangoutLink ? 'bg-blue-50 text-blue-700 border-l-blue-500' : 'bg-primary-50 text-primary-700 border-l-primary-500'}`}
                                         >
-                                            {e.summary}
+                                            {member?.avatar_url && (
+                                                <img src={member.avatar_url} className="w-4 h-4 rounded-full border border-white shrink-0 shadow-sm" alt="" />
+                                            )}
+                                            <span className="truncate flex-1">{e.summary}</span>
                                         </button>
                                     );
                                 })}
@@ -204,13 +294,12 @@ const MonthView = ({ date, events, onEventClick }: { date: Date, events: GoogleE
     );
 };
 
-const TimeGridView = ({ date, days, events, onEventClick, currentTime }: { date: Date, days: number, events: GoogleEvent[], onEventClick: (e: GoogleEvent) => void, currentTime: Date }) => {
+const TimeGridView = ({ date, days, events, onEventClick, currentTime, team }: { date: Date, days: number, events: GoogleEvent[], onEventClick: (e: GoogleEvent) => void, currentTime: Date, team: any[] }) => {
     const start = days === 1 ? startOfDay(date) : startOfWeek(date);
     const weekDays = eachDayOfInterval({ start, end: addDays(start, days - 1) });
     const hours = Array.from({ length: 24 }, (_, i) => i);
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    // Auto-scroll para o horário comercial
     useEffect(() => {
         if (scrollRef.current) scrollRef.current.scrollTop = 450; 
     }, []);
@@ -228,8 +317,7 @@ const TimeGridView = ({ date, days, events, onEventClick, currentTime }: { date:
             </div>
             
             <div ref={scrollRef} className="flex-1 overflow-y-auto relative no-scrollbar">
-                <div className="relative" style={{ height: '1440px', gridTemplateColumns: `60px repeat(${days}, 1fr)` }}>
-                    {/* Time Lines */}
+                <div className="relative" style={{ height: '1440px' }} >
                     {hours.map(h => (
                         <div key={h} className="absolute w-full border-b border-gray-100/50 pointer-events-none" style={{ top: `${h * 60}px`, height: '60px' }}>
                             <span className="absolute -top-3 left-2 text-[9px] font-bold text-gray-300">{h}:00</span>
@@ -244,7 +332,6 @@ const TimeGridView = ({ date, days, events, onEventClick, currentTime }: { date:
 
                             return (
                                 <div key={day.toISOString()} className="relative border-r border-gray-50 h-full bg-white/40">
-                                    {/* Marcador de Tempo Atual */}
                                     {itIsToday && (
                                         <div 
                                             className="absolute left-0 right-0 z-20 flex items-center group pointer-events-none" 
@@ -256,11 +343,12 @@ const TimeGridView = ({ date, days, events, onEventClick, currentTime }: { date:
                                     )}
 
                                     {dayEvents.map(e => {
-                                        const startT = new Date(e.start.dateTime || '');
-                                        const endT = new Date(e.end.dateTime || '');
+                                        const startT = new Date(e.start.dateTime || e.start.date || '');
+                                        const endT = new Date(e.end.dateTime || e.end.date || '');
                                         const top = (startT.getHours() * 60) + startT.getMinutes();
                                         const duration = differenceInMinutes(endT, startT);
                                         const isPastE = isPast(endT);
+                                        const member = team.find(m => m.email?.toLowerCase() === e.owner_email?.toLowerCase());
 
                                         return (
                                             <button 
@@ -271,8 +359,13 @@ const TimeGridView = ({ date, days, events, onEventClick, currentTime }: { date:
                                                 } ${e.hangoutLink ? 'bg-blue-50 text-blue-700 border-blue-500' : 'bg-primary-50 text-primary-700 border-primary-500'}`}
                                                 style={{ top: `${top}px`, height: `${Math.max(duration, 30)}px` }}
                                             >
-                                                <div className="font-black truncate ">{e.summary}</div>
-                                                <div className="text-[10px] opacity-70 mt-0.5">{format(startT, 'HH:mm')} - {format(endT, 'HH:mm')}</div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    {member?.avatar_url && (
+                                                        <img src={member.avatar_url} className="w-5 h-5 rounded-full border-2 border-white shadow-sm" />
+                                                    )}
+                                                    <div className="font-black truncate flex-1">{e.summary}</div>
+                                                </div>
+                                                <div className="text-[10px] opacity-70">{format(startT, 'HH:mm')} - {format(endT, 'HH:mm')}</div>
                                             </button>
                                         );
                                     })}
@@ -286,110 +379,302 @@ const TimeGridView = ({ date, days, events, onEventClick, currentTime }: { date:
     );
 };
 
-const EventModal = ({ event, onClose }: { event: GoogleEvent, onClose: () => void }) => {
+// --- Modals ---
+
+const EventModal = ({ event, onClose, team }: { event: GoogleEvent, onClose: () => void, team: any[] }) => {
     const start = new Date(event.start.dateTime || event.start.date || '');
     const end = new Date(event.end.dateTime || event.end.date || '');
     const isPastEvent = isPast(end);
+    const member = team.find(m => m.email?.toLowerCase() === event.owner_email?.toLowerCase());
 
     return (
         <div className="fixed inset-0 z-[30000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className={`p-6 flex justify-between items-start text-white ${event.hangoutLink ? 'bg-blue-600' : 'bg-primary-600'}`}>
+            <div className="bg-white w-full max-w-lg rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-100">
+                <div className={`p-8 flex justify-between items-start text-white bg-gradient-to-br ${event.hangoutLink ? 'from-blue-600 to-blue-500' : 'from-primary-600 to-primary-500'}`}>
                     <div className="pr-8">
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-1 rounded mb-3 w-fit">
-                            <Clock size={12} /> {isPastEvent ? 'Finalizado' : 'Em breve'}
+                        <div className="flex items-center gap-3 mb-6">
+                            {member?.avatar_url && (
+                                <img src={member.avatar_url} className="w-12 h-12 rounded-2xl border-2 border-white/20 shadow-xl" />
+                            )}
+                            <div>
+                                <div className="text-[10px] font-black uppercase tracking-widest text-white/60 mb-0.5">Proprietário</div>
+                                <div className="text-sm font-bold">{member?.name || event.owner_email || 'Externo'}</div>
+                            </div>
                         </div>
-                        <h3 className="text-2xl font-black leading-tight">{event.summary}</h3>
+                        <h3 className="text-2xl font-black leading-tight tracking-tight">{event.summary}</h3>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-black/10 rounded-xl transition-all">
+                    <button onClick={onClose} className="p-2 hover:bg-black/10 rounded-2xl transition-all">
                         <X size={24} />
                     </button>
                 </div>
 
-                <div className="p-8 space-y-6">
-                    <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100">
-                            <Clock size={20} className="text-gray-400" />
+                <div className="p-10 space-y-8">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-gray-50 rounded-3xl border border-gray-100">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Início</div>
+                            <div className="font-black text-gray-800">{format(start, "HH:mm")}</div>
                         </div>
-                        <div>
-                            <p className="text-sm font-black text-gray-800">
-                                {format(start, "d 'de' MMMM", { locale: ptBR })}
-                            </p>
-                            <p className="text-xs text-gray-400 font-bold">
-                                {format(start, 'HH:mm')} até {format(end, 'HH:mm')}
-                            </p>
+                        <div className="p-4 bg-gray-50 rounded-3xl border border-gray-100">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Fim</div>
+                            <div className="font-black text-gray-800">{format(end, "HH:mm")}</div>
                         </div>
                     </div>
 
-                    {event.location && (
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100">
-                                <MapPin size={20} className="text-gray-400" />
-                            </div>
-                            <div className="text-sm text-gray-600 font-medium">{event.location}</div>
+                    <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center shrink-0">
+                            <CalendarIcon size={20} className="text-primary-600" />
                         </div>
-                    )}
+                        <div>
+                            <p className="text-sm font-black text-gray-800 uppercase tracking-tight">
+                                {format(start, "EEEE, d 'de' MMMM", { locale: ptBR })}
+                            </p>
+                            <p className="text-xs text-gray-400 font-bold">{isPastEvent ? 'Reunião Finalizada' : 'Em andamento'}</p>
+                        </div>
+                    </div>
 
                     {event.description && (
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center shrink-0 border border-gray-100">
-                                <AlignLeft size={20} className="text-gray-400" />
+                        <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100">
+                            <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                <AlignLeft size={14} /> Pauta da Reunião
                             </div>
-                            <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{event.description}</div>
+                            <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap font-medium">{event.description}</div>
                         </div>
                     )}
 
-                    {event.hangoutLink && (
+                    {event.hangoutLink && !isPastEvent && (
                         <button 
                             onClick={() => window.open(event.hangoutLink, '_blank')}
-                            className="w-full flex items-center justify-center gap-3 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-600/20 transition-all hover:-translate-y-1"
+                            className="w-full flex items-center justify-center gap-4 py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-600/20 transition-all hover:-translate-y-1"
                         >
-                            <Video size={20} /> Entrar na Reunião
+                            <Video size={20} /> Participar via Google Meet
                         </button>
                     )}
-                </div>
-                
-                <div className="px-8 pb-6 text-[10px] text-gray-300 font-bold uppercase tracking-widest text-center">
-                    ID: {event.id}
                 </div>
             </div>
         </div>
     );
 };
 
-const AccessDenied = () => (
-    <div className="flex flex-col items-center justify-center h-[60vh] text-center px-4">
-        <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mb-6">
-            <X size={40} className="text-red-400" />
+const BookingModal = ({ onClose, team, providerToken, allEvents, onSuccess }: { onClose: () => void, team: any[], providerToken: string, allEvents: GoogleEvent[], onSuccess: () => void }) => {
+    const [title, setTitle] = useState('');
+    const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [startTime, setStartTime] = useState(format(addMinutes(new Date(), 30), 'HH:00'));
+    const [endTime, setEndTime] = useState(format(addMinutes(new Date(), 90), 'HH:00'));
+    const [description, setDescription] = useState('');
+    const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+    const [externalEmails, setExternalEmails] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Detecção de conflitos
+    const conflicts = useMemo(() => {
+        const startDt = new Date(`${selectedDate}T${startTime}:00`);
+        const endDt = new Date(`${selectedDate}T${endTime}:00`);
+        
+        return allEvents.filter(e => {
+            const eStart = new Date(e.start.dateTime || e.start.date || '');
+            const eEnd = new Date(e.end.dateTime || e.end.date || '');
+            
+            // Verifica se o dono do evento está entre os selecionados (ou se é o atual)
+            const isParticipating = selectedMembers.some(email => e.owner_email?.toLowerCase() === email.toLowerCase());
+            
+            return isParticipating && (
+                isWithinInterval(startDt, { start: eStart, end: eEnd }) ||
+                isWithinInterval(endDt, { start: eStart, end: eEnd }) ||
+                (startDt < eStart && endDt > eEnd)
+            );
+        });
+    }, [selectedDate, startTime, endTime, selectedMembers, allEvents]);
+
+    const handleSave = async () => {
+        if (!title) return;
+        setIsSaving(true);
+        setError(null);
+
+        try {
+            const attendees = [
+                ...selectedMembers.map(email => ({ email })),
+                ...externalEmails.split(',').map(e => ({ email: e.trim() })).filter(e => e.email)
+            ];
+
+            const eventData = {
+                summary: title,
+                description,
+                start: { dateTime: `${selectedDate}T${startTime}:00Z` }, // Ajustar timezone se necessário
+                end: { dateTime: `${selectedDate}T${endTime}:00Z` },
+                attendees,
+                conferenceData: {
+                    createRequest: {
+                        requestId: `housih-${Date.now()}`,
+                        conferenceSolutionKey: { type: 'hangoutsMeet' }
+                    }
+                }
+            };
+
+            const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${providerToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(eventData)
+            });
+
+            if (!response.ok) throw new Error("Falha ao criar evento no Google.");
+            
+            onSuccess();
+            onClose();
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[40000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md">
+            <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-5 duration-300">
+                <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center text-white">
+                            <Plus size={20} />
+                        </div>
+                        <h3 className="text-xl font-black text-gray-900 tracking-tight uppercase">Nova Pauta Estratégica</h3>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-2xl transition-all">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="flex-1 p-10 overflow-y-auto no-scrollbar space-y-8">
+                    {/* Título */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Assunto da Reunião</label>
+                        <input 
+                            type="text" 
+                            placeholder="Ex: Alinhamento de Metas Março" 
+                            className="w-full px-6 py-4 bg-gray-50 border-gray-100 rounded-3xl text-gray-800 font-bold focus:ring-4 focus:ring-primary-500/10 transition-all text-lg placeholder:text-gray-300"
+                            value={title}
+                            onChange={e => setTitle(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Data e Hora */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Data</label>
+                            <input type="date" className="w-full px-5 py-4 bg-gray-50 rounded-2xl border-gray-100 font-bold text-sm" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Início</label>
+                            <input type="time" className="w-full px-5 py-4 bg-gray-50 rounded-2xl border-gray-100 font-bold text-sm" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Término</label>
+                            <input type="time" className="w-full px-5 py-4 bg-gray-50 rounded-2xl border-gray-100 font-bold text-sm" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                        </div>
+                    </div>
+
+                    {/* Participantes Internos */}
+                    <div className="space-y-4">
+                        <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                            <Users size={14} /> Participantes da Equipe
+                        </label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {team.filter(m => m.email).map(member => (
+                                <button 
+                                    key={member.id}
+                                    onClick={() => {
+                                        setSelectedMembers(prev => prev.includes(member.email) ? prev.filter(e => e !== member.email) : [...prev, member.email]);
+                                    }}
+                                    className={`flex items-center gap-3 p-3 rounded-2xl border-2 transition-all text-left ${
+                                        selectedMembers.includes(member.email) ? 'bg-primary-50 border-primary-500 shadow-md scale-[1.02]' : 'bg-white border-gray-100 hover:border-gray-200'
+                                    }`}
+                                >
+                                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border-2 border-white shadow-sm">
+                                        <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
+                                    </div>
+                                    <span className="text-xs font-black text-gray-700 truncate">{member.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Convidados Externos */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Convidados Externos (e-mails)</label>
+                        <textarea 
+                            placeholder="cliente@email.com, parceiro@empresa.com.br"
+                            className="w-full px-6 py-4 bg-gray-50 border-gray-100 rounded-3xl text-sm font-medium focus:ring-4 focus:ring-primary-500/10 min-h-[80px]"
+                            value={externalEmails}
+                            onChange={e => setExternalEmails(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Descrição */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Pauta / Observações</label>
+                        <textarea 
+                            placeholder="Descreva o objetivo da reunião..."
+                            className="w-full px-6 py-4 bg-gray-50 border-gray-100 rounded-3xl text-sm font-medium focus:ring-4 focus:ring-primary-500/10 min-h-[120px]"
+                            value={description}
+                            onChange={e => setDescription(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Alerta de Conflitos */}
+                    {conflicts.length > 0 && (
+                        <div className="p-4 bg-orange-50 border-2 border-orange-200 rounded-3xl flex items-start gap-3 animate-in fade-in zoom-in-95">
+                            <AlertCircle className="text-orange-600 shrink-0 mt-0.5" size={20} />
+                            <div>
+                                <h4 className="text-sm font-black text-orange-900">Alerta de Conflito!</h4>
+                                <p className="text-xs text-orange-700 font-medium">Os seguintes participantes já têm compromisso neste horário:</p>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {conflicts.map((e, idx) => (
+                                        <span key={idx} className="bg-orange-100 text-[10px] px-2 py-1 rounded-lg font-bold text-orange-800">
+                                            {e.owner_email?.split('@')[0]} ({e.summary})
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="p-8 border-t border-gray-50 bg-gray-50/30">
+                    {error && <p className="text-red-500 text-xs font-bold mb-4 flex items-center gap-2"><X size={14}/> {error}</p>}
+                    <button 
+                        onClick={handleSave}
+                        disabled={isSaving || !title}
+                        className="w-full py-5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-[24px] font-black uppercase tracking-widest text-sm shadow-2xl shadow-primary-600/30 transition-all flex items-center justify-center gap-4"
+                    >
+                        {isSaving ? <Sparkles className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
+                        {isSaving ? 'Agendando...' : 'Confirmar Pauta Estratégica'}
+                    </button>
+                </div>
+            </div>
         </div>
-        <h2 className="text-2xl font-black text-gray-800 mb-2 uppercase tracking-tighter">Acesso Restrito</h2>
-        <p className="text-gray-400 max-w-sm text-sm font-medium">Esta aba contém dados estratégicos da agenda e está reservada apenas ao administrador master.</p>
-    </div>
-);
+    );
+};
 
 const ConnectGoogle = ({ onConnect }: { onConnect: () => void }) => (
     <div className="max-w-4xl mx-auto mt-20 p-12 bg-white rounded-[40px] border border-gray-100 shadow-2xl flex flex-col items-center text-center relative overflow-hidden group">
         <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
             <Sparkles size={300} />
         </div>
-        <div className="w-24 h-24 bg-primary-50 rounded-[32px] flex items-center justify-center mb-10 shadow-inner">
-            <CalendarIcon size={48} className="text-primary-600" />
+        <div className="w-24 h-24 bg-primary-50 rounded-[32px] flex items-center justify-center mb-10 shadow-inner text-primary-600">
+            <CalendarIcon size={48} />
         </div>
-        <h1 className="text-4xl lg:text-5xl font-black text-gray-900 mb-6 tracking-tight">Sincronize sua Equipe.</h1>
+        <h1 className="text-4xl lg:text-5xl font-black text-gray-900 mb-6 tracking-tight">Agenda Colaborativa Housih.</h1>
         <p className="text-gray-500 text-lg mb-12 max-w-2xl leading-relaxed font-medium">
-            Ative a integração nativa com o Google Calendar para visualizar prazos, pautas e conferências diretamente no seu fluxo de trabalho.
+            Conecte seu Google Calendar para visualizar prazos, pautas de toda a equipe e agendar reuniões com um clique.
         </p>
         <button 
             onClick={onConnect}
             className="group relative px-10 py-5 bg-primary-600 text-white rounded-3xl font-black uppercase tracking-widest text-sm shadow-2xl shadow-primary-600/30 hover:bg-primary-700 hover:scale-[1.02] transition-all flex items-center gap-4 active:scale-95"
         >
             <Sparkles size={20} className="group-hover:rotate-12 transition-transform" />
-            Conectar Google Calendar
+            Ativar Modo Colaborativo
         </button>
-        <div className="mt-12 flex items-center gap-8 text-[11px] font-black text-gray-300 uppercase tracking-widest">
-            <span className="flex items-center gap-2"><CheckCircle2 size={16} className="text-green-500" /> 256-bit Encrypted</span>
-            <span className="flex items-center gap-2"><CheckCircle2 size={16} className="text-green-500" /> Read-only Scope</span>
-            <span className="flex items-center gap-2"><CheckCircle2 size={16} className="text-green-500" /> Real-time Sync</span>
-        </div>
     </div>
 );

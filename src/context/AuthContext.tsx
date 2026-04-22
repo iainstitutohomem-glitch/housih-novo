@@ -32,10 +32,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         // Escutar mudanças de auth
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             setSession(session);
             setUser(session?.user ?? null);
             setLoading(false);
+
+            // Persistir Refresh Token para Agenda Colaborativa
+            if (session?.provider_refresh_token && session.user?.email) {
+                await supabase.from('user_calendar_connections').upsert({
+                    user_id: session.user.id,
+                    email: session.user.email,
+                    refresh_token: session.provider_refresh_token,
+                    is_active: true,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id' });
+            }
         });
 
         return () => subscription.unsubscribe();
@@ -49,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                scopes: 'https://www.googleapis.com/auth/calendar.events.readonly',
+                scopes: 'https://www.googleapis.com/auth/calendar.events',
                 redirectTo: window.location.origin + '/agenda',
                 queryParams: {
                     access_type: 'offline',
