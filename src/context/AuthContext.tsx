@@ -35,18 +35,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             setSession(session);
             setUser(session?.user ?? null);
-            setLoading(false);
-
             // Persistir Refresh Token para Agenda Colaborativa
             if (session?.provider_refresh_token && session.user?.email) {
-                await supabase.from('user_calendar_connections').upsert({
-                    user_id: session.user.id,
-                    email: session.user.email,
-                    refresh_token: session.provider_refresh_token,
-                    is_active: true,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id' });
+                try {
+                    await supabase.from('user_calendar_connections').upsert({
+                        user_id: session.user.id,
+                        email: session.user.email,
+                        refresh_token: session.provider_refresh_token,
+                        is_active: true,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'user_id' });
+                } catch (e) {
+                    console.error("Erro ao persistir token da agenda:", e);
+                }
             }
+            setLoading(false);
         });
 
         return () => subscription.unsubscribe();

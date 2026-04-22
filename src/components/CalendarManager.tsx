@@ -10,7 +10,12 @@ import {
     AlignLeft,
     Plus,
     Users,
-    AlertCircle
+    AlertCircle,
+    MapPin,
+    Eye,
+    Bell,
+    Clock,
+    Layout
 } from 'lucide-react';
 import { 
     format, 
@@ -460,6 +465,11 @@ const BookingModal = ({ onClose, team, providerToken, allEvents, onSuccess }: { 
     const [description, setDescription] = useState('');
     const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
     const [externalEmails, setExternalEmails] = useState('');
+    const [location, setLocation] = useState('');
+    const [visibility, setVisibility] = useState('default'); // default, public, private
+    const [transparency, setTransparency] = useState('opaque'); // opaque (busy), transparent (free)
+    const [reminderMinutes, setReminderMinutes] = useState(30);
+    const [bookingType, setBookingType] = useState('event'); // event, task
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -507,6 +517,15 @@ const BookingModal = ({ onClose, team, providerToken, allEvents, onSuccess }: { 
                     dateTime: `${selectedDate}T${endTime}:00`,
                     timeZone: userTimeZone
                 },
+                location,
+                visibility,
+                transparency,
+                reminders: {
+                    useDefault: false,
+                    overrides: [
+                        { method: 'popup', minutes: reminderMinutes }
+                    ]
+                },
                 attendees,
                 conferenceData: {
                     createRequest: {
@@ -553,83 +572,144 @@ const BookingModal = ({ onClose, team, providerToken, allEvents, onSuccess }: { 
                     <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-2xl transition-all">
                         <X size={20} />
                     </button>
-                </div>
+                            <div className="flex-1 p-8 overflow-y-auto no-scrollbar space-y-6">
+                    {/* Abas Superiores (Google Style) */}
+                    <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl w-fit mb-4">
+                        {(['event', 'task', 'slot'] as const).map(type => (
+                            <button
+                                key={type}
+                                onClick={() => setBookingType(type)}
+                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    bookingType === type ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                                }`}
+                            >
+                                {type === 'event' ? 'Evento' : type === 'task' ? 'Tarefa' : 'Agendamento'}
+                            </button>
+                        ))}
+                    </div>
 
-                <div className="flex-1 p-10 overflow-y-auto no-scrollbar space-y-8">
                     {/* Título */}
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Assunto da Reunião</label>
                         <input 
                             type="text" 
-                            placeholder="Ex: Alinhamento de Metas Março" 
-                            className="w-full px-6 py-4 bg-gray-50 border-gray-100 rounded-3xl text-gray-800 font-bold focus:ring-4 focus:ring-primary-500/10 transition-all text-lg placeholder:text-gray-300"
+                            placeholder="Adicionar título" 
+                            className="w-full px-0 py-2 bg-transparent border-b-2 border-gray-100 focus:border-primary-500 outline-none text-2xl font-black text-gray-900 transition-all placeholder:text-gray-200"
                             value={title}
                             onChange={e => setTitle(e.target.value)}
                         />
                     </div>
 
                     {/* Data e Hora */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Data</label>
-                            <input type="date" className="w-full px-5 py-4 bg-gray-50 rounded-2xl border-gray-100 font-bold text-sm" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Início</label>
-                            <input type="time" className="w-full px-5 py-4 bg-gray-50 rounded-2xl border-gray-100 font-bold text-sm" value={startTime} onChange={e => setStartTime(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Término</label>
-                            <input type="time" className="w-full px-5 py-4 bg-gray-50 rounded-2xl border-gray-100 font-bold text-sm" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-3xl border border-gray-100">
+                        <Clock className="text-gray-400 shrink-0" size={20} />
+                        <div className="flex flex-wrap items-center gap-3">
+                            <input type="date" className="bg-transparent font-bold text-sm outline-none" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+                            <span className="text-gray-300">•</span>
+                            <div className="flex items-center gap-2">
+                                <input type="time" className="bg-transparent font-bold text-sm outline-none w-16" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                                <span className="text-gray-400">às</span>
+                                <input type="time" className="bg-transparent font-bold text-sm outline-none w-16" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                            </div>
                         </div>
                     </div>
 
-                    {/* Participantes Internos */}
+                    {/* Localização */}
+                    <div className="flex items-center gap-4 px-1">
+                        <MapPin className="text-gray-400 shrink-0" size={20} />
+                        <input 
+                            type="text" 
+                            placeholder="Adicionar local" 
+                            className="flex-1 bg-transparent border-b border-gray-100 py-1 focus:border-primary-500 outline-none text-sm font-medium text-gray-700 transition-all"
+                            value={location}
+                            onChange={e => setLocation(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Configurações de Status e Visibilidade */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-4 px-1">
+                            <Eye className="text-gray-400 shrink-0" size={20} />
+                            <select 
+                                value={visibility}
+                                onChange={e => setVisibility(e.target.value)}
+                                className="flex-1 bg-transparent border-b border-gray-100 py-1 focus:border-primary-500 outline-none text-sm font-medium text-gray-700"
+                            >
+                                <option value="default">Visibilidade padrão</option>
+                                <option value="public">Pública</option>
+                                <option value="private">Privada</option>
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-4 px-1">
+                            <Layout className="text-gray-400 shrink-0" size={20} />
+                            <select 
+                                value={transparency}
+                                onChange={e => setTransparency(e.target.value)}
+                                className="flex-1 bg-transparent border-b border-gray-100 py-1 focus:border-primary-500 outline-none text-sm font-medium text-gray-700"
+                            >
+                                <option value="opaque">Ocupado</option>
+                                <option value="transparent">Disponível</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Notificações */}
+                    <div className="flex items-center gap-4 px-1">
+                        <Bell className="text-gray-400 shrink-0" size={20} />
+                        <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                             Notificar 
+                             <select 
+                                value={reminderMinutes}
+                                onChange={e => setReminderMinutes(Number(e.target.value))}
+                                className="bg-gray-100 px-2 py-1 rounded-lg border-none focus:ring-0"
+                             >
+                                <option value={15}>15 minutos</option>
+                                <option value={30}>30 minutos</option>
+                                <option value={60}>1 hora</option>
+                                <option value={1440}>1 dia</option>
+                             </select>
+                             antes
+                        </div>
+                    </div>
+
+                    {/* Participantes */}
                     <div className="space-y-4">
                         <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                            <Users size={14} /> Participantes da Equipe
+                            <Users size={14} /> Adicionar Convidados (Equipe ou Externos)
                         </label>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <textarea 
+                            placeholder="Adicione e-mails separados por vírgula..."
+                            className="w-full px-6 py-4 bg-gray-50 border-gray-100 rounded-3xl text-sm font-medium focus:ring-4 focus:ring-primary-500/10 min-h-[60px]"
+                            value={externalEmails}
+                            onChange={e => setExternalEmails(e.target.value)}
+                        />
+                        <div className="flex flex-wrap gap-2">
                             {team.filter(m => m.email).map(member => (
                                 <button 
                                     key={member.id}
-                                    onClick={() => {
-                                        setSelectedMembers(prev => prev.includes(member.email) ? prev.filter(e => e !== member.email) : [...prev, member.email]);
-                                    }}
-                                    className={`flex items-center gap-3 p-3 rounded-2xl border-2 transition-all text-left ${
-                                        selectedMembers.includes(member.email) ? 'bg-primary-50 border-primary-500 shadow-md scale-[1.02]' : 'bg-white border-gray-100 hover:border-gray-200'
+                                    onClick={() => setSelectedMembers(prev => prev.includes(member.email) ? prev.filter(e => e !== member.email) : [...prev, member.email])}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border-2 transition-all ${
+                                        selectedMembers.includes(member.email) ? 'bg-primary-600 border-primary-600 text-white shadow-md' : 'bg-white border-gray-100 text-gray-600'
                                     }`}
                                 >
-                                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border-2 border-white shadow-sm">
+                                    <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 border border-white">
                                         <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
                                     </div>
-                                    <span className="text-xs font-black text-gray-700 truncate">{member.name}</span>
+                                    <span className="text-[10px] font-black">{member.name.split(' ')[0]}</span>
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Convidados Externos */}
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Convidados Externos (e-mails)</label>
-                        <textarea 
-                            placeholder="cliente@email.com, parceiro@empresa.com.br"
-                            className="w-full px-6 py-4 bg-gray-50 border-gray-100 rounded-3xl text-sm font-medium focus:ring-4 focus:ring-primary-500/10 min-h-[80px]"
-                            value={externalEmails}
-                            onChange={e => setExternalEmails(e.target.value)}
-                        />
-                    </div>
-
                     {/* Descrição */}
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Pauta / Observações</label>
+                    <div className="flex items-start gap-4 px-1">
+                        <AlignLeft className="text-gray-400 shrink-0 mt-1" size={20} />
                         <textarea 
-                            placeholder="Descreva o objetivo da reunião..."
-                            className="w-full px-6 py-4 bg-gray-50 border-gray-100 rounded-3xl text-sm font-medium focus:ring-4 focus:ring-primary-500/10 min-h-[120px]"
+                            placeholder="Adicionar descrição ou pauta da reunião..."
+                            className="flex-1 bg-transparent border border-gray-100 p-4 rounded-2xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 outline-none text-sm font-medium text-gray-700 min-h-[100px] transition-all"
                             value={description}
                             onChange={e => setDescription(e.target.value)}
                         />
-                    </div>
+                    </div>                </div>
 
                     {/* Alerta de Conflitos */}
                     {conflicts.length > 0 && (
