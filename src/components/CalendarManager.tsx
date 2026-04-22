@@ -4,11 +4,9 @@ import {
     ChevronLeft, 
     ChevronRight, 
     Video, 
-    Clock, 
     Sparkles,
     CheckCircle2,
     X,
-    MapPin,
     AlignLeft,
     Plus,
     Users,
@@ -61,7 +59,6 @@ export const CalendarManager = () => {
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
 
-    const isAdmin = session?.user?.email === 'institutohomem@gmail.com';
     const providerToken = session?.provider_token;
     const userEmail = session?.user?.email;
 
@@ -230,7 +227,7 @@ export const CalendarManager = () => {
             {selectedEvent && <EventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} team={teamMembers} />}
             {isBookingModalOpen && (
                 <BookingModal 
-                    onClose={() => setIsBookingModalOpen(null)} 
+                    onClose={() => setIsBookingModalOpen(false)} 
                     team={teamMembers} 
                     providerToken={providerToken}
                     allEvents={allEvents}
