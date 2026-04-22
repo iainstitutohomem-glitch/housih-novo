@@ -517,7 +517,11 @@ const BookingModal = ({ onClose, team, providerToken, allEvents, onSuccess }: { 
                 body: JSON.stringify(eventData)
             });
 
-            if (!response.ok) throw new Error("Falha ao criar evento no Google.");
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error("Google API Error:", errorData);
+                throw new Error(errorData.error?.message || "Falha ao criar evento no Google.");
+            }
             
             onSuccess();
             onClose();
