@@ -144,7 +144,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             if (filters.empresa !== 'Todas' && task.company_id !== filters.empresa && task.title !== filters.empresa) return false;
             if (filters.prioridade !== 'Todas' && task.priority !== filters.prioridade) return false;
             if (filters.status !== 'Todos' && task.status !== filters.status) return false;
-            if (filters.responsavel !== 'Todos' && !task.assignee.includes(filters.responsavel)) return false;
+            if (filters.responsavel !== 'Todos' && (!Array.isArray(task.assignee) || !task.assignee.includes(filters.responsavel))) return false;
 
             if (filters.dataInicio || filters.dataFim) {
                 if (!task.due_date) return false;
@@ -185,38 +185,42 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     const fetchTasks = async (silent = false) => {
         if (!silent) setLoading(true);
-        const { data, error } = await supabase.from('tasks').select('*').order('order_index', { ascending: true });
-        if (error) {
-            console.error("Fetch tasks error:", error);
-            if (!silent) alert("ERRO CRITICAL DE DADOS: " + error.message);
-        } else if (data) {
-            // Only run overdue check on non-silent (page load) fetches
-            if (!silent) {
+        try {
+            const { data, error } = await supabase.from('tasks').select('*').order('order_index', { ascending: true });
+            
+            if (error) {
+                console.error("Fetch tasks error:", error);
+                if (!silent) alert("ERRO CRITICAL DE DADOS: " + error.message);
+            } else if (data) {
                 const now = new Date();
                 now.setHours(0, 0, 0, 0);
 
                 const updatedData = data.map((t: any) => {
+                    // Ensure assignee is always an array to prevent crashes in useMemo filters
+                    if (!Array.isArray(t.assignee)) {
+                        t.assignee = typeof t.assignee === 'string' ? [t.assignee] : [];
+                    }
+
+                    // In-memory status check for overdue tasks (no DB update here for performance)
                     if (t.due_date && t.status !== 'Concluído' && t.status !== 'Cancelado') {
                         const dueDate = new Date(t.due_date);
                         dueDate.setHours(0, 0, 0, 0);
 
                         if (dueDate < now && t.status !== 'Atrasado') {
                             t.status = 'Atrasado';
-                            supabase.from('tasks').update({ status: 'Atrasado' }).eq('id', t.id).then();
-                        } else if (dueDate >= now && t.status === 'Atrasado') {
-                            t.status = 'Não Iniciado';
-                            supabase.from('tasks').update({ status: 'Não Iniciado' }).eq('id', t.id).then();
                         }
                     }
                     return t;
                 });
                 setTasks(updatedData);
-            } else {
-                setTasks(data);
             }
+        } catch (err) {
+            console.error("Critical error in fetchTasks:", err);
+        } finally {
+            if (!silent) setLoading(false);
         }
-        if (!silent) setLoading(false);
     };
+
 
     const fetchCompanies = async () => {
         const { data, error } = await supabase.from('companies').select('*').order('created_at', { ascending: false });
