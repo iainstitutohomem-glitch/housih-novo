@@ -151,7 +151,7 @@ export const KanbanBoard = () => {
                                             </span>
                                         </div>
 
-                                        <div className="flex flex-col gap-3 flex-1 overflow-y-auto no-scrollbar pr-1 min-h-[500px]">
+                                        <div className="flex flex-col gap-3 flex-1 overflow-y-auto pretty-scrollbar pr-1">
                                             {tasksInCol.map((task, index) => (
                                                 <Draggable key={task.id} draggableId={task.id} index={index}>
                                                     {(provided, snapshot) => (
