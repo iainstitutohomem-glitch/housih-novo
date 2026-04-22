@@ -466,25 +466,20 @@ const BookingModal = ({ onClose, team, providerToken, allEvents, onSuccess }: { 
     const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
     const [externalEmails, setExternalEmails] = useState('');
     const [location, setLocation] = useState('');
-    const [visibility, setVisibility] = useState('default'); // default, public, private
-    const [transparency, setTransparency] = useState('opaque'); // opaque (busy), transparent (free)
+    const [visibility, setVisibility] = useState('default'); 
+    const [transparency, setTransparency] = useState('opaque'); 
     const [reminderMinutes, setReminderMinutes] = useState(30);
-    const [bookingType, setBookingType] = useState('event'); // event, task
+    const [bookingType, setBookingType] = useState('event'); 
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Detecção de conflitos
     const conflicts = useMemo(() => {
         const startDt = new Date(`${selectedDate}T${startTime}:00`);
         const endDt = new Date(`${selectedDate}T${endTime}:00`);
-        
         return allEvents.filter(e => {
             const eStart = new Date(e.start.dateTime || e.start.date || '');
             const eEnd = new Date(e.end.dateTime || e.end.date || '');
-            
-            // Verifica se o dono do evento está entre os selecionados (ou se é o atual)
             const isParticipating = selectedMembers.some(email => e.owner_email?.toLowerCase() === email.toLowerCase());
-            
             return isParticipating && (
                 isWithinInterval(startDt, { start: eStart, end: eEnd }) ||
                 isWithinInterval(endDt, { start: eStart, end: eEnd }) ||
@@ -497,59 +492,33 @@ const BookingModal = ({ onClose, team, providerToken, allEvents, onSuccess }: { 
         if (!title) return;
         setIsSaving(true);
         setError(null);
-
         try {
             const attendees = [
                 ...selectedMembers.map(email => ({ email })),
                 ...externalEmails.split(',').map(e => ({ email: e.trim() })).filter(e => e.email)
             ];
-
             const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
             const eventData = {
                 summary: title,
                 description,
-                start: { 
-                    dateTime: `${selectedDate}T${startTime}:00`,
-                    timeZone: userTimeZone
-                },
-                end: { 
-                    dateTime: `${selectedDate}T${endTime}:00`,
-                    timeZone: userTimeZone
-                },
+                start: { dateTime: `${selectedDate}T${startTime}:00`, timeZone: userTimeZone },
+                end: { dateTime: `${selectedDate}T${endTime}:00`, timeZone: userTimeZone },
                 location,
                 visibility,
                 transparency,
-                reminders: {
-                    useDefault: false,
-                    overrides: [
-                        { method: 'popup', minutes: reminderMinutes }
-                    ]
-                },
+                reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: reminderMinutes }] },
                 attendees,
-                conferenceData: {
-                    createRequest: {
-                        requestId: `housih-${Date.now()}`,
-                        conferenceSolutionKey: { type: 'hangoutsMeet' }
-                    }
-                }
+                conferenceData: { createRequest: { requestId: `housih-${Date.now()}`, conferenceSolutionKey: { type: 'hangoutsMeet' } } }
             };
-
             const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${providerToken}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Authorization': `Bearer ${providerToken}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(eventData)
             });
-
             if (!response.ok) {
                 const errorData = await response.json();
-                console.error("Google API Error:", errorData);
-                throw new Error(errorData.error?.message || "Falha ao criar evento no Google.");
+                throw new Error(errorData.error?.message || "Erro ao criar evento.");
             }
-            
             onSuccess();
             onClose();
         } catch (err: any) {
@@ -560,185 +529,191 @@ const BookingModal = ({ onClose, team, providerToken, allEvents, onSuccess }: { 
     };
 
     return (
-        <div className="fixed inset-0 z-[40000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md">
-            <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-5 duration-300">
-                <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center text-white">
-                            <Plus size={20} />
-                        </div>
-                        <h3 className="text-xl font-black text-gray-900 tracking-tight uppercase">Nova Pauta Estratégica</h3>
-                    </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-2xl transition-all">
-                        <X size={20} />
-                    </button>
-                            <div className="flex-1 p-8 overflow-y-auto no-scrollbar space-y-6">
-                    {/* Abas Superiores (Google Style) */}
-                    <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl w-fit mb-4">
+        <div className="fixed inset-0 z-[40000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <div className="bg-white w-full max-w-xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
+                {/* Header Compacto */}
+                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
+                    <div className="flex gap-1.5 p-1 bg-gray-100 rounded-xl">
                         {(['event', 'task', 'slot'] as const).map(type => (
                             <button
                                 key={type}
                                 onClick={() => setBookingType(type)}
-                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                                     bookingType === type ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'
                                 }`}
                             >
-                                {type === 'event' ? 'Evento' : type === 'task' ? 'Tarefa' : 'Agendamento'}
+                                {type === 'event' ? 'Evento' : type === 'task' ? 'Tarefa' : 'Agenda'}
                             </button>
                         ))}
                     </div>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 transition-all">
+                        <X size={20} />
+                    </button>
+                </div>
 
-                    {/* Título */}
-                    <div className="space-y-2">
-                        <input 
-                            type="text" 
-                            placeholder="Adicionar título" 
-                            className="w-full px-0 py-2 bg-transparent border-b-2 border-gray-100 focus:border-primary-500 outline-none text-2xl font-black text-gray-900 transition-all placeholder:text-gray-200"
-                            value={title}
-                            onChange={e => setTitle(e.target.value)}
-                        />
-                    </div>
+                <div className="flex-1 p-8 overflow-y-auto no-scrollbar space-y-8">
+                    {/* Título - Impactante e Profissional */}
+                    <input 
+                        type="text" 
+                        placeholder="Adicionar título" 
+                        className="w-full px-0 py-1 bg-transparent border-b-2 border-gray-100 focus:border-primary-500 outline-none text-3xl font-black text-gray-900 transition-all placeholder:text-gray-200"
+                        value={title}
+                        onChange={e => setTitle(e.target.value)}
+                        autoFocus
+                    />
 
-                    {/* Data e Hora */}
-                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-3xl border border-gray-100">
-                        <Clock className="text-gray-400 shrink-0" size={20} />
-                        <div className="flex flex-wrap items-center gap-3">
-                            <input type="date" className="bg-transparent font-bold text-sm outline-none" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
-                            <span className="text-gray-300">•</span>
-                            <div className="flex items-center gap-2">
-                                <input type="time" className="bg-transparent font-bold text-sm outline-none w-16" value={startTime} onChange={e => setStartTime(e.target.value)} />
-                                <span className="text-gray-400">às</span>
-                                <input type="time" className="bg-transparent font-bold text-sm outline-none w-16" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                    {/* Blocos de Informação */}
+                    <div className="space-y-6">
+                        {/* Data e Hora Row */}
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 flex items-center justify-center text-gray-400 shrink-0">
+                                <Clock size={20} />
+                            </div>
+                            <div className="flex-1 flex flex-wrap items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                <input type="date" className="bg-transparent font-bold text-sm outline-none text-gray-700" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+                                <span className="text-gray-300">|</span>
+                                <div className="flex items-center gap-2">
+                                    <input type="time" className="bg-transparent font-bold text-sm outline-none text-gray-700" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                                    <span className="text-gray-400 font-medium">até</span>
+                                    <input type="time" className="bg-transparent font-bold text-sm outline-none text-gray-700" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Localização */}
-                    <div className="flex items-center gap-4 px-1">
-                        <MapPin className="text-gray-400 shrink-0" size={20} />
-                        <input 
-                            type="text" 
-                            placeholder="Adicionar local" 
-                            className="flex-1 bg-transparent border-b border-gray-100 py-1 focus:border-primary-500 outline-none text-sm font-medium text-gray-700 transition-all"
-                            value={location}
-                            onChange={e => setLocation(e.target.value)}
-                        />
-                    </div>
-
-                    {/* Configurações de Status e Visibilidade */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex items-center gap-4 px-1">
-                            <Eye className="text-gray-400 shrink-0" size={20} />
-                            <select 
-                                value={visibility}
-                                onChange={e => setVisibility(e.target.value)}
-                                className="flex-1 bg-transparent border-b border-gray-100 py-1 focus:border-primary-500 outline-none text-sm font-medium text-gray-700"
-                            >
-                                <option value="default">Visibilidade padrão</option>
-                                <option value="public">Pública</option>
-                                <option value="private">Privada</option>
-                            </select>
+                        {/* Localização Row */}
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 flex items-center justify-center text-gray-400 shrink-0">
+                                <MapPin size={20} />
+                            </div>
+                            <input 
+                                type="text" 
+                                placeholder="Adicionar local ou link" 
+                                className="flex-1 bg-white border-b border-gray-100 py-2 focus:border-primary-500 outline-none text-sm font-bold text-gray-700 placeholder:text-gray-300"
+                                value={location}
+                                onChange={e => setLocation(e.target.value)}
+                            />
                         </div>
-                        <div className="flex items-center gap-4 px-1">
-                            <Layout className="text-gray-400 shrink-0" size={20} />
-                            <select 
-                                value={transparency}
-                                onChange={e => setTransparency(e.target.value)}
-                                className="flex-1 bg-transparent border-b border-gray-100 py-1 focus:border-primary-500 outline-none text-sm font-medium text-gray-700"
-                            >
-                                <option value="opaque">Ocupado</option>
-                                <option value="transparent">Disponível</option>
-                            </select>
+
+                        {/* Configurações (Visibilidade & Status) */}
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 flex items-center justify-center text-gray-400 shrink-0">
+                                <Eye size={20} />
+                            </div>
+                            <div className="flex-1 grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-tighter ml-1">Visibilidade</label>
+                                    <select 
+                                        value={visibility}
+                                        onChange={e => setVisibility(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-primary-500/10"
+                                    >
+                                        <option value="default">Padrão</option>
+                                        <option value="public">Pública</option>
+                                        <option value="private">Privada</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-tighter ml-1">No meu Google</label>
+                                    <select 
+                                        value={transparency}
+                                        onChange={e => setTransparency(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-primary-500/10"
+                                    >
+                                        <option value="opaque">Ocupado</option>
+                                        <option value="transparent">Disponível</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Notificações */}
-                    <div className="flex items-center gap-4 px-1">
-                        <Bell className="text-gray-400 shrink-0" size={20} />
-                        <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                             Notificar 
-                             <select 
-                                value={reminderMinutes}
-                                onChange={e => setReminderMinutes(Number(e.target.value))}
-                                className="bg-gray-100 px-2 py-1 rounded-lg border-none focus:ring-0"
-                             >
-                                <option value={15}>15 minutos</option>
-                                <option value={30}>30 minutos</option>
-                                <option value={60}>1 hora</option>
-                                <option value={1440}>1 dia</option>
-                             </select>
-                             antes
+                        {/* Lembrete Row */}
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 flex items-center justify-center text-gray-400 shrink-0">
+                                <Bell size={20} />
+                            </div>
+                            <div className="flex items-center gap-2 text-xs font-bold text-gray-600">
+                                 Avisar
+                                 <select 
+                                    value={reminderMinutes}
+                                    onChange={e => setReminderMinutes(Number(e.target.value))}
+                                    className="bg-gray-100 px-2 py-1 rounded-lg border-none font-black text-primary-600"
+                                 >
+                                    <option value={15}>15 min</option>
+                                    <option value={30}>30 min</option>
+                                    <option value={60}>1 hora</option>
+                                    <option value={1440}>1 dia</option>
+                                 </select>
+                                 antes do início
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Participantes */}
-                    <div className="space-y-4">
-                        <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                            <Users size={14} /> Adicionar Convidados (Equipe ou Externos)
-                        </label>
-                        <textarea 
-                            placeholder="Adicione e-mails separados por vírgula..."
-                            className="w-full px-6 py-4 bg-gray-50 border-gray-100 rounded-3xl text-sm font-medium focus:ring-4 focus:ring-primary-500/10 min-h-[60px]"
-                            value={externalEmails}
-                            onChange={e => setExternalEmails(e.target.value)}
-                        />
-                        <div className="flex flex-wrap gap-2">
-                            {team.filter(m => m.email).map(member => (
-                                <button 
-                                    key={member.id}
-                                    onClick={() => setSelectedMembers(prev => prev.includes(member.email) ? prev.filter(e => e !== member.email) : [...prev, member.email])}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border-2 transition-all ${
-                                        selectedMembers.includes(member.email) ? 'bg-primary-600 border-primary-600 text-white shadow-md' : 'bg-white border-gray-100 text-gray-600'
-                                    }`}
-                                >
-                                    <div className="w-5 h-5 rounded-full overflow-hidden shrink-0 border border-white">
-                                        <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
-                                    </div>
-                                    <span className="text-[10px] font-black">{member.name.split(' ')[0]}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Descrição */}
-                    <div className="flex items-start gap-4 px-1">
-                        <AlignLeft className="text-gray-400 shrink-0 mt-1" size={20} />
-                        <textarea 
-                            placeholder="Adicionar descrição ou pauta da reunião..."
-                            className="flex-1 bg-transparent border border-gray-100 p-4 rounded-2xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 outline-none text-sm font-medium text-gray-700 min-h-[100px] transition-all"
-                            value={description}
-                            onChange={e => setDescription(e.target.value)}
-                        />
-                    </div>                </div>
-
-                    {/* Alerta de Conflitos */}
-                    {conflicts.length > 0 && (
-                        <div className="p-4 bg-orange-50 border-2 border-orange-200 rounded-3xl flex items-start gap-3 animate-in fade-in zoom-in-95">
-                            <AlertCircle className="text-orange-600 shrink-0 mt-0.5" size={20} />
-                            <div>
-                                <h4 className="text-sm font-black text-orange-900">Alerta de Conflito!</h4>
-                                <p className="text-xs text-orange-700 font-medium">Os seguintes participantes já têm compromisso neste horário:</p>
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                    {conflicts.map((e, idx) => (
-                                        <span key={idx} className="bg-orange-100 text-[10px] px-2 py-1 rounded-lg font-bold text-orange-800">
-                                            {e.owner_email?.split('@')[0]} ({e.summary})
-                                        </span>
+                        {/* Convidados Row */}
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 flex items-center justify-center text-gray-400 shrink-0 mt-1">
+                                <Users size={20} />
+                            </div>
+                            <div className="flex-1 space-y-4">
+                                <textarea 
+                                    placeholder="Convidados externos (e-mail)..."
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-xs font-medium focus:ring-4 focus:ring-primary-500/10 min-h-[50px] outline-none"
+                                    value={externalEmails}
+                                    onChange={e => setExternalEmails(e.target.value)}
+                                />
+                                <div className="flex flex-wrap gap-2">
+                                    {team.filter(m => m.email).map(member => (
+                                        <button 
+                                            key={member.id}
+                                            onClick={() => setSelectedMembers(prev => prev.includes(member.email) ? prev.filter(e => e !== member.email) : [...prev, member.email])}
+                                            className={`flex items-center gap-1.5 pl-1 pr-3 py-1 rounded-full border-2 transition-all ${
+                                                selectedMembers.includes(member.email) ? 'bg-primary-600 border-primary-600 text-white shadow-md' : 'bg-white border-gray-100 text-gray-500 hover:border-gray-200'
+                                            }`}
+                                        >
+                                            <div className="w-5 h-5 rounded-full overflow-hidden border-2 border-white">
+                                                <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
+                                            </div>
+                                            <span className="text-[10px] font-black">{member.name.split(' ')[0]}</span>
+                                        </button>
                                     ))}
                                 </div>
                             </div>
                         </div>
+
+                        {/* Descrição Row */}
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 flex items-center justify-center text-gray-400 shrink-0 mt-1">
+                                <AlignLeft size={20} />
+                            </div>
+                            <textarea 
+                                placeholder="Adicionar detalhes da reunião..."
+                                className="flex-1 bg-white border border-gray-100 p-4 rounded-2xl focus:border-primary-500 focus:ring-4 focus:ring-primary-500/5 outline-none text-sm font-medium text-gray-600 min-h-[100px] transition-all"
+                                value={description}
+                                onChange={e => setDescription(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Conflitos */}
+                    {conflicts.length > 0 && (
+                        <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl flex items-start gap-3">
+                            <AlertCircle className="text-orange-600 shrink-0 mt-0.5" size={18} />
+                            <p className="text-[10px] font-bold text-orange-800 leading-tight">
+                                <span className="block font-black uppercase mb-1">Atenção</span>
+                                Conflitos de horário detectados para: {conflicts.map(e => e.owner_email?.split('@')[0]).join(', ')}
+                            </p>
+                        </div>
                     )}
                 </div>
 
-                <div className="p-8 border-t border-gray-50 bg-gray-50/30">
-                    {error && <p className="text-red-500 text-xs font-bold mb-4 flex items-center gap-2"><X size={14}/> {error}</p>}
+                {/* Footer Fixo */}
+                <div className="p-6 border-t border-gray-100 bg-white">
+                    {error && <p className="text-red-500 text-[10px] font-black mb-4 flex items-center gap-2 uppercase tracking-widest"><X size={12}/> {error}</p>}
                     <button 
                         onClick={handleSave}
                         disabled={isSaving || !title}
-                        className="w-full py-5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-[24px] font-black uppercase tracking-widest text-sm shadow-2xl shadow-primary-600/30 transition-all flex items-center justify-center gap-4"
+                        className="w-full py-4 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary-600/30 transition-all flex items-center justify-center gap-3 active:scale-95"
                     >
-                        {isSaving ? <Sparkles className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
-                        {isSaving ? 'Agendando...' : 'Confirmar Pauta Estratégica'}
+                        {isSaving ? <Sparkles className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
+                        {isSaving ? 'Reservando...' : 'Confirmar Pauta Estratégica'}
                     </button>
                 </div>
             </div>

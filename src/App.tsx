@@ -116,9 +116,14 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
               <Sparkles size={16} />
               <span className="hidden md:inline text-[10px] uppercase tracking-wider">IA Assistente</span>
             </button>
-            <div className="hidden lg:flex flex-col items-end mr-2">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Conectado como</span>
-                <span className="text-[11px] font-bold text-primary-600 leading-tight">{(useAuth() as any).session?.user?.email}</span>
+            <div className="hidden lg:flex items-center mr-2">
+                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-sm hover:scale-110 transition-all cursor-help" title={(useAuth() as any).session?.user?.email}>
+                    <img 
+                        src={(useAuth() as any).session?.user?.user_metadata?.avatar_url || (useAuth() as any).session?.user?.user_metadata?.picture} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                    />
+                </div>
             </div>
             <NotificationBell />
             <button 
