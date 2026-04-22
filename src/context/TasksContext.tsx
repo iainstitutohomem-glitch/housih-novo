@@ -188,7 +188,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const { data, error } = await supabase.from('tasks').select('*').order('order_index', { ascending: true });
         if (error) {
             console.error("Fetch tasks error:", error);
-            if (!silent) alert("Erro ao buscar tarefas: " + error.message);
+            if (!silent && !error.message.includes('Lock')) alert("Erro ao buscar tarefas: " + error.message);
         } else if (data) {
             // Only run overdue check on non-silent (page load) fetches
             if (!silent) {

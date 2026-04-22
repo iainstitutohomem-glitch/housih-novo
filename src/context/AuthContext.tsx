@@ -53,7 +53,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const signOut = async () => {
-        await supabase.auth.signOut();
+        try {
+            await supabase.auth.signOut();
+            // Limpeza forçada para evitar erros de cache/lock
+            localStorage.clear();
+            window.location.href = '/login';
+        } catch (error) {
+            console.error("Erro ao sair:", error);
+            localStorage.clear();
+            window.location.href = '/login';
+        }
     };
 
     const signInWithGoogle = async () => {
