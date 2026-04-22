@@ -5,8 +5,6 @@ import {
     ChevronRight, 
     Video, 
     Clock, 
-    RefreshCw, 
-    ExternalLink,
     Sparkles,
     CheckCircle2,
     X,
@@ -24,11 +22,8 @@ import {
     isSameDay, 
     isSameMonth, 
     startOfDay, 
-    endOfDay,
     addMonths,
-    subMonths,
     isPast,
-    isAfter,
     differenceInMinutes
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -52,7 +47,7 @@ export const CalendarManager = () => {
     const [viewDate, setViewDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<ViewMode>('month');
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [, setError] = useState<string | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<GoogleEvent | null>(null);
     const [currentTime, setCurrentTime] = useState(new Date());
 
