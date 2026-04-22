@@ -116,6 +116,13 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
               <span className="hidden md:inline text-[10px] uppercase tracking-wider">IA Assistente</span>
             </button>
             <NotificationBell />
+            <button 
+              onClick={signOut}
+              className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+              title="Sair do Sistema"
+            >
+              <LogOut size={20} />
+            </button>
             <NovaTarefaButton />
           </div>
         </header>
