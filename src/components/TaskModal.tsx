@@ -31,7 +31,6 @@ export const TaskModal = () => {
     const [showMentionList, setShowMentionList] = useState(false);
     const [activeChecklistMenu, setActiveChecklistMenu] = useState<{ id: number, type: 'date' | 'users' } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isEditingObservations, setIsEditingObservations] = useState(false);
 
     // Efeito para carregar os dados da tarefa apenas quando abrir o modal ou mudar de tarefa
     useEffect(() => {
