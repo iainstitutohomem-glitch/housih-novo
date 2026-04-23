@@ -588,11 +588,6 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         fetchTeam();
         fetchNotifications();
 
-        // Automação: Verificar tarefas atrasadas a cada 1 hora se o navegador estiver aberto
-        const automationInterval = setInterval(() => {
-            fetchTasks(true);
-        }, 1000 * 60 * 60);
-
         // Subscrição Realtime para atualizações automáticas
         const taskSubscription = supabase
             .channel('db-changes')
@@ -611,7 +606,6 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         return () => {
             supabase.removeChannel(taskSubscription);
-            clearInterval(automationInterval);
         };
     }, [session]);
 
