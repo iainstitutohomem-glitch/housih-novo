@@ -7,26 +7,17 @@ export const TaskFilterBar = () => {
     return (
         <div className="flex flex-col gap-4 bg-white/80 backdrop-blur-md border border-white/40 p-5 rounded-2xl shadow-sm mb-6 w-full">
             {/* Primeira Linha: Busca */}
-            <div className="flex gap-3">
-                <div className="flex-1 relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none group-focus-within:text-primary-500 transition-colors">
-                        <Search size={20} className="text-gray-400 group-focus-within:text-primary-500" />
-                    </div>
-                    <input 
-                        type="text"
-                        placeholder="Buscar tarefa pelo nome do chamado..."
-                        value={filters.busca}
-                        onChange={(e) => setFilters({ ...filters, busca: e.target.value })}
-                        className="w-full bg-gray-50/50 border border-gray-200 text-gray-700 py-3 pl-12 px-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:bg-white focus:border-primary-500/50 transition-all text-sm outline-none shadow-sm"
-                    />
+            <div className="w-full relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none group-focus-within:text-primary-500 transition-colors">
+                    <Search size={20} className="text-gray-400 group-focus-within:text-primary-500" />
                 </div>
-                <button 
-                    onClick={() => fetchTasks(false)}
-                    className="px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 hover:text-primary-600 transition-all text-sm font-medium shadow-sm flex items-center gap-2 shrink-0 group"
-                >
-                    <svg className={`group-active:animate-spin`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-                    Sincronizar Atrasados
-                </button>
+                <input 
+                    type="text"
+                    placeholder="Buscar tarefa pelo nome do chamado..."
+                    value={filters.busca}
+                    onChange={(e) => setFilters({ ...filters, busca: e.target.value })}
+                    className="w-full bg-gray-50/50 border border-gray-200 text-gray-700 py-3 pl-12 px-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:bg-white focus:border-primary-500/50 transition-all text-sm outline-none shadow-sm"
+                />
             </div>
 
             {/* Segunda Linha: Outros Filtros */}
