@@ -84,7 +84,7 @@ interface TasksContextType {
     boardColumns: BoardColumn[];
     activeBoardId: string;
     setActiveBoardId: (id: string) => void;
-    fetchTasks: () => Promise<void>;
+    fetchTasks: (silent?: boolean) => Promise<void>;
     updateTaskStatus: (taskId: string, columnId: string, statusName: string) => Promise<void>;
     addTask: (task: Partial<Task>) => Promise<void>;
     updateTask: (taskId: string, task: Partial<Task>) => Promise<void>;
