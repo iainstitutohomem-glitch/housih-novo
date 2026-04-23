@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus, Download } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
@@ -32,11 +32,13 @@ export const TaskModal = () => {
     const [activeChecklistMenu, setActiveChecklistMenu] = useState<{ id: number, type: 'date' | 'users' } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const prevTaskIdRef = useRef<string | null>(null);
+
     // Efeito para carregar os dados da tarefa apenas quando abrir o modal ou mudar de tarefa
     useEffect(() => {
-        // Se o modal não estiver aberto, não fazemos nada
+        // Se o modal não estiver aberto, limpamos tudo e resetamos o rastreador
         if (!isModalOpen) {
-            // Limpa os campos quando o modal fecha para a próxima abertura estar limpa
+            prevTaskIdRef.current = null;
             setTitle('');
             setCompany('Nenhuma');
             setAssignees([]);
@@ -49,48 +51,42 @@ export const TaskModal = () => {
             return;
         }
 
-        // Se estivermos editando uma tarefa, carregamos os dados dela apenas se for uma tarefa diferente da atual
-        // ou se o modal acabou de abrir. Isso evita que atualizações em background apaguem o que o usuário está digitando.
-        if (editingTask) {
-            setTitle(editingTask.title || '');
-            setCompany(editingTask.company_id || 'Nenhuma');
-            setAssignees(editingTask.assignee || []);
-            setStatus(editingTask.status || 'Não Iniciado');
-            setBoardId(editingTask.board_id);
-            setColumnId(editingTask.column_id);
-            if (editingTask.due_date) {
-                const d = new Date(editingTask.due_date);
-                const y = d.getUTCFullYear();
-                const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-                const dd = String(d.getUTCDate()).padStart(2, '0');
-                setDueDate(`${y}-${m}-${dd}`);
-            } else {
-                setDueDate('');
-            }
-            setPriority(editingTask.priority || 'Média');
-            setObservations(editingTask.observations || '');
-            setChecklist(editingTask.checklist || []);
-            setAttachments(editingTask.attachments || []);
-        } else {
-            // Se for uma nova tarefa, inicializamos com os padrões
-            setTitle('');
-            setCompany('Nenhuma');
-            setAssignees([]);
-            setStatus('Não Iniciado');
-            
-            const defBoard = activeBoardId !== 'Todas' ? activeBoardId : (boards.find(b => b.is_default)?.id || boards[0]?.id || null);
-            setBoardId(defBoard);
-            
-            const defCol = boardColumns.find(c => c.board_id === defBoard)?.id || null;
-            setColumnId(defCol);
+        // Só carregamos os dados se for uma tarefa REALMENTE diferente (ID mudou) ou se nada foi carregado ainda
+        const currentId = editingTask?.id || 'new';
+        if (currentId !== prevTaskIdRef.current) {
+            prevTaskIdRef.current = currentId;
 
-            setDueDate('');
-            setPriority('Média');
-            setObservations('');
-            setChecklist([]);
-            setAttachments([]);
+            if (editingTask) {
+                setTitle(editingTask.title || '');
+                setCompany(editingTask.company_id || 'Nenhuma');
+                setAssignees(editingTask.assignee || []);
+                setStatus(editingTask.status || 'Não Iniciado');
+                setBoardId(editingTask.board_id);
+                setColumnId(editingTask.column_id);
+                if (editingTask.due_date) {
+                    const d = new Date(editingTask.due_date);
+                    const y = d.getUTCFullYear();
+                    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getUTCDate()).padStart(2, '0');
+                    setDueDate(`${y}-${m}-${dd}`);
+                } else {
+                    setDueDate('');
+                }
+                setPriority(editingTask.priority || 'Média');
+                setObservations(''); // Limpa o campo de digitação para novos comentários
+                setChecklist(editingTask.checklist || []);
+                setAttachments(editingTask.attachments || []);
+            } else {
+                // Nova tarefa
+                setTitle('');
+                const defBoard = activeBoardId !== 'Todas' ? activeBoardId : (boards.find(b => b.is_default)?.id || boards[0]?.id || null);
+                setBoardId(defBoard);
+                const defCol = boardColumns.find(c => c.board_id === defBoard)?.id || null;
+                setColumnId(defCol);
+                setObservations('');
+            }
         }
-    }, [editingTask?.id, isModalOpen]); // APENAS recarrega se o ID da tarefa mudar ou o modal abrir
+    }, [editingTask?.id, isModalOpen, boards, boardColumns, activeBoardId]);
 
     const handleSave = async () => {
         if (!title.trim() || isSubmitting) return;
