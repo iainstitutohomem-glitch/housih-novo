@@ -103,7 +103,7 @@ interface TasksContextType {
     loading: boolean;
     isModalOpen: boolean;
     editingTask: Task | null;
-    openModal: (task?: Task) => void;
+    openModal: (task?: Task) => Promise<void>;
     closeModal: () => void;
     session: any;
     createSharedReport: (title: string, data: any, filters: any) => Promise<string | null>;
@@ -161,8 +161,23 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-    const openModal = (task?: Task) => {
-        setEditingTask(task || null);
+    const openModal = async (task?: Task) => {
+        if (task) {
+            // OPTIMIZATION: Fetch full task details (description, checklist, etc) only when opening the modal
+            // This allows the initial Kanban load to stay light and avoid timeouts.
+            const { data, error } = await supabase.from('tasks').select('*').eq('id', task.id).single();
+            if (!error && data) {
+                // Ensure assignee is always an array
+                if (!Array.isArray(data.assignee)) {
+                    data.assignee = typeof data.assignee === 'string' ? [data.assignee] : [];
+                }
+                setEditingTask(data);
+            } else {
+                setEditingTask(task);
+            }
+        } else {
+            setEditingTask(null);
+        }
         setIsModalOpen(true);
     };
 
@@ -186,29 +201,24 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const fetchTasks = async (silent = false) => {
         if (!silent) setLoading(true);
         try {
-            const { data, error } = await supabase.from('tasks').select('*').order('order_index', { ascending: true });
+            // Automatically update overdue tasks in the database before fetching
+            if (!silent) {
+                await supabase.rpc('update_overdue_tasks');
+            }
+
+            // OPTIMIZATION: Select only necessary fields for Kanban/List views 
+            const { data, error } = await supabase
+                .from('tasks')
+                .select('id, title, status, priority, company_id, due_date, assignee, board_id, column_id, order_index')
+                .order('order_index', { ascending: true });
             
             if (error) {
                 console.error("Fetch tasks error:", error);
                 if (!silent) alert("ERRO CRITICAL DE DADOS: " + error.message);
             } else if (data) {
-                const now = new Date();
-                now.setHours(0, 0, 0, 0);
-
                 const updatedData = data.map((t: any) => {
-                    // Ensure assignee is always an array to prevent crashes in useMemo filters
                     if (!Array.isArray(t.assignee)) {
                         t.assignee = typeof t.assignee === 'string' ? [t.assignee] : [];
-                    }
-
-                    // In-memory status check for overdue tasks (no DB update here for performance)
-                    if (t.due_date && t.status !== 'Concluído' && t.status !== 'Cancelado') {
-                        const dueDate = new Date(t.due_date);
-                        dueDate.setHours(0, 0, 0, 0);
-
-                        if (dueDate < now && t.status !== 'Atrasado') {
-                            t.status = 'Atrasado';
-                        }
                     }
                     return t;
                 });
@@ -220,6 +230,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             if (!silent) setLoading(false);
         }
     };
+
 
 
     const fetchCompanies = async () => {

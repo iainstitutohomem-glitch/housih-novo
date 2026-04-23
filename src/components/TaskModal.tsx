@@ -588,12 +588,17 @@ export const TaskModal = () => {
                                     if (isSubmitting) return;
                                     setIsSubmitting(true);
                                     try {
+                                        // Busca o ID da coluna de Concluído deste quadro
+                                        const concluidoCol = boardColumns.find(c => c.board_id === boardId && c.title.toLowerCase().includes('concluído'));
+                                        const finalColId = concluidoCol ? concluidoCol.id : columnId;
+
                                         setStatus('Concluído');
                                         const taskData = {
                                             title,
                                             company_id: company === 'Nenhuma' ? null : company,
                                             assignee: assignees,
                                             status: 'Concluído',
+                                            column_id: finalColId,
                                             priority,
                                             due_date: dueDate ? new Date(`${dueDate}T12:00:00`).toISOString() : new Date().toISOString(),
                                             observations,
