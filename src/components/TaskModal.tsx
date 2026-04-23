@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus, Download } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
@@ -30,6 +31,7 @@ export const TaskModal = () => {
     const [showMentionList, setShowMentionList] = useState(false);
     const [activeChecklistMenu, setActiveChecklistMenu] = useState<{ id: number, type: 'date' | 'users' } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isEditingObservations, setIsEditingObservations] = useState(false);
 
     // Efeito para carregar os dados da tarefa apenas quando abrir o modal ou mudar de tarefa
     useEffect(() => {
@@ -550,10 +552,19 @@ export const TaskModal = () => {
                         )}
 
                         {editingTask && editingTask.observations && (
-                            <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 max-h-40 overflow-y-auto space-y-2">
+                            <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 max-h-60 overflow-y-auto space-y-3 shadow-inner">
+                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Histórico de Notas</div>
                                 {editingTask.observations.split('\n').filter(line => line.trim()).map((line, idx) => (
-                                    <div key={idx} className="text-xs text-gray-600 border-b border-white pb-1">
-                                        {line}
+                                    <div key={idx} className="text-xs text-gray-600 border-b border-gray-200/50 pb-2 last:border-0">
+                                        <div className="prose prose-sm max-w-none prose-p:leading-relaxed text-gray-700">
+                                            <ReactMarkdown 
+                                                components={{
+                                                    a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-bold" />
+                                                }}
+                                            >
+                                                {line}
+                                            </ReactMarkdown>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
