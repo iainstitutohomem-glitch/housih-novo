@@ -31,7 +31,25 @@ export const TaskModal = () => {
     const [activeChecklistMenu, setActiveChecklistMenu] = useState<{ id: number, type: 'date' | 'users' } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Efeito para carregar os dados da tarefa apenas quando abrir o modal ou mudar de tarefa
     useEffect(() => {
+        // Se o modal não estiver aberto, não fazemos nada
+        if (!isModalOpen) {
+            // Limpa os campos quando o modal fecha para a próxima abertura estar limpa
+            setTitle('');
+            setCompany('Nenhuma');
+            setAssignees([]);
+            setStatus('Não Iniciado');
+            setDueDate('');
+            setPriority('Média');
+            setObservations('');
+            setChecklist([]);
+            setAttachments([]);
+            return;
+        }
+
+        // Se estivermos editando uma tarefa, carregamos os dados dela apenas se for uma tarefa diferente da atual
+        // ou se o modal acabou de abrir. Isso evita que atualizações em background apaguem o que o usuário está digitando.
         if (editingTask) {
             setTitle(editingTask.title || '');
             setCompany(editingTask.company_id || 'Nenhuma');
@@ -53,6 +71,7 @@ export const TaskModal = () => {
             setChecklist(editingTask.checklist || []);
             setAttachments(editingTask.attachments || []);
         } else {
+            // Se for uma nova tarefa, inicializamos com os padrões
             setTitle('');
             setCompany('Nenhuma');
             setAssignees([]);
@@ -70,7 +89,7 @@ export const TaskModal = () => {
             setChecklist([]);
             setAttachments([]);
         }
-    }, [editingTask, isModalOpen, boards, boardColumns, activeBoardId]);
+    }, [editingTask?.id, isModalOpen]); // APENAS recarrega se o ID da tarefa mudar ou o modal abrir
 
     const handleSave = async () => {
         if (!title.trim() || isSubmitting) return;
