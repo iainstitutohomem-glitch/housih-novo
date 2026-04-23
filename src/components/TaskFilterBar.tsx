@@ -2,7 +2,7 @@ import { Search } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const TaskFilterBar = () => {
-    const { filters, setFilters, companies, teamMembers } = useTasks();
+    const { filters, setFilters, companies, teamMembers, fetchTasks } = useTasks();
 
     return (
         <div className="flex flex-col gap-4 bg-white/80 backdrop-blur-md border border-white/40 p-5 rounded-2xl shadow-sm mb-6 w-full">
