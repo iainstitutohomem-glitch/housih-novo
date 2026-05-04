@@ -547,9 +547,10 @@ export const TaskModal = () => {
 
                         {editingTask && (
                             <button
+                                type="button"
                                 onClick={handleSendObservation}
                                 disabled={!observations.trim()}
-                                className="absolute bottom-3 right-3 p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="absolute bottom-3 right-3 p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed z-10"
                                 title="Enviar comentário"
                             >
                                 <MessageSquare size={16} />
