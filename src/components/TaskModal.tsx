@@ -33,6 +33,15 @@ export const TaskModal = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const prevTaskIdRef = useRef<string | null>(null);
+    const obsTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Efeito para auto-ajuste da altura do textarea de observações
+    useEffect(() => {
+        if (obsTextareaRef.current) {
+            obsTextareaRef.current.style.height = 'auto';
+            obsTextareaRef.current.style.height = `${obsTextareaRef.current.scrollHeight}px`;
+        }
+    }, [observations]);
 
     // Efeito para carregar os dados da tarefa apenas quando abrir o modal ou mudar de tarefa
     useEffect(() => {
@@ -508,6 +517,7 @@ export const TaskModal = () => {
                             <MessageSquare size={14} /> Observações (@menções)
                         </label>
                         <textarea
+                            ref={obsTextareaRef}
                             rows={3}
                             placeholder="Digite um comentário ou use @ para mencionar alguém..."
                             value={observations}
@@ -532,7 +542,7 @@ export const TaskModal = () => {
                                     handleSendObservation();
                                 }
                             }}
-                            className="w-full bg-gray-50/50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all resize-none text-sm pr-12"
+                            className="w-full bg-gray-50/50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all resize-none text-sm pr-12 overflow-hidden"
                         ></textarea>
 
                         {editingTask && (
