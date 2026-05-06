@@ -337,6 +337,11 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         else if (data) {
             const updatedTask = data[0];
             setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
+            
+            // Sync editingTask if it's the one being updated
+            if (editingTask?.id === taskId) {
+                setEditingTask(updatedTask);
+            }
 
             // 1. Notificar novos responsáveis
             if (task.assignee && task.assignee.length > 0) {

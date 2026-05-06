@@ -18,6 +18,7 @@ export const TaskModal = () => {
     const [dueDate, setDueDate] = useState('');
     const [priority, setPriority] = useState('Média');
     const [observations, setObservations] = useState('');
+    const [observationsHistory, setObservationsHistory] = useState('');
     const [checklist, setChecklist] = useState<{
         id: number;
         text: string;
@@ -55,6 +56,7 @@ export const TaskModal = () => {
             setDueDate('');
             setPriority('Média');
             setObservations('');
+            setObservationsHistory('');
             setChecklist([]);
             setAttachments([]);
             return;
@@ -83,6 +85,7 @@ export const TaskModal = () => {
                 }
                 setPriority(editingTask.priority || 'Média');
                 setObservations(''); // Limpa o campo de digitação para novos comentários
+                setObservationsHistory(editingTask.observations || '');
                 setChecklist(editingTask.checklist || []);
                 setAttachments(editingTask.attachments || []);
             } else {
@@ -93,9 +96,10 @@ export const TaskModal = () => {
                 const defCol = boardColumns.find(c => c.board_id === defBoard)?.id || null;
                 setColumnId(defCol);
                 setObservations('');
+                setObservationsHistory('');
             }
         }
-    }, [editingTask?.id, isModalOpen, boards, boardColumns, activeBoardId]);
+    }, [editingTask?.id, editingTask?.observations, isModalOpen, boards, boardColumns, activeBoardId]);
 
     const handleSave = async () => {
         if (!title.trim() || isSubmitting) return;
@@ -110,7 +114,7 @@ export const TaskModal = () => {
                 column_id: columnId,
                 priority,
                 due_date: dueDate ? new Date(`${dueDate}T12:00:00`).toISOString() : new Date().toISOString(),
-                observations,
+                observations: observationsHistory + (observations.trim() ? `\n[${new Date().toLocaleString('pt-BR')}] ${teamMembers.find(m => m.email === session?.user?.email)?.name || 'Sistema'}: ${observations.trim()}` : ''),
                 checklist,
                 attachments
             };
@@ -144,16 +148,20 @@ export const TaskModal = () => {
     };
 
     const handleSendObservation = async () => {
-        if (!observations.trim() || !editingTask) return;
+        if (!observations.trim()) return;
 
         const timestamp = new Date().toLocaleString('pt-BR');
         const currentUser = teamMembers.find(m => m.email === session?.user?.email)?.name || 'Sistema';
         const newMsg = `\n[${timestamp}] ${currentUser}: ${observations}`;
 
-        const updatedObs = (editingTask.observations || '') + newMsg;
+        const updatedObs = (observationsHistory || '') + newMsg;
 
+        setObservationsHistory(updatedObs);
         setObservations(''); // Limpa o campo localmente para a próxima
-        await updateTask(editingTask.id, { observations: updatedObs });
+
+        if (editingTask) {
+            await updateTask(editingTask.id, { observations: updatedObs });
+        }
     };
 
     const handleDelete = async () => {
@@ -516,36 +524,36 @@ export const TaskModal = () => {
                         <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                             <MessageSquare size={14} /> Observações (@menções)
                         </label>
-                        <textarea
-                            ref={obsTextareaRef}
-                            rows={3}
-                            placeholder="Digite um comentário ou use @ para mencionar alguém..."
-                            value={observations}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                setObservations(val);
+                        <div className="relative">
+                            <textarea
+                                ref={obsTextareaRef}
+                                rows={3}
+                                placeholder="Digite um comentário ou use @ para mencionar alguém..."
+                                value={observations}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setObservations(val);
 
-                                const cursor = e.target.selectionStart;
-                                const lastAt = val.lastIndexOf('@', cursor - 1);
+                                    const cursor = e.target.selectionStart;
+                                    const lastAt = val.lastIndexOf('@', cursor - 1);
 
-                                if (lastAt !== -1 && lastAt >= (val.lastIndexOf(' ', cursor - 1))) {
-                                    const search = val.substring(lastAt + 1, cursor);
-                                    setMentionSearch(search);
-                                    setShowMentionList(true);
-                                } else {
-                                    setShowMentionList(false);
-                                }
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey && observations.trim() && editingTask) {
-                                    e.preventDefault();
-                                    handleSendObservation();
-                                }
-                            }}
-                            className="w-full bg-gray-50/50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all resize-none text-sm pr-12 overflow-hidden"
-                        ></textarea>
+                                    if (lastAt !== -1 && lastAt >= (val.lastIndexOf(' ', cursor - 1))) {
+                                        const search = val.substring(lastAt + 1, cursor);
+                                        setMentionSearch(search);
+                                        setShowMentionList(true);
+                                    } else {
+                                        setShowMentionList(false);
+                                    }
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey && observations.trim()) {
+                                        e.preventDefault();
+                                        handleSendObservation();
+                                    }
+                                }}
+                                className="w-full bg-gray-50/50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all resize-none text-sm pr-12 overflow-hidden"
+                            ></textarea>
 
-                        {editingTask && (
                             <button
                                 type="button"
                                 onClick={handleSendObservation}
@@ -555,12 +563,12 @@ export const TaskModal = () => {
                             >
                                 <MessageSquare size={16} />
                             </button>
-                        )}
+                        </div>
 
-                        {editingTask && editingTask.observations && (
+                        {observationsHistory && (
                             <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 max-h-60 overflow-y-auto space-y-3 shadow-inner">
                                 <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Histórico de Notas</div>
-                                {editingTask.observations.split('\n').filter(line => line.trim()).map((line, idx) => (
+                                {observationsHistory.split('\n').filter(line => line.trim()).map((line, idx) => (
                                     <div key={idx} className="text-xs text-gray-600 border-b border-gray-200/50 pb-2 last:border-0">
                                         <div className="prose prose-sm max-w-none prose-p:leading-relaxed text-gray-700">
                                             <ReactMarkdown 
