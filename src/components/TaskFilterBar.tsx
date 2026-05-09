@@ -1,8 +1,18 @@
+import { useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const TaskFilterBar = () => {
-    const { filters, setFilters, companies, teamMembers } = useTasks();
+    const { filters, setFilters, companies, teamMembers, boardColumns } = useTasks();
+
+    const availableStatuses = useMemo(() => {
+        const titles = boardColumns.map(c => c.title);
+        // Garante que "Atrasado" esteja na lista se houver lógica para ele
+        if (!titles.some(t => t.toLowerCase() === 'atrasado')) {
+            titles.push('Atrasado');
+        }
+        return Array.from(new Set(titles)).sort();
+    }, [boardColumns]);
 
     return (
         <div className="flex flex-col gap-4 bg-white/80 backdrop-blur-md border border-white/40 p-5 rounded-2xl shadow-sm mb-6 w-full">
@@ -32,6 +42,12 @@ export const TaskFilterBar = () => {
                     <select value={filters.responsavel} onChange={(e) => setFilters({ ...filters, responsavel: e.target.value })} className="w-full bg-gray-50/50 border border-gray-200 text-gray-600 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 appearance-none text-xs cursor-pointer hover:bg-white transition-colors">
                         <option value="Todos">Responsáveis (Todos)</option>
                         {teamMembers.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
+                    </select>
+                </div>
+                <div className="flex-1 min-w-[140px]">
+                    <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} className="w-full bg-gray-50/50 border border-gray-200 text-gray-600 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/20 appearance-none text-xs cursor-pointer hover:bg-white transition-colors">
+                        <option value="Todos">Status (Todos)</option>
+                        {availableStatuses.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                 </div>
                 <div className="flex-1 min-w-[140px]">
