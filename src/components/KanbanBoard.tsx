@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Calendar } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
@@ -26,6 +26,14 @@ export const KanbanBoard = () => {
         if (!currentBoard) return [];
         return boardColumns.filter(col => col.board_id === currentBoard.id);
     }, [boardColumns, currentBoard]);
+
+    // Sincronizar o activeBoardId se estiver como 'Todas' ao entrar no Kanban
+    useEffect(() => {
+        if (activeBoardId === 'Todas' && boards.length > 0) {
+            const defaultBoard = boards.find(b => b.is_default) || boards[0];
+            setActiveBoardId(defaultBoard.id);
+        }
+    }, [activeBoardId, boards, setActiveBoardId]);
 
     const handleMouseEnter = (taskId: string) => {
         if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);

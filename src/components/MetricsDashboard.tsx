@@ -33,7 +33,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 };
 
 export const MetricsDashboard = () => {
-    const { filteredTasks: globalFilteredTasks, companies, teamMembers, boardColumns, boards } = useTasks();
+    const { filteredTasks: globalFilteredTasks, companies, teamMembers, boardColumns, boards, activeBoardId, setActiveBoardId } = useTasks();
     const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
 
     // Initial default: Find "Geral" board or first board
@@ -41,8 +41,10 @@ export const MetricsDashboard = () => {
         if (boards.length > 0 && !selectedBoardId) {
             const geralBoard = boards.find(b => b.name.toLowerCase() === 'geral') || boards[0];
             setSelectedBoardId(geralBoard.id);
+            // Sincroniza com o context para o TaskFilterBar saber qual quadro está ativo
+            setActiveBoardId(geralBoard.id);
         }
-    }, [boards, selectedBoardId]);
+    }, [boards, selectedBoardId, setActiveBoardId]);
 
     // Local filter for the dashboard: Take global filters (search, company, etc.) and add board filter
     const dashboardTasks = useMemo(() => {
@@ -91,7 +93,10 @@ export const MetricsDashboard = () => {
                 {boards.map(board => (
                     <button
                         key={board.id}
-                        onClick={() => setSelectedBoardId(board.id)}
+                        onClick={() => {
+                            setSelectedBoardId(board.id);
+                            setActiveBoardId(board.id);
+                        }}
                         className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm border ${
                             selectedBoardId === board.id
                                 ? 'bg-primary-500 text-white border-primary-600'

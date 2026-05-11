@@ -584,6 +584,10 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     useEffect(() => {
+        setFilters(prev => ({ ...prev, status: 'Todos' }));
+    }, [activeBoardId]);
+
+    useEffect(() => {
         if (!session) return;
 
         fetchBoards();
