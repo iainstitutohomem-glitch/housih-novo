@@ -33,7 +33,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 };
 
 export const MetricsDashboard = () => {
-    const { filteredTasks: globalFilteredTasks, companies, teamMembers, boardColumns, boards, activeBoardId, setActiveBoardId } = useTasks();
+    const { filteredTasks: globalFilteredTasks, companies, teamMembers, boardColumns, boards, setActiveBoardId } = useTasks();
     const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
 
     // Initial default: Find "Geral" board or first board
