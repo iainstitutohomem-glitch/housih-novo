@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus, Download } from 'lucide-react';
+import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus, Download, Paperclip, HelpCircle, Activity } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const TaskModal = () => {
@@ -32,9 +32,97 @@ export const TaskModal = () => {
     const [showMentionList, setShowMentionList] = useState(false);
     const [activeChecklistMenu, setActiveChecklistMenu] = useState<{ id: number, type: 'date' | 'users' } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showActivityDetails, setShowActivityDetails] = useState(false);
+    const [isFollowed, setIsFollowed] = useState(false);
 
     const prevTaskIdRef = useRef<string | null>(null);
     const obsTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const insertMarkdown = (syntax: 'bold' | 'italic' | 'list' | 'link' | 'heading') => {
+        if (!obsTextareaRef.current) return;
+        
+        const textarea = obsTextareaRef.current;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        
+        let replacement = '';
+        if (syntax === 'bold') {
+            replacement = `**${text.substring(start, end) || 'texto'}**`;
+        } else if (syntax === 'italic') {
+            replacement = `*${text.substring(start, end) || 'texto'}*`;
+        } else if (syntax === 'list') {
+            replacement = `\n- ${text.substring(start, end) || 'item'}`;
+        } else if (syntax === 'link') {
+            replacement = `[${text.substring(start, end) || 'link'}](url)`;
+        } else if (syntax === 'heading') {
+            replacement = `\n### ${text.substring(start, end) || 'Título'}`;
+        }
+        
+        const newVal = text.substring(0, start) + replacement + text.substring(end);
+        setObservations(newVal);
+        
+        // Reset focus and selection
+        setTimeout(() => {
+            textarea.focus();
+            const offset = syntax === 'bold' ? 2 : syntax === 'italic' ? 1 : syntax === 'list' ? 3 : syntax === 'heading' ? 5 : 1;
+            const newCursorPos = start + offset + (text.substring(start, end).length || (syntax === 'bold' ? 5 : syntax === 'italic' ? 5 : syntax === 'list' ? 4 : syntax === 'heading' ? 6 : 4));
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    };
+
+    const parsedHistory = useMemo(() => {
+        if (!observationsHistory) return [];
+        return observationsHistory.split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0)
+            .map((line, index) => {
+                // Match [timestamp] Author: content
+                const matchWithColon = line.match(/^\[(.*?)\]\s*(.*?):\s*(.*)$/);
+                if (matchWithColon) {
+                    const timestamp = matchWithColon[1];
+                    const author = matchWithColon[2];
+                    const content = matchWithColon[3];
+                    const member = teamMembers.find(m => m.name.toLowerCase() === author.toLowerCase());
+                    const isSystemAction = author === 'Sistema' || content.includes('alterou') || content.includes('moveu') || content.includes('adicionou') || content.includes('excluiu') || content.includes('finalizou') || content.includes('criou');
+                    return {
+                        id: index,
+                        timestamp,
+                        author,
+                        content,
+                        avatarUrl: member?.avatar_url || null,
+                        isComment: !isSystemAction
+                    };
+                }
+                
+                // Match [timestamp] Author action content
+                const matchWithoutColon = line.match(/^\[(.*?)\]\s*(\S+\s+\S+)\s+(.*)$/);
+                if (matchWithoutColon) {
+                    const timestamp = matchWithoutColon[1];
+                    const author = matchWithoutColon[2];
+                    const content = matchWithoutColon[3];
+                    const member = teamMembers.find(m => m.name.toLowerCase() === author.toLowerCase());
+                    return {
+                        id: index,
+                        timestamp,
+                        author,
+                        content,
+                        avatarUrl: member?.avatar_url || null,
+                        isComment: false
+                    };
+                }
+                
+                // Fallback
+                return {
+                    id: index,
+                    timestamp: '',
+                    author: 'Sistema',
+                    content: line,
+                    avatarUrl: null,
+                    isComment: false
+                };
+            });
+    }, [observationsHistory, teamMembers]);
 
     // Efeito para auto-ajuste da altura do textarea de observações
     useEffect(() => {
@@ -178,8 +266,9 @@ export const TaskModal = () => {
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" onClick={closeModal} />
-            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative z-10 border border-white/50 animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between p-6 border-b border-gray-100">
+            <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden relative z-10 border border-white/50 animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-gray-100 shrink-0">
                     <input
                         type="text"
                         placeholder="Título da Tarefa..."
@@ -187,435 +276,606 @@ export const TaskModal = () => {
                         onChange={(e) => setTitle(e.target.value)}
                         className="text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 placeholder-gray-300 w-full text-gray-800"
                     />
-                    <button onClick={closeModal} className="p-2 bg-gray-100/50 hover:bg-gray-100 rounded-full text-gray-500 transition-colors ml-4">
+                    <button onClick={closeModal} className="p-2 bg-gray-100/50 hover:bg-gray-100 rounded-full text-gray-500 transition-colors ml-4 shrink-0">
                         <X size={20} />
                     </button>
                 </div>
-                <div className="p-6 space-y-8">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Empresa</label>
-                                <select
-                                    value={company}
-                                    onChange={(e) => setCompany(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
-                                    <option value="Nenhuma">Nenhuma</option>
-                                    {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Quadro</label>
-                                    <select
-                                        value={boardId || ''}
-                                        onChange={(e) => handleBoardChange(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
-                                        <option value="" disabled>Selecionar...</option>
-                                        {boards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                    </select>
+
+                {/* Grid Body */}
+                <div className="p-6 overflow-y-auto flex-1 pretty-scrollbar">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        {/* Coluna da Esquerda (Principal) */}
+                        <div className="lg:col-span-8 space-y-6">
+                            {/* Metadados originais divididos em sub-colunas */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Empresa</label>
+                                        <select
+                                            value={company}
+                                            onChange={(e) => setCompany(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
+                                            <option value="Nenhuma">Nenhuma</option>
+                                            {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Quadro</label>
+                                            <select
+                                                value={boardId || ''}
+                                                onChange={(e) => handleBoardChange(e.target.value)}
+                                                className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
+                                                <option value="" disabled>Selecionar...</option>
+                                                {boards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Etapa (Coluna)</label>
+                                            <select
+                                                value={columnId || ''}
+                                                onChange={(e) => handleColumnChange(e.target.value)}
+                                                className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
+                                                <option value="" disabled>Selecionar...</option>
+                                                {availableColumns.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responsáveis</label>
+                                        <div className="space-y-2 max-h-40 overflow-y-auto p-3 bg-gray-50 border border-gray-200 rounded-xl custom-scrollbar">
+                                            {teamMembers && teamMembers.map(member => (
+                                                <label key={member.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer group">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+                                                        checked={assignees.includes(member.name)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setAssignees([...assignees, member.name]);
+                                                            } else {
+                                                                setAssignees(assignees.filter(a => a !== member.name));
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
+                                                        {member.avatar_url ? (
+                                                            <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <span className="text-[10px] font-bold text-primary-600">{member.name.charAt(0)}</span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-sm text-gray-700 group-hover:text-primary-700 font-medium">{member.name}</span>
+                                                </label>
+                                            ))}
+                                            {(!teamMembers || teamMembers.length === 0) && (
+                                                <p className="text-xs text-gray-400 italic text-center py-2">Nenhum membro da equipe encontrado.</p>
+                                            )}
+                                        </div>
+                                        {assignees.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {assignees.map(name => (
+                                                    <span key={name} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-100 text-primary-700 rounded-md text-[10px] font-bold">
+                                                        {name}
+                                                        <button type="button" onClick={() => setAssignees(assignees.filter(a => a !== name))} className="hover:text-primary-900">
+                                                            <X size={10} />
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Etapa (Coluna)</label>
-                                    <select
-                                        value={columnId || ''}
-                                        onChange={(e) => handleColumnChange(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
-                                        <option value="" disabled>Selecionar...</option>
-                                        {availableColumns.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responsáveis</label>
-                                <div className="space-y-2 max-h-40 overflow-y-auto p-3 bg-gray-50 border border-gray-200 rounded-xl custom-scrollbar">
-                                    {teamMembers && teamMembers.map(member => (
-                                        <label key={member.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer group">
-                                            <input 
-                                                type="checkbox" 
-                                                className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
-                                                checked={assignees.includes(member.name)}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) {
-                                                        setAssignees([...assignees, member.name]);
-                                                    } else {
-                                                        setAssignees(assignees.filter(a => a !== member.name));
-                                                    }
-                                                }}
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data de Entrega</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <Calendar size={18} className="text-gray-400" />
+                                            </div>
+                                            <input
+                                                type="date"
+                                                value={dueDate}
+                                                onChange={(e) => setDueDate(e.target.value)}
+                                                className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 pl-10 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all"
                                             />
-                                            <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
-                                                {member.avatar_url ? (
-                                                    <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <span className="text-[10px] font-bold text-primary-600">{member.name.charAt(0)}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Prioridade</label>
+                                        <select
+                                            value={priority}
+                                            onChange={(e) => setPriority(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
+                                            <option>Alta</option>
+                                            <option>Média</option>
+                                            <option>Baixa</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Checklist */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Checklist</label>
+                                <div className="space-y-4 mb-3">
+                                    {checklist.map((item) => {
+                                        const now = new Date();
+                                        now.setHours(0, 0, 0, 0);
+                                        const itemDate = item.due_date ? new Date(item.due_date) : null;
+                                        if (itemDate) itemDate.setHours(0, 0, 0, 0);
+                                        
+                                        const isOverdue = itemDate && itemDate < now && !item.done;
+                                        const itemAssignees = item.assignees || [];
+                                        
+                                        return (
+                                            <div key={item.id} className="flex flex-col gap-2">
+                                                <div className="flex items-center gap-3 group">
+                                                    <button onClick={() => setChecklist(checklist.map(c => c.id === item.id ? { ...c, done: !c.done } : c))}>
+                                                        {item.done ? <CheckCircle2 size={20} className="text-primary-500" /> : <Circle size={20} className="text-gray-300 hover:text-primary-400 transition-colors" />}
+                                                    </button>
+                                                    
+                                                    <input 
+                                                        type="text"
+                                                        value={item.text}
+                                                        onChange={(e) => setChecklist(checklist.map(c => c.id === item.id ? { ...c, text: e.target.value } : c))}
+                                                        className={`text-sm flex-1 bg-transparent border-none focus:outline-none ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}
+                                                    />
+
+                                                    <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-all">
+                                                        {/* Botão Data */}
+                                                        <div className="relative">
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => setActiveChecklistMenu(activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'date' ? null : { id: item.id, type: 'date' })}
+                                                                className={`p-1.5 rounded-lg hover:bg-gray-100 transition-colors ${item.due_date ? (isOverdue ? 'text-red-500' : 'text-primary-600 bg-primary-50') : 'text-gray-400'}`}
+                                                                title="Definir data"
+                                                            >
+                                                                <Calendar size={14} />
+                                                            </button>
+                                                            {activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'date' && (
+                                                                <div className="absolute bottom-full right-0 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] animate-in zoom-in-95 duration-200">
+                                                                    <input 
+                                                                        type="date" 
+                                                                        className="text-xs border-none bg-gray-50 rounded-lg p-1.5 focus:ring-0"
+                                                                        value={item.due_date || ''}
+                                                                        onChange={(e) => {
+                                                                            setChecklist(checklist.map(c => c.id === item.id ? { ...c, due_date: e.target.value } : c));
+                                                                            setActiveChecklistMenu(null);
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Botão Responsáveis */}
+                                                        <div className="relative">
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => setActiveChecklistMenu(activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'users' ? null : { id: item.id, type: 'users' })}
+                                                                className={`p-1.5 rounded-lg hover:bg-gray-100 transition-colors ${itemAssignees.length > 0 ? 'text-primary-600 bg-primary-50' : 'text-gray-400'}`}
+                                                                title="Adicionar responsáveis"
+                                                            >
+                                                                <UserPlus size={14} />
+                                                            </button>
+                                                            {activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'users' && (
+                                                                <div className="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] animate-in zoom-in-95 duration-200">
+                                                                    <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
+                                                                        {teamMembers.map(member => (
+                                                                            <label key={member.id} className="flex items-center gap-2 p-1.5 hover:bg-primary-50 rounded-lg cursor-pointer transition-colors">
+                                                                                <input 
+                                                                                    type="checkbox"
+                                                                                    className="w-3 h-3 text-primary-600 rounded"
+                                                                                    checked={itemAssignees.includes(member.name)}
+                                                                                    onChange={(e) => {
+                                                                                        const newAssignees = e.target.checked 
+                                                                                            ? [...itemAssignees, member.name]
+                                                                                            : itemAssignees.filter(name => name !== member.name);
+                                                                                        setChecklist(checklist.map(c => c.id === item.id ? { ...c, assignees: newAssignees } : c));
+                                                                                    }}
+                                                                                />
+                                                                                <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
+                                                                                    {member.avatar_url ? (
+                                                                                        <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
+                                                                                    ) : (
+                                                                                        <div className="w-full h-full bg-primary-100 flex items-center justify-center text-[10px] font-bold text-primary-600">
+                                                                                            {member.name.charAt(0)}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                                <span className="text-[11px] font-medium text-gray-700 truncate">{member.name}</span>
+                                                                            </label>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setChecklist(checklist.filter(c => c.id !== item.id))}
+                                                            className="text-gray-300 hover:text-red-500 transition-all p-1.5"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Detalhes do item (data e fotos dos responsáveis) */}
+                                                {(item.due_date || itemAssignees.length > 0) && (
+                                                    <div className="flex items-center gap-3 ml-8">
+                                                        {item.due_date && (
+                                                            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${isOverdue ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
+                                                                <Calendar size={10} />
+                                                                {new Date(item.due_date).toLocaleDateString('pt-BR')}
+                                                            </div>
+                                                        )}
+                                                        <div className="flex -space-x-1.5 overflow-hidden">
+                                                            {itemAssignees.map((name: string) => {
+                                                                const member = teamMembers.find(m => m.name === name);
+                                                                return (
+                                                                    <div key={name} className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-primary-50 text-primary-700 rounded-md text-[10px] font-bold border border-primary-100">
+                                                                        <div className="w-4 h-4 rounded-full overflow-hidden flex-shrink-0">
+                                                                            {member?.avatar_url ? (
+                                                                                <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
+                                                                            ) : (
+                                                                                <div className="w-full h-full bg-primary-200 flex items-center justify-center text-[8px] font-bold text-primary-700">
+                                                                                    {name.charAt(0)}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        {name}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
                                                 )}
                                             </div>
-                                            <span className="text-sm text-gray-700 group-hover:text-primary-700 font-medium">{member.name}</span>
-                                        </label>
-                                    ))}
-                                    {(!teamMembers || teamMembers.length === 0) && (
-                                        <p className="text-xs text-gray-400 italic text-center py-2">Nenhum membro da equipe encontrado.</p>
-                                    )}
+                                        );
+                                    })}
                                 </div>
-                                {assignees.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-2">
-                                        {assignees.map(name => (
-                                            <span key={name} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-100 text-primary-700 rounded-md text-[10px] font-bold">
-                                                {name}
-                                                <button onClick={() => setAssignees(assignees.filter(a => a !== name))} className="hover:text-primary-900">
-                                                    <X size={10} />
-                                                </button>
-                                            </span>
+                                <div className="flex items-center gap-2 p-2 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 group-within:border-primary-200 group-within:bg-white transition-all">
+                                    <Plus size={18} className="text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Adicionar item..."
+                                        className="flex-1 bg-transparent border-none text-sm focus:outline-none placeholder-gray-400 text-gray-700"
+                                        value={newChecklistItem}
+                                        onChange={(e) => setNewChecklistItem(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && newChecklistItem.trim()) {
+                                                setChecklist([...checklist, { id: Date.now(), text: newChecklistItem.trim(), done: false, assignees: [], due_date: null }]);
+                                                setNewChecklistItem('');
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Anexos */}
+                            <div>
+                                <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                                    <Upload size={14} /> Anexos
+                                </label>
+
+                                {attachments.length > 0 && (
+                                    <div className="flex flex-col gap-2 mb-3">
+                                        {attachments.map((file, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 border border-gray-200 rounded-lg group/file">
+                                                <div className="flex items-center gap-2 overflow-hidden">
+                                                    <span className="text-xs truncate text-gray-600 font-medium max-w-[200px]">{file.name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const link = document.createElement('a');
+                                                            link.href = file.data;
+                                                            link.download = file.name;
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+                                                        }}
+                                                        className="text-gray-400 hover:text-primary-600 transition-colors p-1"
+                                                        title="Download"
+                                                    >
+                                                        <Download size={14} />
+                                                    </button>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setAttachments(attachments.filter((_, i) => i !== idx))} 
+                                                        className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                                                        title="Remover"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
                                         ))}
+                                    </div>
+                                )}
+
+                                <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-gray-50/50 transition-colors cursor-pointer group relative">
+                                    <div className="bg-primary-50 text-primary-500 p-2 rounded-full mb-2 group-hover:bg-primary-100 transition-colors">
+                                        <Upload size={16} />
+                                    </div>
+                                    <p className="text-xs font-medium text-gray-600">Clique para anexar arquivo</p>
+                                    <input
+                                        type="file"
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => setAttachments([...attachments, { name: file.name, data: reader.result as string }]);
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Coluna da Direita (Lateral) */}
+                        <div className="lg:col-span-4 space-y-6 lg:border-l lg:border-gray-100 lg:pl-6">
+                            {/* Comentários e Atividade (Trello Style) */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xs font-semibold text-gray-800 flex items-center gap-2">
+                                        <MessageSquare size={14} className="text-gray-500" />
+                                        Comentários e atividade
+                                    </h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowActivityDetails(!showActivityDetails)}
+                                        className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all"
+                                    >
+                                        {showActivityDetails ? 'Ocultar detalhes' : 'Mostrar detalhes'}
+                                    </button>
+                                </div>
+
+                                {/* Editor */}
+                                <div className="space-y-3">
+                                    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 transition-all">
+                                        {/* Barra de Formatação */}
+                                        <div className="flex items-center justify-between px-2.5 py-1.5 bg-gray-50 border-b border-gray-150 text-gray-500 select-none text-[11px]">
+                                            <div className="flex items-center gap-1">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => insertMarkdown('heading')}
+                                                    className="p-1 hover:bg-gray-200 rounded font-bold transition-colors flex items-center gap-0.5" 
+                                                    title="Tamanho do texto"
+                                                >
+                                                    <span>Tt</span>
+                                                    <Plus size={8} className="opacity-70" />
+                                                </button>
+                                                <div className="h-3 w-[1px] bg-gray-300 mx-0.5" />
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => insertMarkdown('bold')}
+                                                    className="p-1 hover:bg-gray-200 rounded font-extrabold transition-colors px-1.5" 
+                                                    title="Negrito"
+                                                >
+                                                    B
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => insertMarkdown('italic')}
+                                                    className="p-1 hover:bg-gray-200 rounded italic font-serif transition-colors px-1.5" 
+                                                    title="Itálico"
+                                                >
+                                                    I
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    className="p-1 hover:bg-gray-200 rounded transition-colors px-1" 
+                                                    title="Mais formatações"
+                                                >
+                                                    ...
+                                                </button>
+                                                <div className="h-3 w-[1px] bg-gray-300 mx-0.5" />
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => insertMarkdown('list')}
+                                                    className="p-1 hover:bg-gray-200 rounded transition-colors flex items-center gap-0.5" 
+                                                    title="Lista com marcadores"
+                                                >
+                                                    <span className="font-mono text-[10px] leading-none">•=</span>
+                                                    <Plus size={8} className="opacity-70" />
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    className="p-1 hover:bg-gray-200 rounded transition-colors flex items-center gap-0.5" 
+                                                    title="Adicionar item"
+                                                >
+                                                    <span>+</span>
+                                                    <Plus size={8} className="opacity-70" />
+                                                </button>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => insertMarkdown('link')}
+                                                    className="p-1 hover:bg-gray-200 rounded transition-colors" 
+                                                    title="Link"
+                                                >
+                                                    <Paperclip size={12} className="rotate-45" />
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    className="p-1 hover:bg-gray-200 rounded transition-colors" 
+                                                    title="Ajuda de Markdown"
+                                                >
+                                                    <HelpCircle size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Textarea */}
+                                        <textarea
+                                            ref={obsTextareaRef}
+                                            rows={3}
+                                            placeholder="Escrever um comentário..."
+                                            value={observations}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setObservations(val);
+
+                                                const cursor = e.target.selectionStart;
+                                                const lastAt = val.lastIndexOf('@', cursor - 1);
+
+                                                if (lastAt !== -1 && lastAt >= (val.lastIndexOf(' ', cursor - 1))) {
+                                                    const search = val.substring(lastAt + 1, cursor);
+                                                    setMentionSearch(search);
+                                                    setShowMentionList(true);
+                                                } else {
+                                                    setShowMentionList(false);
+                                                }
+                                            }}
+                                            className="w-full bg-transparent text-xs text-gray-700 py-2.5 px-3 focus:outline-none focus:ring-0 resize-none min-h-[70px] border-none"
+                                        />
+                                    </div>
+
+                                    {/* Botões do Editor */}
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={handleSendObservation}
+                                            disabled={!observations.trim()}
+                                            className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold py-1.5 px-4 rounded-lg transition-all text-xs"
+                                        >
+                                            Salvar
+                                        </button>
+                                        <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 cursor-pointer select-none">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={isFollowed}
+                                                onChange={(e) => setIsFollowed(e.target.checked)}
+                                                className="w-3.5 h-3.5 text-primary-600 rounded border-gray-300 focus:ring-primary-500 cursor-pointer"
+                                            />
+                                            <span>Seguir</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Mencionador Popover */}
+                                {showMentionList && (
+                                    <div className="absolute w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[10000] animate-in slide-in-from-bottom-2 duration-200">
+                                        <div className="p-2 border-b border-gray-50 bg-gray-50/50 text-[9px] font-bold text-gray-400 uppercase tracking-widest">Mencionar Equipe</div>
+                                        <div className="max-h-32 overflow-y-auto">
+                                            {teamMembers.filter(m => m.name.toLowerCase().includes(mentionSearch.toLowerCase())).length > 0 ? (
+                                                teamMembers
+                                                    .filter(m => m.name.toLowerCase().includes(mentionSearch.toLowerCase()))
+                                                    .map(member => (
+                                                        <button
+                                                            key={member.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const lastAt = observations.lastIndexOf('@', observations.length);
+                                                                const newVal = observations.substring(0, lastAt) + '@' + member.name + ' ';
+                                                                setObservations(newVal);
+                                                                setShowMentionList(false);
+                                                            }}
+                                                            className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-primary-50 text-left transition-colors group"
+                                                        >
+                                                            <img src={member.avatar_url} alt="" className="w-5 h-5 rounded-full" />
+                                                            <span className="text-xs font-medium text-gray-700 group-hover:text-primary-700">{member.name}</span>
+                                                        </button>
+                                                    ))
+                                            ) : (
+                                                <div className="p-3 text-[10px] text-gray-400 text-center italic">Nenhum membro encontrado...</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Lista de Comentários / Feed */}
+                                {parsedHistory.length > 0 && (
+                                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 pretty-scrollbar pt-2">
+                                        {parsedHistory.map((item) => {
+                                            if (item.isComment) {
+                                                return (
+                                                    <div key={item.id} className="flex gap-2 items-start group animate-in fade-in duration-200">
+                                                        {/* Avatar */}
+                                                        <div className="w-7 h-7 rounded-full bg-primary-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-white shadow-sm mt-0.5">
+                                                            {item.avatarUrl ? (
+                                                                <img src={item.avatarUrl} alt={item.author} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <span className="text-[9px] font-bold text-primary-700">{item.author.charAt(0).toUpperCase()}</span>
+                                                            )}
+                                                        </div>
+                                                        {/* Conteúdo do Comentário */}
+                                                        <div className="flex-1 space-y-0.5">
+                                                            <div className="flex items-baseline gap-1.5">
+                                                                <span className="text-xs font-semibold text-gray-800">{item.author}</span>
+                                                                <span className="text-[9px] text-gray-400 hover:underline cursor-pointer">
+                                                                    {item.timestamp}
+                                                                </span>
+                                                            </div>
+                                                            <div className="bg-gray-100 border border-gray-150/50 text-gray-800 text-[11px] py-1.5 px-2.5 rounded-xl rounded-tl-none inline-block max-w-full leading-relaxed shadow-sm">
+                                                                <ReactMarkdown 
+                                                                    components={{
+                                                                        a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-bold" />
+                                                                    }}
+                                                                >
+                                                                    {item.content}
+                                                                </ReactMarkdown>
+                                                            </div>
+                                                            {/* Reaction + Responder row */}
+                                                            <div className="flex items-center gap-1.5 text-[9px] text-gray-400 pl-0.5">
+                                                                <button type="button" className="hover:text-gray-650 transition-colors flex items-center gap-0.5">
+                                                                    <span>😊</span>
+                                                                    <Plus size={8} />
+                                                                </button>
+                                                                <span>•</span>
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setObservations(prev => (prev.trim() ? prev + ' ' : '') + `@${item.author} `);
+                                                                        obsTextareaRef.current?.focus();
+                                                                    }}
+                                                                    className="hover:text-primary-650 hover:underline font-bold"
+                                                                >
+                                                                    Responder
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            } else {
+                                                if (!showActivityDetails) return null;
+                                                return (
+                                                    <div key={item.id} className="flex gap-2 items-start text-[10px] text-gray-500 pl-1 animate-in fade-in duration-200">
+                                                        {/* Icon / Mini Avatar */}
+                                                        <div className="w-7 h-7 rounded-full bg-gray-50 flex-shrink-0 flex items-center justify-center overflow-hidden border border-gray-100 shadow-sm mt-0.5">
+                                                            {item.avatarUrl ? (
+                                                                <img src={item.avatarUrl} alt={item.author} className="w-full h-full object-cover opacity-60" />
+                                                            ) : (
+                                                                <Activity size={10} className="text-gray-450" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 py-0.5">
+                                                            <p className="leading-relaxed">
+                                                                <span className="font-semibold text-gray-700">{item.author}</span> {item.content}
+                                                            </p>
+                                                            <span className="text-[8px] text-gray-400 hover:underline cursor-pointer block mt-0.5">
+                                                                {item.timestamp}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                        })}
                                     </div>
                                 )}
                             </div>
                         </div>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data de Entrega</label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Calendar size={18} className="text-gray-400" />
-                                    </div>
-                                    <input
-                                        type="date"
-                                        value={dueDate}
-                                        onChange={(e) => setDueDate(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 pl-10 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Prioridade</label>
-                                <select
-                                    value={priority}
-                                    onChange={(e) => setPriority(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
-                                    <option>Alta</option>
-                                    <option>Média</option>
-                                    <option>Baixa</option>
-                                </select>
-                            </div>
-                            <div className="hidden">
-                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Status Legislado</label>
-                                <input readOnly value={status} className="w-full bg-gray-200 border border-gray-200 text-gray-400 py-2.5 px-4 rounded-xl outline-none text-xs" />
-                            </div>
-                        </div>
-                    </div>
-                    {/* Checklist */}
-                    {/* Checklist */}
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Checklist</label>
-                        <div className="space-y-4 mb-3">
-                            {checklist.map((item) => {
-                                const now = new Date();
-                                now.setHours(0, 0, 0, 0);
-                                const itemDate = item.due_date ? new Date(item.due_date) : null;
-                                if (itemDate) itemDate.setHours(0, 0, 0, 0);
-                                
-                                const isOverdue = itemDate && itemDate < now && !item.done;
-                                const itemAssignees = item.assignees || [];
-                                
-                                return (
-                                    <div key={item.id} className="flex flex-col gap-2">
-                                        <div className="flex items-center gap-3 group">
-                                            <button onClick={() => setChecklist(checklist.map(c => c.id === item.id ? { ...c, done: !c.done } : c))}>
-                                                {item.done ? <CheckCircle2 size={20} className="text-primary-500" /> : <Circle size={20} className="text-gray-300 hover:text-primary-400 transition-colors" />}
-                                            </button>
-                                            
-                                            <input 
-                                                type="text"
-                                                value={item.text}
-                                                onChange={(e) => setChecklist(checklist.map(c => c.id === item.id ? { ...c, text: e.target.value } : c))}
-                                                className={`text-sm flex-1 bg-transparent border-none focus:outline-none ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}
-                                            />
-
-                                            <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-all">
-                                                {/* Botão Data */}
-                                                <div className="relative">
-                                                    <button 
-                                                        onClick={() => setActiveChecklistMenu(activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'date' ? null : { id: item.id, type: 'date' })}
-                                                        className={`p-1.5 rounded-lg hover:bg-gray-100 transition-colors ${item.due_date ? (isOverdue ? 'text-red-500' : 'text-primary-600 bg-primary-50') : 'text-gray-400'}`}
-                                                        title="Definir data"
-                                                    >
-                                                        <Calendar size={14} />
-                                                    </button>
-                                                    {activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'date' && (
-                                                        <div className="absolute bottom-full right-0 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] animate-in zoom-in-95 duration-200">
-                                                            <input 
-                                                                type="date" 
-                                                                className="text-xs border-none bg-gray-50 rounded-lg p-1.5 focus:ring-0"
-                                                                value={item.due_date || ''}
-                                                                onChange={(e) => {
-                                                                    setChecklist(checklist.map(c => c.id === item.id ? { ...c, due_date: e.target.value } : c));
-                                                                    setActiveChecklistMenu(null);
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Botão Responsáveis */}
-                                                <div className="relative">
-                                                    <button 
-                                                        onClick={() => setActiveChecklistMenu(activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'users' ? null : { id: item.id, type: 'users' })}
-                                                        className={`p-1.5 rounded-lg hover:bg-gray-100 transition-colors ${itemAssignees.length > 0 ? 'text-primary-600 bg-primary-50' : 'text-gray-400'}`}
-                                                        title="Adicionar responsáveis"
-                                                    >
-                                                        <UserPlus size={14} />
-                                                    </button>
-                                                    {activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'users' && (
-                                                        <div className="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] animate-in zoom-in-95 duration-200">
-                                                            <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
-                                                                {teamMembers.map(member => (
-                                                                    <label key={member.id} className="flex items-center gap-2 p-1.5 hover:bg-primary-50 rounded-lg cursor-pointer transition-colors">
-                                                                        <input 
-                                                                            type="checkbox"
-                                                                            className="w-3 h-3 text-primary-600 rounded"
-                                                                            checked={itemAssignees.includes(member.name)}
-                                                                            onChange={(e) => {
-                                                                                const newAssignees = e.target.checked 
-                                                                                    ? [...itemAssignees, member.name]
-                                                                                    : itemAssignees.filter(name => name !== member.name);
-                                                                                setChecklist(checklist.map(c => c.id === item.id ? { ...c, assignees: newAssignees } : c));
-                                                                            }}
-                                                                        />
-                                                                        <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
-                                                                            {member.avatar_url ? (
-                                                                                <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
-                                                                            ) : (
-                                                                                <div className="w-full h-full bg-primary-100 flex items-center justify-center text-[10px] font-bold text-primary-600">
-                                                                                    {member.name.charAt(0)}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                        <span className="text-[11px] font-medium text-gray-700 truncate">{member.name}</span>
-                                                                    </label>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <button
-                                                    onClick={() => setChecklist(checklist.filter(c => c.id !== item.id))}
-                                                    className="text-gray-300 hover:text-red-500 transition-all p-1.5"
-                                                >
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Detalhes do item (data e fotos dos responsáveis) */}
-                                        {(item.due_date || itemAssignees.length > 0) && (
-                                            <div className="flex items-center gap-3 ml-8">
-                                                {item.due_date && (
-                                                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${isOverdue ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
-                                                        <Calendar size={10} />
-                                                        {new Date(item.due_date).toLocaleDateString('pt-BR')}
-                                                    </div>
-                                                )}
-                                                <div className="flex -space-x-1.5 overflow-hidden">
-                                                    {itemAssignees.map((name: string) => {
-                                                        const member = teamMembers.find(m => m.name === name);
-                                                        return (
-                                                            <div key={name} className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-primary-50 text-primary-700 rounded-md text-[10px] font-bold border border-primary-100">
-                                                                <div className="w-4 h-4 rounded-full overflow-hidden flex-shrink-0">
-                                                                    {member?.avatar_url ? (
-                                                                        <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
-                                                                    ) : (
-                                                                        <div className="w-full h-full bg-primary-200 flex items-center justify-center text-[8px] font-bold text-primary-700">
-                                                                            {name.charAt(0)}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                {name}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        <div className="flex items-center gap-2 p-2 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 group-within:border-primary-200 group-within:bg-white transition-all">
-                            <Plus size={18} className="text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Adicionar item..."
-                                className="flex-1 bg-transparent border-none text-sm focus:outline-none placeholder-gray-400 text-gray-700"
-                                value={newChecklistItem}
-                                onChange={(e) => setNewChecklistItem(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && newChecklistItem.trim()) {
-                                        setChecklist([...checklist, { id: Date.now(), text: newChecklistItem.trim(), done: false, assignees: [], due_date: null }]);
-                                        setNewChecklistItem('');
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
-                    {/* Attachments */}
-                    <div>
-                        <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                            <Upload size={14} /> Anexos
-                        </label>
-
-                        {attachments.length > 0 && (
-                            <div className="flex flex-col gap-2 mb-3">
-                                {attachments.map((file, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 border border-gray-200 rounded-lg group/file">
-                                        <div className="flex items-center gap-2 overflow-hidden">
-                                            <span className="text-xs truncate text-gray-600 font-medium max-w-[200px]">{file.name}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <button 
-                                                onClick={() => {
-                                                    const link = document.createElement('a');
-                                                    link.href = file.data;
-                                                    link.download = file.name;
-                                                    document.body.appendChild(link);
-                                                    link.click();
-                                                    document.body.removeChild(link);
-                                                }}
-                                                className="text-gray-400 hover:text-primary-600 transition-colors p-1"
-                                                title="Download"
-                                            >
-                                                <Download size={14} />
-                                            </button>
-                                            <button 
-                                                onClick={() => setAttachments(attachments.filter((_, i) => i !== idx))} 
-                                                className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                                                title="Remover"
-                                            >
-                                                <X size={14} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:bg-gray-50/50 transition-colors cursor-pointer group relative">
-                            <div className="bg-primary-50 text-primary-500 p-2 rounded-full mb-2 group-hover:bg-primary-100 transition-colors">
-                                <Upload size={16} />
-                            </div>
-                            <p className="text-xs font-medium text-gray-600">Clique para anexar arquivo</p>
-                            <input
-                                type="file"
-                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => setAttachments([...attachments, { name: file.name, data: reader.result as string }]);
-                                        reader.readAsDataURL(file);
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Observations */}
-                    <div className="relative">
-                        <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                            <MessageSquare size={14} /> Observações (@menções)
-                        </label>
-                        <div className="relative">
-                            <textarea
-                                ref={obsTextareaRef}
-                                rows={3}
-                                placeholder="Digite um comentário ou use @ para mencionar alguém..."
-                                value={observations}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setObservations(val);
-
-                                    const cursor = e.target.selectionStart;
-                                    const lastAt = val.lastIndexOf('@', cursor - 1);
-
-                                    if (lastAt !== -1 && lastAt >= (val.lastIndexOf(' ', cursor - 1))) {
-                                        const search = val.substring(lastAt + 1, cursor);
-                                        setMentionSearch(search);
-                                        setShowMentionList(true);
-                                    } else {
-                                        setShowMentionList(false);
-                                    }
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey && observations.trim()) {
-                                        e.preventDefault();
-                                        handleSendObservation();
-                                    }
-                                }}
-                                className="w-full bg-gray-50/50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all resize-none text-sm pr-12 overflow-hidden"
-                            ></textarea>
-
-                            <button
-                                type="button"
-                                onClick={handleSendObservation}
-                                disabled={!observations.trim()}
-                                className="absolute bottom-3 right-3 p-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed z-10"
-                                title="Enviar comentário"
-                            >
-                                <MessageSquare size={16} />
-                            </button>
-                        </div>
-
-                        {observationsHistory && (
-                            <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-100 max-h-60 overflow-y-auto space-y-3 shadow-inner">
-                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Histórico de Notas</div>
-                                {observationsHistory.split('\n').filter(line => line.trim()).map((line, idx) => (
-                                    <div key={idx} className="text-xs text-gray-600 border-b border-gray-200/50 pb-2 last:border-0">
-                                        <div className="prose prose-sm max-w-none prose-p:leading-relaxed text-gray-700">
-                                            <ReactMarkdown 
-                                                components={{
-                                                    a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-bold" />
-                                                }}
-                                            >
-                                                {line}
-                                            </ReactMarkdown>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {showMentionList && (
-                            <div className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[10000] animate-in slide-in-from-bottom-2 duration-200">
-                                <div className="p-2 border-b border-gray-50 bg-gray-50/50 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mencionar Equipe</div>
-                                <div className="max-h-48 overflow-y-auto">
-                                    {teamMembers.filter(m => m.name.toLowerCase().includes(mentionSearch.toLowerCase())).length > 0 ? (
-                                        teamMembers
-                                            .filter(m => m.name.toLowerCase().includes(mentionSearch.toLowerCase()))
-                                            .map(member => (
-                                                <button
-                                                    key={member.id}
-                                                    onClick={() => {
-                                                        const lastAt = observations.lastIndexOf('@', observations.length);
-                                                        const newVal = observations.substring(0, lastAt) + '@' + member.name + ' ';
-                                                        setObservations(newVal);
-                                                        setShowMentionList(false);
-                                                    }}
-                                                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-primary-50 text-left transition-colors group"
-                                                >
-                                                    <img src={member.avatar_url} alt="" className="w-6 h-6 rounded-full" />
-                                                    <span className="text-sm font-medium text-gray-700 group-hover:text-primary-700">{member.name}</span>
-                                                </button>
-                                            ))
-                                    ) : (
-                                        <div className="p-4 text-xs text-gray-400 text-center italic">Nenhum membro encontrado...</div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
+
                 {/* Footer */}
-                <div className="p-6 border-t border-gray-100 flex flex-col sm:flex-row justify-between gap-4 bg-gray-50/50 rounded-b-2xl">
+                <div className="p-6 border-t border-gray-100 flex flex-col sm:flex-row justify-between gap-4 bg-gray-50/50 rounded-b-2xl shrink-0">
                     {editingTask ? (
                         <button onClick={handleDelete} className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors w-full sm:w-auto">
                             <Trash2 size={16} /> Excluir
