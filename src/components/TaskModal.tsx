@@ -34,6 +34,51 @@ export const TaskModal = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showActivityDetails, setShowActivityDetails] = useState(false);
     const [isFollowed, setIsFollowed] = useState(false);
+    const [leftWidth, setLeftWidth] = useState(65);
+    const [isLg, setIsLg] = useState(true);
+    const isDraggingRef = useRef(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const handleMouseMove = (e: MouseEvent) => {
+        if (!isDraggingRef.current || !containerRef.current) return;
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+        if (newLeftWidth >= 30 && newLeftWidth <= 80) {
+            setLeftWidth(newLeftWidth);
+        }
+    };
+
+    const handleMouseUp = () => {
+        isDraggingRef.current = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        isDraggingRef.current = true;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsLg(window.innerWidth >= 1024);
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+    }, []);
 
     const prevTaskIdRef = useRef<string | null>(null);
     const obsTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -282,10 +327,13 @@ export const TaskModal = () => {
                 </div>
 
                 {/* Grid Body */}
-                <div className="p-6 overflow-y-auto flex-1 pretty-scrollbar">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className={`p-6 flex-1 pretty-scrollbar ${isLg ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
+                    <div ref={containerRef} className={`flex ${isLg ? 'flex-row h-full overflow-hidden gap-0' : 'flex-col gap-8'}`}>
                         {/* Coluna da Esquerda (Principal) */}
-                        <div className="lg:col-span-8 space-y-6">
+                        <div 
+                            className={`space-y-6 pretty-scrollbar ${isLg ? 'h-full overflow-y-auto pr-6 flex-shrink-0' : 'w-full'}`}
+                            style={{ width: isLg ? `${leftWidth}%` : '100%' }}
+                        >
                             {/* Metadados originais divididos em sub-colunas */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="space-y-4">
@@ -617,8 +665,21 @@ export const TaskModal = () => {
                             </div>
                         </div>
 
+                        {/* Divisória Arrastável (Resizer Bar) */}
+                        {isLg && (
+                            <div 
+                                onMouseDown={handleMouseDown}
+                                className="w-1.5 hover:w-2 hover:bg-primary-500/50 bg-gray-100 hover:cursor-col-resize select-none flex items-center justify-center border-l border-r border-gray-200/30 transition-all self-stretch relative z-20 flex-shrink-0"
+                                title="Arraste para redimensionar"
+                            >
+                                <div className="w-[2px] h-10 bg-gray-300 group-hover:bg-primary-600 rounded-full transition-colors" />
+                            </div>
+                        )}
+
                         {/* Coluna da Direita (Lateral) */}
-                        <div className="lg:col-span-4 space-y-6 lg:border-l lg:border-gray-100 lg:pl-6">
+                        <div 
+                            className={`space-y-6 pretty-scrollbar ${isLg ? 'h-full overflow-y-auto pl-6 flex-1' : 'w-full'}`}
+                        >
                             {/* Comentários e Atividade (Trello Style) */}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
