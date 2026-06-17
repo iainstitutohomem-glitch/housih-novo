@@ -33,7 +33,6 @@ export const TaskModal = () => {
     const [activeChecklistMenu, setActiveChecklistMenu] = useState<{ id: number, type: 'date' | 'users' } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showActivityDetails, setShowActivityDetails] = useState(false);
-    const [isFollowed, setIsFollowed] = useState(false);
     const [leftWidth, setLeftWidth] = useState(65);
     const [isLg, setIsLg] = useState(true);
     const isDraggingRef = useRef(false);
@@ -808,15 +807,6 @@ export const TaskModal = () => {
                                         >
                                             Salvar
                                         </button>
-                                        <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 cursor-pointer select-none">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={isFollowed}
-                                                onChange={(e) => setIsFollowed(e.target.checked)}
-                                                className="w-3.5 h-3.5 text-primary-600 rounded border-gray-300 focus:ring-primary-500 cursor-pointer"
-                                            />
-                                            <span>Seguir</span>
-                                        </label>
                                     </div>
                                 </div>
 
