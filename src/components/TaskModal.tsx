@@ -806,14 +806,14 @@ export const TaskModal = () => {
                                                             )}
                                                         </div>
                                                         {/* Conteúdo do Comentário */}
-                                                        <div className="flex-1 space-y-0.5">
+                                                        <div className="flex-1 min-w-0 space-y-0.5">
                                                             <div className="flex items-baseline gap-1.5">
                                                                 <span className="text-xs font-semibold text-gray-800">{item.author}</span>
                                                                 <span className="text-[9px] text-gray-400 hover:underline cursor-pointer">
                                                                     {item.timestamp}
                                                                 </span>
                                                             </div>
-                                                            <div className="bg-gray-100 border border-gray-150/50 text-gray-800 text-[11px] py-1.5 px-2.5 rounded-xl rounded-tl-none inline-block max-w-full leading-relaxed shadow-sm">
+                                                            <div className="bg-gray-100 border border-gray-150/50 text-gray-800 text-[11px] py-1.5 px-2.5 rounded-xl rounded-tl-none inline-block max-w-full leading-relaxed shadow-sm break-words">
                                                                 <ReactMarkdown 
                                                                     components={{
                                                                         a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-bold" />
@@ -855,7 +855,7 @@ export const TaskModal = () => {
                                                                 <Activity size={10} className="text-gray-450" />
                                                             )}
                                                         </div>
-                                                        <div className="flex-1 py-0.5">
+                                                        <div className="flex-1 min-w-0 py-0.5 break-words">
                                                             <p className="leading-relaxed">
                                                                 <span className="font-semibold text-gray-700">{item.author}</span> {item.content}
                                                             </p>
