@@ -35,8 +35,12 @@ export const TaskModal = () => {
     const [showActivityDetails, setShowActivityDetails] = useState(false);
     const [leftWidth, setLeftWidth] = useState(65);
     const [isLg, setIsLg] = useState(true);
+    const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+    const [editingCommentText, setEditingCommentText] = useState('');
     const isDraggingRef = useRef(false);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    const currentUser = teamMembers.find(m => m.email === session?.user?.email)?.name || 'Sistema';
 
     const handleMouseMove = (e: MouseEvent) => {
         if (!isDraggingRef.current || !containerRef.current) return;
@@ -118,9 +122,9 @@ export const TaskModal = () => {
     const parsedHistory = useMemo(() => {
         if (!observationsHistory) return [];
         return observationsHistory.split('\n')
-            .map(line => line.trim())
-            .filter(line => line.length > 0)
-            .map((line, index) => {
+            .map((line, index) => ({ line: line.trim(), index }))
+            .filter(item => item.line.length > 0)
+            .map(({ line, index }) => {
                 // Match [timestamp] Author: content
                 const matchWithColon = line.match(/^\[(.*?)\]\s*(.*?):\s*(.*)$/);
                 if (matchWithColon) {
@@ -291,6 +295,44 @@ export const TaskModal = () => {
         setObservationsHistory(updatedObs);
         setObservations(''); // Limpa o campo localmente para a próxima
 
+        if (editingTask) {
+            await updateTask(editingTask.id, { observations: updatedObs });
+        }
+    };
+
+    const handleEditComment = async (index: number, newText: string) => {
+        if (!newText.trim()) return;
+        
+        const lines = observationsHistory.split('\n');
+        const lineToEdit = lines[index];
+        if (!lineToEdit) return;
+        
+        const matchWithColon = lineToEdit.match(/^\[(.*?)\]\s*(.*?):\s*(.*)$/);
+        if (matchWithColon) {
+            const timestamp = matchWithColon[1];
+            const author = matchWithColon[2];
+            lines[index] = `[${timestamp}] ${author}: ${newText.trim()}`;
+            
+            const updatedObs = lines.join('\n');
+            setObservationsHistory(updatedObs);
+            setEditingCommentId(null);
+            setEditingCommentText('');
+            
+            if (editingTask) {
+                await updateTask(editingTask.id, { observations: updatedObs });
+            }
+        }
+    };
+
+    const handleDeleteComment = async (index: number) => {
+        if (!window.confirm('Deseja realmente excluir este comentário?')) return;
+        
+        const lines = observationsHistory.split('\n');
+        lines.splice(index, 1);
+        
+        const updatedObs = lines.join('\n');
+        setObservationsHistory(updatedObs);
+        
         if (editingTask) {
             await updateTask(editingTask.id, { observations: updatedObs });
         }
@@ -864,15 +906,46 @@ export const TaskModal = () => {
                                                                     {item.timestamp}
                                                                 </span>
                                                             </div>
-                                                            <div className="bg-gray-100 border border-gray-150/50 text-gray-800 text-[11px] py-1.5 px-2.5 rounded-xl rounded-tl-none inline-block max-w-full leading-relaxed shadow-sm break-words">
-                                                                <ReactMarkdown 
-                                                                    components={{
-                                                                        a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-bold" />
-                                                                    }}
-                                                                >
-                                                                    {item.content}
-                                                                </ReactMarkdown>
-                                                            </div>
+                                                            {editingCommentId === item.id ? (
+                                                                <div className="space-y-2 mt-1 w-full max-w-md">
+                                                                    <textarea
+                                                                        value={editingCommentText}
+                                                                        onChange={(e) => setEditingCommentText(e.target.value)}
+                                                                        className="w-full bg-white border border-gray-200 text-xs text-gray-700 py-1.5 px-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all resize-none min-h-[60px]"
+                                                                        rows={2}
+                                                                        autoFocus
+                                                                    />
+                                                                    <div className="flex items-center gap-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleEditComment(item.id, editingCommentText)}
+                                                                            className="bg-primary-600 hover:bg-primary-700 text-white font-bold py-1 px-3 rounded-lg text-[10px] transition-all"
+                                                                        >
+                                                                            Salvar
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setEditingCommentId(null);
+                                                                                setEditingCommentText('');
+                                                                            }}
+                                                                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-1 px-3 rounded-lg text-[10px] transition-all"
+                                                                        >
+                                                                            Cancelar
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="bg-gray-100 border border-gray-150/50 text-gray-800 text-[11px] py-1.5 px-2.5 rounded-xl rounded-tl-none inline-block max-w-full leading-relaxed shadow-sm break-words">
+                                                                    <ReactMarkdown 
+                                                                        components={{
+                                                                            a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-bold" />
+                                                                        }}
+                                                                    >
+                                                                        {item.content}
+                                                                    </ReactMarkdown>
+                                                                </div>
+                                                            )}
                                                             {/* Reaction + Responder row */}
                                                             <div className="flex items-center gap-1.5 text-[9px] text-gray-400 pl-0.5">
                                                                 <button type="button" className="hover:text-gray-650 transition-colors flex items-center gap-0.5">
@@ -890,6 +963,29 @@ export const TaskModal = () => {
                                                                 >
                                                                     Responder
                                                                 </button>
+                                                                {item.author.toLowerCase() === currentUser.toLowerCase() && editingCommentId !== item.id && (
+                                                                    <>
+                                                                        <span>•</span>
+                                                                        <button 
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setEditingCommentId(item.id);
+                                                                                setEditingCommentText(item.content);
+                                                                            }}
+                                                                            className="hover:text-primary-650 hover:underline font-bold"
+                                                                        >
+                                                                            Editar
+                                                                        </button>
+                                                                        <span>•</span>
+                                                                        <button 
+                                                                            type="button"
+                                                                            onClick={() => handleDeleteComment(item.id)}
+                                                                            className="hover:text-red-650 hover:underline font-bold text-red-500/80"
+                                                                        >
+                                                                            Excluir
+                                                                        </button>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
