@@ -53,3 +53,20 @@
   background: rgba(249, 115, 22, 0.5); /* Primary 500 when hovered */
   background-clip: padding-box;
 }
+
+/* Beauty Vertical Scrollbar for Modal Columns */
+.pretty-scrollbar-y::-webkit-scrollbar {
+  width: 6px;
+}
+.pretty-scrollbar-y::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 10px;
+}
+.pretty-scrollbar-y::-webkit-scrollbar-thumb {
+  background: rgba(249, 115, 22, 0.2); /* Primary 500 with low opacity */
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+.pretty-scrollbar-y::-webkit-scrollbar-thumb:hover {
+  background: rgba(249, 115, 22, 0.5); /* Primary 500 when hovered */
+}

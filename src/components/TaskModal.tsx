@@ -368,11 +368,11 @@ export const TaskModal = () => {
                 </div>
 
                 {/* Grid Body */}
-                <div className={`p-6 flex-1 pretty-scrollbar ${isLg ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
-                    <div ref={containerRef} className={`flex ${isLg ? 'flex-row h-full overflow-hidden gap-0' : 'flex-col gap-8'}`}>
+                <div className={`p-6 flex-1 pretty-scrollbar-y ${isLg ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
+                    <div ref={containerRef} className={`flex ${isLg ? 'flex-row h-full overflow-hidden gap-0 flex-1 min-h-0' : 'flex-col gap-8'}`}>
                         {/* Coluna da Esquerda (Principal) */}
                         <div 
-                            className={`space-y-6 pretty-scrollbar ${isLg ? 'h-full overflow-y-auto pr-6 flex-shrink-0' : 'w-full'}`}
+                            className={`space-y-6 pretty-scrollbar-y ${isLg ? 'h-full overflow-y-auto pr-6 flex-shrink-0' : 'w-full'}`}
                             style={{ width: isLg ? `${leftWidth}%` : '100%' }}
                         >
                             {/* Metadados originais divididos em sub-colunas */}
@@ -719,7 +719,7 @@ export const TaskModal = () => {
 
                         {/* Coluna da Direita (Lateral) */}
                         <div 
-                            className={`space-y-6 pretty-scrollbar ${isLg ? 'h-full overflow-y-auto pl-6 flex-1' : 'w-full'}`}
+                            className={`space-y-6 pretty-scrollbar-y ${isLg ? 'h-full overflow-y-auto pl-6 flex-1' : 'w-full'}`}
                         >
                             {/* Comentários e Atividade (Trello Style) */}
                             <div className="space-y-4">
@@ -885,7 +885,7 @@ export const TaskModal = () => {
 
                                 {/* Lista de Comentários / Feed */}
                                 {parsedHistory.length > 0 && (
-                                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 pretty-scrollbar pt-2">
+                                    <div className="space-y-3 overflow-y-auto pr-1 pretty-scrollbar-y pt-2 flex-1 min-h-0">
                                         {parsedHistory.map((item) => {
                                             if (item.isComment) {
                                                 return (
