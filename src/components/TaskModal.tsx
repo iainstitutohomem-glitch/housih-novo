@@ -369,10 +369,10 @@ export const TaskModal = () => {
 
                 {/* Grid Body */}
                 <div className={`flex-1 pretty-scrollbar-y ${isLg ? 'flex flex-col overflow-hidden p-0' : 'p-6 overflow-y-auto'}`}>
-                    <div ref={containerRef} className={`flex ${isLg ? 'flex-row h-full overflow-hidden gap-0 flex-1 min-h-0' : 'flex-col gap-8'}`}>
+                    <div ref={containerRef} className={`flex ${isLg ? 'flex-row overflow-hidden gap-0 flex-1 min-h-0' : 'flex-col gap-8'}`}>
                         {/* Coluna da Esquerda (Principal) */}
                         <div 
-                            className={`space-y-6 pretty-scrollbar-y ${isLg ? 'h-full overflow-y-auto pt-6 pb-6 pl-6 pr-4 flex-shrink-0 min-h-0' : 'w-full'}`}
+                            className={`space-y-6 pretty-scrollbar-y ${isLg ? 'overflow-y-auto pt-6 pb-6 pl-6 pr-4 flex-shrink-0 min-h-0' : 'w-full'}`}
                             style={{ width: isLg ? `${leftWidth}%` : '100%' }}
                         >
                             {/* Metadados originais divididos em sub-colunas */}
@@ -719,7 +719,7 @@ export const TaskModal = () => {
 
                         {/* Coluna da Direita (Lateral) */}
                         <div 
-                            className={`space-y-6 pretty-scrollbar-y ${isLg ? 'h-full overflow-y-auto pt-6 pb-6 pl-4 pr-6 flex-1 min-h-0' : 'w-full'}`}
+                            className={`space-y-6 pretty-scrollbar-y ${isLg ? 'overflow-y-auto pt-6 pb-6 pl-4 pr-6 flex-1 min-h-0' : 'w-full'}`}
                         >
                             {/* Comentários e Atividade (Trello Style) */}
                             <div className="space-y-4">
