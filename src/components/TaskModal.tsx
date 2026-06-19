@@ -369,7 +369,7 @@ export const TaskModal = () => {
 
                 {/* Grid Body */}
                 <div className={`p-6 flex-1 pretty-scrollbar-y ${isLg ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
-                    <div ref={containerRef} className={`flex ${isLg ? 'flex-row h-full overflow-hidden gap-0 flex-1 min-h-0' : 'flex-col gap-8'}`}>
+                    <div ref={containerRef} className={`flex ${isLg ? 'flex-row overflow-hidden gap-0 flex-1 min-h-0' : 'flex-col gap-8'}`}>
                         {/* Coluna da Esquerda (Principal) */}
                         <div 
                             className={`space-y-6 pretty-scrollbar-y ${isLg ? 'h-full overflow-y-auto pr-6 flex-shrink-0' : 'w-full'}`}
@@ -412,7 +412,7 @@ export const TaskModal = () => {
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responsáveis</label>
-                                        <div className="space-y-2 max-h-40 overflow-y-auto p-3 bg-gray-50 border border-gray-200 rounded-xl custom-scrollbar">
+                                        <div className="space-y-2 max-h-40 overflow-y-auto p-3 bg-gray-50 border border-gray-200 rounded-xl pretty-scrollbar-y">
                                             {teamMembers && teamMembers.map(member => (
                                                 <label key={member.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer group">
                                                     <input 
@@ -549,7 +549,7 @@ export const TaskModal = () => {
                                                             </button>
                                                             {activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'users' && (
                                                                 <div className="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] animate-in zoom-in-95 duration-200">
-                                                                    <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
+                                                                    <div className="max-h-40 overflow-y-auto space-y-1 pretty-scrollbar-y">
                                                                         {teamMembers.map(member => (
                                                                             <label key={member.id} className="flex items-center gap-2 p-1.5 hover:bg-primary-50 rounded-lg cursor-pointer transition-colors">
                                                                                 <input 
@@ -856,7 +856,7 @@ export const TaskModal = () => {
                                 {showMentionList && (
                                     <div className="absolute w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[10000] animate-in slide-in-from-bottom-2 duration-200">
                                         <div className="p-2 border-b border-gray-50 bg-gray-50/50 text-[9px] font-bold text-gray-400 uppercase tracking-widest">Mencionar Equipe</div>
-                                        <div className="max-h-32 overflow-y-auto">
+                                        <div className="max-h-32 overflow-y-auto pretty-scrollbar-y">
                                             {teamMembers.filter(m => m.name.toLowerCase().includes(mentionSearch.toLowerCase())).length > 0 ? (
                                                 teamMembers
                                                     .filter(m => m.name.toLowerCase().includes(mentionSearch.toLowerCase()))
