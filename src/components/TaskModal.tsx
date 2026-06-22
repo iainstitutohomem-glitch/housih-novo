@@ -121,55 +121,97 @@ export const TaskModal = () => {
 
     const parsedHistory = useMemo(() => {
         if (!observationsHistory) return [];
-        return observationsHistory.split('\n')
-            .map((line, index) => ({ line: line.trim(), index }))
-            .filter(item => item.line.length > 0)
-            .map(({ line, index }) => {
-                // Match [timestamp] Author: content
-                const matchWithColon = line.match(/^\[(.*?)\]\s*(.*?):\s*(.*)$/);
-                if (matchWithColon) {
-                    const timestamp = matchWithColon[1];
-                    const author = matchWithColon[2];
-                    const content = matchWithColon[3];
-                    const member = teamMembers.find(m => m.name.toLowerCase() === author.toLowerCase());
-                    const isSystemAction = author === 'Sistema' || content.includes('alterou') || content.includes('moveu') || content.includes('adicionou') || content.includes('excluiu') || content.includes('finalizou') || content.includes('criou');
-                    return {
-                        id: index,
-                        timestamp,
-                        author,
-                        content,
-                        avatarUrl: member?.avatar_url || null,
-                        isComment: !isSystemAction
-                    };
-                }
+        
+        const lines = observationsHistory.split('\n');
+        const items: {
+            id: number;
+            lineIndices: number[];
+            timestamp: string;
+            author: string;
+            content: string;
+            avatarUrl: string | null;
+            isComment: boolean;
+        }[] = [];
+        let currentItem: typeof items[number] | null = null;
+
+        lines.forEach((line, index) => {
+            const trimmedLine = line.trim();
+            if (trimmedLine.length === 0) return; // skip empty lines
+
+            // Try to parse as header with colon
+            const matchWithColon = trimmedLine.match(/^\[(.*?)\]\s*(.*?):\s*(.*)$/);
+            if (matchWithColon) {
+                if (currentItem) items.push(currentItem);
                 
-                // Match [timestamp] Author action content
-                const matchWithoutColon = line.match(/^\[(.*?)\]\s*(\S+\s+\S+)\s+(.*)$/);
-                if (matchWithoutColon) {
-                    const timestamp = matchWithoutColon[1];
-                    const author = matchWithoutColon[2];
-                    const content = matchWithoutColon[3];
-                    const member = teamMembers.find(m => m.name.toLowerCase() === author.toLowerCase());
-                    return {
-                        id: index,
-                        timestamp,
-                        author,
-                        content,
-                        avatarUrl: member?.avatar_url || null,
-                        isComment: false
-                    };
-                }
-                
-                // Fallback
-                return {
+                const timestamp = matchWithColon[1];
+                const author = matchWithColon[2];
+                const content = matchWithColon[3];
+                const member = teamMembers.find(m => m.name.toLowerCase() === author.toLowerCase());
+                const isSystemAction = author === 'Sistema' || 
+                    content.includes('alterou') || 
+                    content.includes('moveu') || 
+                    content.includes('adicionou') || 
+                    content.includes('excluiu') || 
+                    content.includes('finalizou') || 
+                    content.includes('criou');
+
+                currentItem = {
                     id: index,
-                    timestamp: '',
-                    author: 'Sistema',
-                    content: line,
-                    avatarUrl: null,
+                    lineIndices: [index],
+                    timestamp,
+                    author,
+                    content,
+                    avatarUrl: member?.avatar_url || null,
+                    isComment: !isSystemAction
+                };
+                return;
+            }
+
+            // Try to parse as header without colon
+            const matchWithoutColon = trimmedLine.match(/^\[(.*?)\]\s*(\S+\s+\S+)\s+(.*)$/);
+            if (matchWithoutColon) {
+                if (currentItem) items.push(currentItem);
+                
+                const timestamp = matchWithoutColon[1];
+                const author = matchWithoutColon[2];
+                const content = matchWithoutColon[3];
+                const member = teamMembers.find(m => m.name.toLowerCase() === author.toLowerCase());
+
+                currentItem = {
+                    id: index,
+                    lineIndices: [index],
+                    timestamp,
+                    author,
+                    content,
+                    avatarUrl: member?.avatar_url || null,
                     isComment: false
                 };
-            });
+                return;
+            }
+
+            // If it is a continuation line of a previous item
+            if (currentItem) {
+                currentItem.content += '\n' + trimmedLine;
+                currentItem.lineIndices.push(index);
+            } else {
+                // Standalone fallback
+                items.push({
+                    id: index,
+                    lineIndices: [index],
+                    timestamp: '',
+                    author: 'Sistema',
+                    content: trimmedLine,
+                    avatarUrl: null,
+                    isComment: false
+                });
+            }
+        });
+
+        if (currentItem) {
+            items.push(currentItem);
+        }
+
+        return items;
     }, [observationsHistory, teamMembers]);
 
     // Efeito para auto-ajuste da altura do textarea de observações
@@ -300,18 +342,28 @@ export const TaskModal = () => {
         }
     };
 
-    const handleEditComment = async (index: number, newText: string) => {
+    const handleEditComment = async (itemId: number, newText: string) => {
         if (!newText.trim()) return;
         
-        const lines = observationsHistory.split('\n');
-        const lineToEdit = lines[index];
-        if (!lineToEdit) return;
+        const itemToEdit = parsedHistory.find(item => item.id === itemId);
+        if (!itemToEdit) return;
         
-        const matchWithColon = lineToEdit.match(/^\[(.*?)\]\s*(.*?):\s*(.*)$/);
+        const lines = observationsHistory.split('\n');
+        const headerLine = lines[itemToEdit.lineIndices[0]];
+        const matchWithColon = headerLine.match(/^\[(.*?)\]\s*(.*?):\s*(.*)$/);
+        
         if (matchWithColon) {
             const timestamp = matchWithColon[1];
             const author = matchWithColon[2];
-            lines[index] = `[${timestamp}] ${author}: ${newText.trim()}`;
+            
+            // Format the edited comment
+            const newCommentStr = `[${timestamp}] ${author}: ${newText.trim()}`;
+            
+            // Replace the range of lines corresponding to the old comment
+            const startIdx = itemToEdit.lineIndices[0];
+            const deleteCount = itemToEdit.lineIndices.length;
+            
+            lines.splice(startIdx, deleteCount, newCommentStr);
             
             const updatedObs = lines.join('\n');
             setObservationsHistory(updatedObs);
@@ -323,12 +375,18 @@ export const TaskModal = () => {
             }
         }
     };
-
-    const handleDeleteComment = async (index: number) => {
+ 
+    const handleDeleteComment = async (itemId: number) => {
         if (!window.confirm('Deseja realmente excluir este comentário?')) return;
         
+        const itemToDelete = parsedHistory.find(item => item.id === itemId);
+        if (!itemToDelete) return;
+        
         const lines = observationsHistory.split('\n');
-        lines.splice(index, 1);
+        const startIdx = itemToDelete.lineIndices[0];
+        const deleteCount = itemToDelete.lineIndices.length;
+        
+        lines.splice(startIdx, deleteCount);
         
         const updatedObs = lines.join('\n');
         setObservationsHistory(updatedObs);
