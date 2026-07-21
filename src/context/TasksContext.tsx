@@ -113,6 +113,7 @@ interface TasksContextType {
     addColumn: (boardId: string, column: Partial<BoardColumn>) => Promise<void>;
     updateColumn: (columnId: string, updates: Partial<BoardColumn>) => Promise<void>;
     deleteColumn: (columnId: string) => Promise<void>;
+    updateColumnsOrder: (orderedCols: { id: string; order_index: number }[]) => Promise<void>;
     updateTaskOrder: (taskId: string, newOrder: number, columnId?: string, statusName?: string) => Promise<void>;
 }
 
@@ -563,6 +564,32 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (error) alert(error.message);
         else fetchBoardColumns();
     };
+
+    const updateColumnsOrder = async (orderedCols: { id: string; order_index: number }[]) => {
+        // Optimistic update
+        const updatedColumns = boardColumns.map(col => {
+            const match = orderedCols.find(o => o.id === col.id);
+            if (match) return { ...col, order_index: match.order_index };
+            return col;
+        }).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+        
+        setBoardColumns(updatedColumns);
+
+        // Update in database in parallel
+        const promises = orderedCols.map(item => 
+            supabase.from('board_columns').update({ order_index: item.order_index }).eq('id', item.id)
+        );
+        
+        const results = await Promise.all(promises);
+        const error = results.find(r => r.error)?.error;
+        
+        if (error) {
+            console.error("Error updating columns order:", error);
+            // Re-fetch to sync if failed
+            const { data } = await supabase.from('board_columns').select('*').order('order_index', { ascending: true });
+            if (data) setBoardColumns(data);
+        }
+    };
     
     const updateTaskOrder = async (taskId: string, newOrder: number, columnId?: string, statusName?: string) => {
         // Atualização otimista
@@ -648,7 +675,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             notifications, fetchNotifications, markNotificationAsRead, deleteNotification, clearAllNotifications, session,
             createSharedReport,
             boards, boardColumns, activeBoardId, setActiveBoardId,
-            addBoard, updateBoard, deleteBoard, addColumn, updateColumn, deleteColumn,
+            addBoard, updateBoard, deleteBoard, addColumn, updateColumn, deleteColumn, updateColumnsOrder,
             updateTaskOrder
         }}>
             {children}

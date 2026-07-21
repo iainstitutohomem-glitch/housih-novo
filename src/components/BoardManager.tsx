@@ -1,19 +1,31 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTasks } from '../context/TasksContext';
 import type { BoardColumn } from '../context/TasksContext';
 import { Plus, Trash2, GripVertical, Save, X, Settings2, Pencil } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 export const BoardManager = () => {
     const { 
-        boards, boardColumns, addBoard, deleteBoard, 
-        addColumn, updateColumn, deleteColumn 
+        boards, boardColumns, addBoard, updateBoard, deleteBoard, 
+        addColumn, updateColumn, deleteColumn, updateColumnsOrder 
     } = useTasks();
     const [selectedBoardId, setSelectedBoardId] = useState<string | null>(boards[0]?.id || null);
     const [newBoardName, setNewBoardName] = useState('');
     const [isAddingBoard, setIsAddingBoard] = useState(false);
 
+    // Board name editing state
+    const [isEditingBoardName, setIsEditingBoardName] = useState(false);
+    const [editBoardNameValue, setEditBoardNameValue] = useState('');
+
     const selectedBoard = boards.find(b => b.id === selectedBoardId);
     const columns = boardColumns.filter(c => c.board_id === selectedBoardId);
+
+    // Set initial selected board if none is set
+    useEffect(() => {
+        if (!selectedBoardId && boards.length > 0) {
+            setSelectedBoardId(boards[0].id);
+        }
+    }, [boards, selectedBoardId]);
 
     const handleAddBoard = async () => {
         if (!newBoardName.trim()) return;
@@ -30,6 +42,46 @@ export const BoardManager = () => {
             color: 'bg-gray-100 text-gray-600',
             dot_color: '#9ca3af'
         });
+    };
+
+    const handleSelectBoard = (boardId: string) => {
+        setSelectedBoardId(boardId);
+        setIsEditingBoardName(false);
+    };
+
+    const handleStartEditingBoardName = () => {
+        if (selectedBoard) {
+            setEditBoardNameValue(selectedBoard.name);
+            setIsEditingBoardName(true);
+        }
+    };
+
+    const handleSaveBoardName = async () => {
+        if (!selectedBoardId || !editBoardNameValue.trim()) {
+            setIsEditingBoardName(false);
+            return;
+        }
+        await updateBoard(selectedBoardId, editBoardNameValue.trim());
+        setIsEditingBoardName(false);
+    };
+
+    const handleDragEnd = async (result: any) => {
+        if (!result.destination) return;
+        const { source, destination } = result;
+        if (source.index === destination.index) return;
+
+        // Sort columns by their current order_index
+        const sortedCols = [...columns].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+        const [removed] = sortedCols.splice(source.index, 1);
+        sortedCols.splice(destination.index, 0, removed);
+
+        // Map them to the updates list with new order_index
+        const updates = sortedCols.map((col, index) => ({
+            id: col.id,
+            order_index: index
+        }));
+
+        await updateColumnsOrder(updates);
     };
 
     return (
@@ -78,7 +130,7 @@ export const BoardManager = () => {
                             {boards.map(board => (
                                 <div key={board.id} className="group flex items-center gap-2">
                                     <button
-                                        onClick={() => setSelectedBoardId(board.id)}
+                                        onClick={() => handleSelectBoard(board.id)}
                                         className={`flex-1 text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                                             selectedBoardId === board.id 
                                             ? 'bg-primary-50 text-primary-700 shadow-sm'
@@ -107,9 +159,37 @@ export const BoardManager = () => {
                     {selectedBoard ? (
                         <div className="bg-white/80 backdrop-blur-md border border-white/40 rounded-2xl shadow-sm p-6">
                             <div className="flex justify-between items-center mb-6">
-                                <div>
-                                    <h3 className="text-lg font-bold text-gray-800">{selectedBoard.name}</h3>
-                                    <p className="text-xs text-gray-400">Personalize as colunas e cores deste fluxo</p>
+                                <div className="flex-1 mr-4">
+                                    {isEditingBoardName ? (
+                                        <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                                            <input 
+                                                autoFocus
+                                                type="text" 
+                                                value={editBoardNameValue}
+                                                onChange={(e) => setEditBoardNameValue(e.target.value)}
+                                                className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-base font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-500/20 max-w-xs sm:max-w-md w-full"
+                                                onKeyDown={(e) => e.key === 'Enter' && handleSaveBoardName()}
+                                            />
+                                            <button onClick={handleSaveBoardName} className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors" title="Salvar nome">
+                                                <Save size={16} />
+                                            </button>
+                                            <button onClick={() => setIsEditingBoardName(false)} className="p-1.5 bg-gray-50 text-gray-400 rounded-lg hover:bg-gray-100 transition-colors" title="Cancelar">
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-lg font-bold text-gray-800">{selectedBoard.name}</h3>
+                                            <button 
+                                                onClick={handleStartEditingBoardName}
+                                                className="p-1 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-all"
+                                                title="Editar nome do quadro"
+                                            >
+                                                <Pencil size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                    <p className="text-xs text-gray-400 mt-1">Personalize as colunas e cores deste fluxo</p>
                                 </div>
                                 <button 
                                     onClick={handleAddColumn}
@@ -125,14 +205,38 @@ export const BoardManager = () => {
                                         <p className="text-gray-400 text-sm">Nenhuma coluna definida.</p>
                                     </div>
                                 )}
-                                {columns.map((col) => (
-                                    <ColumnItem 
-                                        key={col.id} 
-                                        column={col} 
-                                        onUpdate={(upd) => updateColumn(col.id, upd)}
-                                        onDelete={() => deleteColumn(col.id)}
-                                    />
-                                ))}
+                                <DragDropContext onDragEnd={handleDragEnd}>
+                                    <Droppable droppableId="columns" type="column">
+                                        {(provided) => (
+                                            <div 
+                                                {...provided.droppableProps}
+                                                ref={provided.innerRef}
+                                                className="space-y-3"
+                                            >
+                                                {columns.sort((a, b) => (a.order_index || 0) - (b.order_index || 0)).map((col, index) => (
+                                                    <Draggable key={col.id} draggableId={col.id} index={index}>
+                                                        {(provided, snapshot) => (
+                                                            <div
+                                                                ref={provided.innerRef}
+                                                                {...provided.draggableProps}
+                                                                className={snapshot.isDragging ? 'shadow-lg rounded-xl overflow-hidden' : ''}
+                                                                style={provided.draggableProps.style}
+                                                            >
+                                                                <ColumnItem 
+                                                                    column={col} 
+                                                                    onUpdate={(upd) => updateColumn(col.id, upd)}
+                                                                    onDelete={() => deleteColumn(col.id)}
+                                                                    dragHandleProps={provided.dragHandleProps}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </Draggable>
+                                                ))}
+                                                {provided.placeholder}
+                                            </div>
+                                        )}
+                                    </Droppable>
+                                </DragDropContext>
                             </div>
                         </div>
                     ) : (
@@ -147,7 +251,11 @@ export const BoardManager = () => {
     );
 };
 
-const ColumnItem = ({ column, onUpdate, onDelete }: { column: BoardColumn, onUpdate: (u: any) => void, onDelete: () => void }) => {
+const ColumnItem = ({ 
+    column, onUpdate, onDelete, dragHandleProps 
+}: { 
+    column: BoardColumn, onUpdate: (u: any) => void, onDelete: () => void, dragHandleProps: any 
+}) => {
     const [title, setTitle] = useState(column.title);
     const colorInputRef = useRef<HTMLInputElement>(null);
 
@@ -176,7 +284,10 @@ const ColumnItem = ({ column, onUpdate, onDelete }: { column: BoardColumn, onUpd
 
     return (
         <div className="flex items-center gap-4 bg-white border border-gray-100 p-3 rounded-xl hover:shadow-md transition-all group">
-            <div className="cursor-grab text-gray-300 hover:text-gray-500 shrink-0">
+            <div 
+                {...dragHandleProps}
+                className="cursor-grab text-gray-300 hover:text-gray-500 shrink-0"
+            >
                 <GripVertical size={20} />
             </div>
             
