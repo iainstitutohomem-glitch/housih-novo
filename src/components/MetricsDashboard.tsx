@@ -55,14 +55,24 @@ export const MetricsDashboard = () => {
         });
     }, [boards, teamMembers, session]);
 
-    // Initial default: Find "Geral" board or first accessible board
+    // Initial default: Find "Geral" board or first accessible board based on user sector
     useEffect(() => {
         if (accessibleBoards.length > 0 && !selectedBoardId) {
-            const defaultBoard = accessibleBoards.find(b => b.name.toLowerCase() === 'geral') || accessibleBoards[0];
+            const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
+            let defaultBoard = accessibleBoards.find(b => b.name.toLowerCase() === 'geral') || accessibleBoards[0];
+            
+            if (currentUser && currentUser.sectors && currentUser.sectors.length > 0) {
+                // Try to find a board that matches any of the user's sectors
+                const sectorBoard = accessibleBoards.find(b => currentUser.sectors.includes(b.name));
+                if (sectorBoard) {
+                    defaultBoard = sectorBoard;
+                }
+            }
+            
             setSelectedBoardId(defaultBoard.id);
             setActiveBoardId(defaultBoard.id);
         }
-    }, [accessibleBoards, selectedBoardId, setActiveBoardId]);
+    }, [accessibleBoards, selectedBoardId, setActiveBoardId, teamMembers, session]);
 
     // Local filter for the dashboard: Take global filters (search, company, etc.) and add board filter
     const dashboardTasks = useMemo(() => {

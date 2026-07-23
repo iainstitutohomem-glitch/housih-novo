@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Calendar } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
+import { useAuth } from '../context/AuthContext';
 import { TaskFilterBar } from './TaskFilterBar';
 
 export const KanbanBoard = () => {
@@ -12,6 +13,7 @@ export const KanbanBoard = () => {
         activeParentBoardId, setActiveParentBoardId,
         updateTaskOrder, activeUnit, setActiveUnit, UNIDADES
     } = useTasks();
+    const { session } = useAuth();
 
     const [transferringTaskId, setTransferringTaskId] = useState<string | null>(null);
     const leaveTimeoutRef = useRef<any>(null);
@@ -47,13 +49,23 @@ export const KanbanBoard = () => {
         return null;
     }, [boards, activeBoardId]);
 
-    // On mount: auto-select first parent board
+    // On mount: auto-select first parent board based on user sector
     useEffect(() => {
         if (parentBoards.length > 0 && activeParentBoardId === 'Todas') {
-            const defaultParent = parentBoards.find(b => b.is_default) || parentBoards[0];
+            const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
+            let defaultParent = parentBoards.find(b => b.is_default) || parentBoards[0];
+            
+            if (currentUser && currentUser.sectors && currentUser.sectors.length > 0) {
+                // Try to find a parent board that matches any of the user's sectors
+                const sectorBoard = parentBoards.find(b => currentUser.sectors.includes(b.name));
+                if (sectorBoard) {
+                    defaultParent = sectorBoard;
+                }
+            }
+            
             handleSelectParent(defaultParent.id);
         }
-    }, [parentBoards]);
+    }, [parentBoards, teamMembers, session, activeParentBoardId]);
 
     const handleSelectParent = (parentId: string) => {
         setActiveParentBoardId(parentId);
