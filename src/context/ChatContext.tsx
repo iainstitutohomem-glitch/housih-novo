@@ -134,7 +134,7 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
                             unread_count: unreadCount
                         };
                     });
-                    setConversations(mapped);
+                    setConversations(mapped.sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()));
                 }
             }
             setLoading(false);
@@ -157,15 +157,17 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     // 2b. Reset unread count when opening a conversation
     useEffect(() => {
         if (activeConversation && activeConversation.unread_count && activeConversation.unread_count > 0 && session?.user?.email) {
-            supabase.from('chat_participants').update({ unread_count: 0 })
-                .eq('conversation_id', activeConversation.id)
-                .ilike('user_email', session.user.email)
-                .then(({ error }) => {
-                    if (!error) {
-                        setConversations(prev => prev.map(c => c.id === activeConversation.id ? { ...c, unread_count: 0 } : c));
-                        setActiveConversation(prev => prev ? { ...prev, unread_count: 0 } : prev);
-                    }
-                });
+            supabase.rpc('reset_chat_unread', { 
+                p_conversation_id: activeConversation.id, 
+                p_user_email: session.user.email 
+            }).then(({ error }) => {
+                if (!error) {
+                    setConversations(prev => prev.map(c => c.id === activeConversation.id ? { ...c, unread_count: 0 } : c));
+                    setActiveConversation(prev => prev ? { ...prev, unread_count: 0 } : prev);
+                } else {
+                    console.error("Erro ao resetar unread:", error);
+                }
+            });
         }
     }, [activeConversation, session?.user?.email]);
 
@@ -199,6 +201,12 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
                                 ...prev,
                                 [activeConversation.id]: [...currentMsgs, payload.new as ChatMessage]
                             };
+                        });
+                        
+                        // Local update to push conversation to top when receiving message
+                        setConversations(prev => {
+                            const updated = prev.map(c => c.id === activeConversation.id ? { ...c, last_message_at: new Date().toISOString() } : c);
+                            return updated.sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
                         });
                     }
                 }
@@ -366,6 +374,13 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             alert("Erro ao enviar mensagem: " + error.message);
         } else {
             console.log("Mensagem enviada com sucesso!");
+            
+            // Push locally immediately
+            setConversations(prev => {
+                const updated = prev.map(c => c.id === activeConversation.id ? { ...c, last_message_at: new Date().toISOString() } : c);
+                return updated.sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
+            });
+
             await supabase.from('chat_conversations')
                 .update({ last_message_at: new Date().toISOString() })
                 .eq('id', activeConversation.id);
