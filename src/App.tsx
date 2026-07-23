@@ -294,7 +294,7 @@ const ChatDrawerPortal = () => {
 
   return (
     <ChatErrorBoundary>
-      <ChatDrawer />
+      {isChatOpen && <ChatDrawer />}
       {!isChatOpen && (
         <button 
           onClick={() => setIsChatOpen(true)}

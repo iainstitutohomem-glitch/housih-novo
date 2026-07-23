@@ -5,7 +5,7 @@ import { useTasks } from '../../context/TasksContext';
 import { useAuth } from '../../context/AuthContext';
 
 export const ChatDrawer = () => {
-    const { activeConversation, setActiveConversation, messages, sendMessage, onlineUsers, uploadFile } = useChat();
+    const { activeConversation, setActiveConversation, messages, sendMessage, onlineUsers, uploadFile, setIsChatOpen } = useChat();
     const { teamMembers, openModal, tasks } = useTasks();
     const { session } = useAuth();
     const [input, setInput] = useState('');
@@ -25,7 +25,27 @@ export const ChatDrawer = () => {
         }
     }, [activeMsgs]);
 
-    if (!activeConversation) return null;
+    if (!activeConversation) {
+        return (
+            <div className="fixed bottom-4 right-4 w-80 sm:w-96 h-[500px] bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col z-[10000] animate-in slide-in-from-bottom-4 duration-300">
+                <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-primary-600 rounded-t-2xl text-white">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                            <Send size={20} />
+                        </div>
+                        <h3 className="font-bold text-sm">Chat Housih</h3>
+                    </div>
+                    <button onClick={() => setIsChatOpen(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="flex-1 flex flex-col items-center justify-center opacity-50 p-8 text-center bg-gray-50/50 rounded-b-2xl">
+                    <Send size={48} className="mb-4 text-gray-400" />
+                    <p className="text-sm font-medium text-gray-600">Selecione uma conversa na barra lateral à esquerda para começar a enviar mensagens.</p>
+                </div>
+            </div>
+        );
+    }
 
     const handleSend = async (e?: FormEvent) => {
         e?.preventDefault();
@@ -85,7 +105,10 @@ export const ChatDrawer = () => {
                         </p>
                     </div>
                 </div>
-                <button onClick={() => setActiveConversation(null)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                <button onClick={() => {
+                    setActiveConversation(null);
+                    setIsChatOpen(false);
+                }} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                     <X size={20} />
                 </button>
             </div>
