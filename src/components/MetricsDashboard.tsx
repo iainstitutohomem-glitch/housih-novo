@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useTasks } from '../context/TasksContext';
+import { useAuth } from '../context/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { TaskFilterBar } from './TaskFilterBar';
 
@@ -34,17 +35,34 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 
 export const MetricsDashboard = () => {
     const { filteredTasks: globalFilteredTasks, companies, teamMembers, boardColumns, boards, setActiveBoardId } = useTasks();
+    const { session } = useAuth();
     const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
 
-    // Initial default: Find "Geral" board or first board
+    const accessibleBoards = useMemo(() => {
+        const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
+        const isMaster = 
+            currentUser?.sectors?.includes('Master') || 
+            currentUser?.sectors?.includes('Diretoria') || 
+            session?.user?.email?.toLowerCase() === 'institutohomem@gmail.com';
+
+        if (isMaster) return boards;
+
+        const userSectors = currentUser?.sectors || [];
+        return boards.filter(b => {
+            // Se o usuário tem o setor do quadro atual ou o quadro pai
+            const parentBoard = boards.find(parent => parent.id === b.parent_board_id);
+            return userSectors.includes(b.name) || (parentBoard && userSectors.includes(parentBoard.name));
+        });
+    }, [boards, teamMembers, session]);
+
+    // Initial default: Find "Geral" board or first accessible board
     useEffect(() => {
-        if (boards.length > 0 && !selectedBoardId) {
-            const geralBoard = boards.find(b => b.name.toLowerCase() === 'geral') || boards[0];
-            setSelectedBoardId(geralBoard.id);
-            // Sincroniza com o context para o TaskFilterBar saber qual quadro está ativo
-            setActiveBoardId(geralBoard.id);
+        if (accessibleBoards.length > 0 && !selectedBoardId) {
+            const defaultBoard = accessibleBoards.find(b => b.name.toLowerCase() === 'geral') || accessibleBoards[0];
+            setSelectedBoardId(defaultBoard.id);
+            setActiveBoardId(defaultBoard.id);
         }
-    }, [boards, selectedBoardId, setActiveBoardId]);
+    }, [accessibleBoards, selectedBoardId, setActiveBoardId]);
 
     // Local filter for the dashboard: Take global filters (search, company, etc.) and add board filter
     const dashboardTasks = useMemo(() => {
@@ -90,7 +108,7 @@ export const MetricsDashboard = () => {
         <div className="flex-1 w-full space-y-6 text-gray-800 font-sans pb-8">
             {/* Board Selection Tabs */}
             <div className="flex flex-wrap gap-2 mb-2">
-                {boards.map(board => (
+                {accessibleBoards.map(board => (
                     <button
                         key={board.id}
                         onClick={() => {
@@ -103,9 +121,14 @@ export const MetricsDashboard = () => {
                                 : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                         }`}
                     >
-                        {board.name}
+                        {board.parent_board_id 
+                            ? `${boards.find(p => p.id === board.parent_board_id)?.name} > ${board.name}`
+                            : board.name}
                     </button>
                 ))}
+                {accessibleBoards.length === 0 && (
+                    <p className="text-sm text-gray-400 italic py-2">Nenhum quadro disponível para o seu nível de acesso.</p>
+                )}
             </div>
 
             {/* 1. Progress Bar */}
