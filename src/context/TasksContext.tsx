@@ -334,23 +334,26 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
 
     const fetchCompanies = async () => {
-        // OPTIMIZATION: Query only lightweight text columns. 
-        // Passwords and full social media JSONB are loaded on-demand in CompanyManager.
+        // OPTIMIZATION: Select logo and color from social_media JSONB but exclude passwords.
+        // Passwords are loaded on-demand in CompanyManager when the user opens a company for editing.
         const { data, error } = await supabase
             .from('companies')
-            .select('id, name, logo_url')
+            .select('id, name, logo_url, social_media')
             .order('created_at', { ascending: false });
             
         if (!error && data) {
-            setCompanies(data.map((c: any) => ({
-                id: c.id,
-                name: c.name,
-                color: c.logo_url || '#4b5563',
-                logoBase64: '',
-                site: '',
-                social: '',
-                passwords: []
-            })));
+            setCompanies(data.map((c: any) => {
+                const sm = c.social_media || {};
+                return {
+                    id: c.id,
+                    name: c.name,
+                    color: sm.color || c.logo_url || '#4b5563',
+                    logoBase64: sm.logoBase64 || '',
+                    site: sm.site || '',
+                    social: sm.social || '',
+                    passwords: [] // passwords are only loaded on-demand when editing
+                };
+            }));
         }
     };
 
@@ -596,11 +599,9 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     const fetchTeam = async () => {
-        // OPTIMIZATION: Do not select `avatar_url` because raw base64 avatars exceed HTTP transfer size.
-        // It falls back to default UI-avatars in the frontend mapped list.
         const { data, error } = await supabase
             .from('team_members')
-            .select('id, name, email, birth_date, units, sectors');
+            .select('id, name, email, avatar_url, birth_date, units, sectors');
             
         if (!error && data) {
             setTeamMembers(data.map((m: any) => ({
