@@ -154,7 +154,7 @@ export const TeamManager = () => {
                             {UNIDADES.map(unit => (
                                 <div key={unit} className="flex justify-between items-center px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-white transition-colors">
                                     <span className="font-medium text-gray-700">{unit}</span>
-                                    {unit !== 'Geral' && unit !== 'Corporativo' && (
+                                    {unit !== 'Corporativo' && (
                                         <button onClick={() => handleDeleteUnit(unit)} className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Excluir unidade">
                                             <Trash2 size={16} />
                                         </button>

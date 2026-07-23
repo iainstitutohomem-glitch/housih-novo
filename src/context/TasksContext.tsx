@@ -40,7 +40,7 @@ export const DEFAULT_UNIDADES = [
     "São Bernardo do Campo", "Presidente Prudente", "Jundiaí", "Faria Lima", 
     "São José dos Campos", "Ribeirão Preto", "Bauru", "Campo Grande", 
     "Curitiba", "Londrina", "Foz do Iguaçu", "Joinville", "Florianópolis", 
-    "Balneário Camboriú", "Geral"
+    "Balneário Camboriú"
 ];
 
 export const CORPORATIVO_SECTORS = [
