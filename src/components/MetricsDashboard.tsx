@@ -57,7 +57,8 @@ export const MetricsDashboard = () => {
 
     // Initial default: Find "Geral" board or first accessible board based on user sector
     useEffect(() => {
-        if (accessibleBoards.length > 0 && !selectedBoardId) {
+        // Wait until teamMembers are loaded so we can find the currentUser
+        if (accessibleBoards.length > 0 && teamMembers.length > 0 && !selectedBoardId) {
             const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
             let defaultBoard = accessibleBoards.find(b => b.name.toLowerCase() === 'geral') || accessibleBoards[0];
             

@@ -51,7 +51,8 @@ export const KanbanBoard = () => {
 
     // On mount: auto-select first parent board based on user sector
     useEffect(() => {
-        if (parentBoards.length > 0 && activeParentBoardId === 'Todas') {
+        // Wait until teamMembers are loaded so we can find the currentUser
+        if (parentBoards.length > 0 && teamMembers.length > 0 && activeParentBoardId === 'Todas') {
             const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
             let defaultParent = parentBoards.find(b => b.is_default) || parentBoards[0];
             
