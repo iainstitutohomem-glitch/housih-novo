@@ -35,7 +35,7 @@ export interface BoardColumn {
     order_index: number;
 }
 
-export const UNIDADES = [
+export const DEFAULT_UNIDADES = [
     "Corporativo", "Tatuapé", "São José do Rio Preto", "Osasco", "Santos", "Piracicaba", 
     "São Bernardo do Campo", "Presidente Prudente", "Jundiaí", "Faria Lima", 
     "São José dos Campos", "Ribeirão Preto", "Bauru", "Campo Grande", 
@@ -179,6 +179,8 @@ interface TasksContextType {
     addTicket: (ticket: any) => Promise<void>;
     addTicketMessage: (ticketId: string, content: string) => Promise<void>;
     updateTicketStatus: (id: string, status: 'aberto' | 'finalizado') => Promise<void>;
+    addUnit: (name: string) => Promise<void>;
+    deleteUnit: (name: string) => Promise<void>;
 }
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
@@ -195,6 +197,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [activeBoardId, setActiveBoardId] = useState<string>('Todas');
     const [activeParentBoardId, setActiveParentBoardId] = useState<string>('Todas');
     const [activeUnit, setActiveUnit] = useState<string>('Todas');
+    const [dbUnits, setDbUnits] = useState<string[]>([]);
 
     const [timelinePosts, setTimelinePosts] = useState<TimelinePost[]>([]);
     const [tickets, setTickets] = useState<any[]>([]);
@@ -600,6 +603,26 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const { error } = await supabase.from('companies').delete().eq('id', id);
         if (error) alert("Erro ao excluir: " + error.message);
         else fetchCompanies();
+    };
+
+    const addUnit = async (name: string) => {
+        const { error } = await supabase.from('system_units').insert([{ name }]);
+        if (error) {
+            alert("Erro ao adicionar unidade: " + error.message);
+        } else {
+            const { data: unitsData } = await supabase.from('system_units').select('name').order('name');
+            if (unitsData) setDbUnits(unitsData.map(u => u.name));
+        }
+    };
+
+    const deleteUnit = async (name: string) => {
+        const { error } = await supabase.from('system_units').delete().eq('name', name);
+        if (error) {
+            alert("Erro ao remover unidade: " + error.message);
+        } else {
+            const { data: unitsData } = await supabase.from('system_units').select('name').order('name');
+            if (unitsData) setDbUnits(unitsData.map(u => u.name));
+        }
     };
 
     const fetchTeam = async () => {
@@ -1046,17 +1069,36 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setFilters(prev => ({ ...prev, status: 'Todos' }));
     }, [activeBoardId]);
 
+    const UNIDADES = dbUnits.length > 0 ? dbUnits : DEFAULT_UNIDADES;
+
     useEffect(() => {
         if (!session) return;
 
-        fetchBoards();
-        fetchBoardColumns();
-        fetchTasks();
-        fetchCompanies();
-        fetchTeam();
-        fetchNotifications();
-        fetchTimeline();
-        fetchTickets();
+        const fetchAllData = async () => {
+            setLoading(true);
+            try {
+                // Fetch units
+                const { data: unitsData } = await supabase.from('system_units').select('name').order('name');
+                if (unitsData && unitsData.length > 0) {
+                    setDbUnits(unitsData.map(u => u.name));
+                } else {
+                    setDbUnits(DEFAULT_UNIDADES);
+                }
+
+                fetchBoards();
+                fetchBoardColumns();
+                fetchTasks();
+                fetchCompanies();
+                fetchTeam();
+                fetchNotifications();
+                fetchTimeline();
+                fetchTickets();
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAllData();
 
         // Subscrição Realtime para atualizações automáticas
         const taskSubscription = supabase
@@ -1069,6 +1111,10 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'timeline_posts' }, () => fetchTimeline())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => fetchTickets())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'ticket_messages' }, () => fetchTickets())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'system_units' }, async () => {
+                const { data } = await supabase.from('system_units').select('name').order('name');
+                if (data) setDbUnits(data.map(u => u.name));
+            })
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
@@ -1189,7 +1235,8 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             timelinePosts, addTimelinePost, deleteTimelinePost, uploadTimelineImage, toggleLike, addComment,
             CORPORATIVO_SECTORS, UNIDADES_SECTORS,
             tickets, fetchTickets, addTicket, addTicketMessage, updateTicketStatus,
-            createNotification
+            createNotification,
+            addUnit, deleteUnit
         }}>
             {children}
         </TasksContext.Provider>

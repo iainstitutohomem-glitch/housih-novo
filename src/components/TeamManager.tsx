@@ -7,7 +7,7 @@ import { useChat } from '../context/ChatContext';
 
 export const TeamManager = () => {
     const { user } = useAuth();
-    const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember, UNIDADES, SETORES } = useTasks();
+    const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember, UNIDADES, SETORES, addUnit, deleteUnit } = useTasks();
     const { startPrivateChat } = useChat();
     const isMaster = user?.email === 'institutohomem@gmail.com';
 
@@ -20,6 +20,10 @@ export const TeamManager = () => {
     const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
     const [birthDate, setBirthDate] = useState('');
     const [avatarBase64, setAvatarBase64] = useState<string>('');
+
+    // ── Manage Units state ──
+    const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
+    const [newUnitName, setNewUnitName] = useState('');
 
     // ── Edit member state ──
     const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
@@ -55,6 +59,19 @@ export const TeamManager = () => {
 
     const toggleSector = (sector: string) =>
         setSelectedSectors(prev => prev.includes(sector) ? prev.filter(s => s !== sector) : [...prev, sector]);
+
+    const handleAddUnit = async () => {
+        if (newUnitName.trim()) {
+            await addUnit(newUnitName.trim());
+            setNewUnitName('');
+        }
+    };
+
+    const handleDeleteUnit = async (unit: string) => {
+        if (confirm(`Tem certeza que deseja excluir a unidade ${unit}?`)) {
+            await deleteUnit(unit);
+        }
+    };
 
     // ── Edit handlers ──
     const openEdit = (member: TeamMember) => {
@@ -97,15 +114,57 @@ export const TeamManager = () => {
                 </div>
                 <div className="flex gap-3">
                     {isMaster && (
-                        <button
-                            onClick={() => { setIsAdding(true); closeEdit(); }}
-                            className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all"
-                        >
-                            <Plus size={18} /> Novo Membro
-                        </button>
+                        <>
+                            <button
+                                onClick={() => { setIsUnitModalOpen(!isUnitModalOpen); setIsAdding(false); closeEdit(); }}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all ${isUnitModalOpen ? 'bg-primary-100 text-primary-700' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                            >
+                                Gerenciar Unidades
+                            </button>
+                            <button
+                                onClick={() => { setIsAdding(true); setIsUnitModalOpen(false); closeEdit(); }}
+                                className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all"
+                            >
+                                <Plus size={18} /> Novo Membro
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
+
+            {/* Manage Units */}
+            {isUnitModalOpen && isMaster && (
+                <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl border border-white/40 shadow-sm animate-in fade-in slide-in-from-top-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-800">Gerenciar Unidades</h3>
+                        <button onClick={() => setIsUnitModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all"><X size={20} /></button>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                        <input type="text" placeholder="Nome da nova unidade" value={newUnitName} onChange={e => setNewUnitName(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleAddUnit()}
+                            className="flex-1 bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                        <button onClick={handleAddUnit} className="bg-gray-800 text-white px-6 py-2.5 rounded-xl hover:bg-gray-700 transition-colors shadow-sm whitespace-nowrap">
+                            Adicionar Unidade
+                        </button>
+                    </div>
+
+                    <div className="mt-4 border border-gray-100 rounded-xl overflow-hidden bg-gray-50/50">
+                        <div className="max-h-60 overflow-y-auto no-scrollbar">
+                            {UNIDADES.map(unit => (
+                                <div key={unit} className="flex justify-between items-center px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-white transition-colors">
+                                    <span className="font-medium text-gray-700">{unit}</span>
+                                    {unit !== 'Geral' && unit !== 'Corporativo' && (
+                                        <button onClick={() => handleDeleteUnit(unit)} className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Excluir unidade">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Add new member form */}
             {isAdding && (
