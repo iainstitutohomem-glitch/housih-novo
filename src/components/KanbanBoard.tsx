@@ -1,8 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Calendar, Plus } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
-import { useAuth } from '../context/AuthContext';
 import { TaskFilterBar } from './TaskFilterBar';
 
 export const KanbanBoard = () => {
@@ -11,19 +10,13 @@ export const KanbanBoard = () => {
         openModal, teamMembers, updateTask,
         boards, boardColumns, activeBoardId, setActiveBoardId,
         activeParentBoardId, setActiveParentBoardId,
-        updateTaskOrder, activeUnit, setActiveUnit, UNIDADES,
-        addBoard
+        updateTaskOrder, activeUnit, setActiveUnit, UNIDADES
     } = useTasks();
-    const { user } = useAuth();
-    const isMaster = user?.email === 'institutohomem@gmail.com';
 
     const [transferringTaskId, setTransferringTaskId] = useState<string | null>(null);
-    const [addingSubBoardForParent, setAddingSubBoardForParent] = useState<string | null>(null);
-    const [newSubBoardName, setNewSubBoardName] = useState('');
     const leaveTimeoutRef = useRef<any>(null);
     const unitScrollRef = useRef<HTMLDivElement>(null);
     const parentBoardScrollRef = useRef<HTMLDivElement>(null);
-    const subBoardScrollRef = useRef<HTMLDivElement>(null);
 
     const scroll = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
         if (ref.current) {
@@ -64,14 +57,11 @@ export const KanbanBoard = () => {
 
     const handleSelectParent = (parentId: string) => {
         setActiveParentBoardId(parentId);
-        setAddingSubBoardForParent(null);
         // Check if this parent has sub-boards
         const subs = boards.filter(b => b.parent_board_id === parentId);
         if (subs.length > 0) {
-            // Select first sub-board
             setActiveBoardId(subs[0].id);
         } else {
-            // Parent IS the board itself (no sub-boards)
             setActiveBoardId(parentId);
         }
     };
@@ -103,13 +93,6 @@ export const KanbanBoard = () => {
         if (!currentBoard) return [];
         return boardColumns.filter(col => col.board_id === currentBoard.id);
     }, [boardColumns, currentBoard]);
-
-    const handleAddSubBoard = async () => {
-        if (!newSubBoardName.trim() || !addingSubBoardForParent) return;
-        await addBoard(newSubBoardName.trim(), [], addingSubBoardForParent);
-        setNewSubBoardName('');
-        setAddingSubBoardForParent(null);
-    };
 
     const handleMouseEnter = (taskId: string) => {
         if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
@@ -240,51 +223,22 @@ export const KanbanBoard = () => {
                         </button>
                     </div>
 
-                    {/* Filtro de Subquadros — aparece só se o setor tiver subquadros */}
-                    {(hasSubBoards || (isMaster && activeParentBoardId && activeParentBoardId !== 'Todas')) && (
-                        <div className="flex items-center gap-2 pl-2 border-l-4 border-primary-200 animate-in slide-in-from-top-1 duration-200">
-                            <span className="text-[10px] font-black text-primary-400 uppercase tracking-widest whitespace-nowrap pr-2">Subquadro</span>
-                            <div ref={subBoardScrollRef} className="flex gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1">
-                                {activeSubBoards.map(sub => (
-                                    <button
-                                        key={sub.id}
-                                        onClick={() => handleSelectSubBoard(sub.id)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap border ${
-                                            activeBoardId === sub.id
-                                            ? 'bg-primary-500 text-white border-primary-500 shadow-sm'
-                                            : 'bg-white text-gray-500 border-gray-200 hover:border-primary-300 hover:text-primary-600'
-                                        }`}
-                                    >
-                                        {sub.name}
-                                    </button>
-                                ))}
-
-                                {/* Botão + Subquadro só para master */}
-                                {isMaster && (
-                                    addingSubBoardForParent === activeParentBoardId ? (
-                                        <div className="flex items-center gap-1 animate-in fade-in zoom-in-95 duration-150">
-                                            <input
-                                                autoFocus
-                                                type="text"
-                                                value={newSubBoardName}
-                                                onChange={e => setNewSubBoardName(e.target.value)}
-                                                onKeyDown={e => { if (e.key === 'Enter') handleAddSubBoard(); if (e.key === 'Escape') { setAddingSubBoardForParent(null); setNewSubBoardName(''); } }}
-                                                placeholder="Nome do subquadro..."
-                                                className="text-xs px-2 py-1.5 border border-primary-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-400 bg-white w-40"
-                                            />
-                                            <button onClick={handleAddSubBoard} className="text-xs px-2 py-1.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 font-semibold">✓</button>
-                                            <button onClick={() => { setAddingSubBoardForParent(null); setNewSubBoardName(''); }} className="text-xs px-2 py-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200">✕</button>
-                                        </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => setAddingSubBoardForParent(activeParentBoardId)}
-                                            className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-dashed border-primary-300 text-primary-500 hover:bg-primary-50 transition-all whitespace-nowrap flex items-center gap-1"
-                                        >
-                                            <Plus size={12} /> Subquadro
-                                        </button>
-                                    )
-                                )}
-                            </div>
+                    {/* Subquadros — segunda linha, aparece só se o setor tiver filhos */}
+                    {hasSubBoards && (
+                        <div className="flex gap-2 overflow-x-auto no-scrollbar py-0.5 pl-4 border-l-4 border-primary-200 animate-in slide-in-from-top-1 duration-200">
+                            {activeSubBoards.map(sub => (
+                                <button
+                                    key={sub.id}
+                                    onClick={() => handleSelectSubBoard(sub.id)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap border ${
+                                        activeBoardId === sub.id
+                                        ? 'bg-primary-500 text-white border-primary-500 shadow-sm'
+                                        : 'bg-white text-gray-500 border-gray-200 hover:border-primary-300 hover:text-primary-600'
+                                    }`}
+                                >
+                                    {sub.name}
+                                </button>
+                            ))}
                         </div>
                     )}
 
