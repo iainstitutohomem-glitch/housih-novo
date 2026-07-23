@@ -5,7 +5,7 @@ import { useTasks } from '../../context/TasksContext';
 import { useAuth } from '../../context/AuthContext';
 
 export const ChatDrawer = () => {
-    const { activeConversation, setActiveConversation, messages, sendMessage, onlineUsers, uploadFile, setIsChatOpen } = useChat();
+    const { activeConversation, setActiveConversation, messages, sendMessage, onlineUsers, uploadFile, setIsChatOpen, conversations } = useChat();
     const { teamMembers, openModal, tasks } = useTasks();
     const { session } = useAuth();
     const [input, setInput] = useState('');
@@ -33,15 +33,59 @@ export const ChatDrawer = () => {
                         <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
                             <Send size={20} />
                         </div>
-                        <h3 className="font-bold text-sm">Chat Housih</h3>
+                        <h3 className="font-bold text-sm">Conversas Recentes</h3>
                     </div>
                     <button onClick={() => setIsChatOpen(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                         <X size={20} />
                     </button>
                 </div>
-                <div className="flex-1 flex flex-col items-center justify-center opacity-50 p-8 text-center bg-gray-50/50 rounded-b-2xl">
-                    <Send size={48} className="mb-4 text-gray-400" />
-                    <p className="text-sm font-medium text-gray-600">Selecione uma conversa na barra lateral à esquerda para começar a enviar mensagens.</p>
+                <div className="flex-1 overflow-y-auto p-2 bg-gray-50/50 rounded-b-2xl custom-scrollbar">
+                    {conversations.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center opacity-50 p-6 text-center">
+                            <Send size={48} className="mb-4 text-gray-400" />
+                            <p className="text-sm font-medium text-gray-600">Nenhuma conversa iniciada. Selecione um membro na barra lateral para conversar.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-1">
+                            {conversations.map(conv => {
+                                const isGroup = conv.type === 'group';
+                                const otherEmail = !isGroup ? conv.participants.find((p: string) => p.toLowerCase() !== session?.user?.email?.toLowerCase()) : null;
+                                const otherMember = otherEmail ? teamMembers.find(m => m.email?.toLowerCase() === otherEmail.toLowerCase()) : null;
+                                const isUserOnline = otherEmail ? Array.from(onlineUsers).some((u: string) => u.toLowerCase() === otherEmail.toLowerCase()) : false;
+
+                                return (
+                                    <button 
+                                        key={conv.id} 
+                                        onClick={() => setActiveConversation(conv)}
+                                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white transition-all text-left group border border-transparent hover:border-gray-200 hover:shadow-sm"
+                                    >
+                                        <div className="relative">
+                                            <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden text-primary-600 font-bold">
+                                                {isGroup ? <Users size={20} /> : (
+                                                    otherMember?.avatar_url ? (
+                                                        <img src={otherMember.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        otherMember?.name?.charAt(0) || <User size={20} />
+                                                    )
+                                                )}
+                                            </div>
+                                            {!isGroup && isUserOnline && (
+                                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-semibold text-gray-800 text-sm truncate">
+                                                {isGroup ? conv.name : otherMember?.name || 'Usuário'}
+                                            </h4>
+                                            <p className="text-[10px] text-gray-400 truncate">
+                                                {isGroup ? `${conv.participants.length} integrantes` : (isUserOnline ? 'Online agora' : 'Offline')}
+                                            </p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
         );
