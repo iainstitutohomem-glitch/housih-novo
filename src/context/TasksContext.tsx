@@ -1,11 +1,28 @@
-import { createContext, useContext, useState, useEffect, useMemo, type Dispatch, type SetStateAction, type ReactNode, type FC } from 'react';
-import { supabase } from '../lib/supabase';
+import { createContext, useContext, useState, useEffect, useMemo, useRef, type Dispatch, type SetStateAction, type ReactNode, type FC } from 'react';
+import { supabase, supabaseAdmin } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+
+export interface TimelinePost {
+    id: string;
+    author_id: string;
+    author_name?: string;
+    author_avatar?: string;
+    content: string;
+    category?: string;
+    visibility: string[];
+    is_automated: boolean;
+    image_url?: string;
+    likes_count?: number;
+    user_has_liked?: boolean;
+    comments?: any[];
+    created_at: string;
+}
 
 export interface Board {
     id: string;
     name: string;
     is_default: boolean;
+    member_emails?: string[];
 }
 
 export interface BoardColumn {
@@ -16,6 +33,26 @@ export interface BoardColumn {
     dot_color: string;
     order_index: number;
 }
+
+export const UNIDADES = [
+    "Corporativo", "Tatuapé", "São José do Rio Preto", "Osasco", "Santos", "Piracicaba", 
+    "São Bernardo do Campo", "Presidente Prudente", "Jundiaí", "Faria Lima", 
+    "São José dos Campos", "Ribeirão Preto", "Bauru", "Campo Grande", 
+    "Curitiba", "Londrina", "Foz do Iguaçu", "Joinville", "Florianópolis", 
+    "Balneário Camboriú", "Geral"
+];
+
+export const CORPORATIVO_SECTORS = [
+    "Arquitetura e Obras", "Atendimento Comercial", "Cobrança", "Comercial", 
+    "Comunicação & Marketing", "Financeiro", "Jurídico", 
+    "Operações & Projetos Internos", "RH", "Geral"
+];
+
+export const UNIDADES_SECTORS = [
+    "Recepção", "Administrativo", "Gestor/Assessor", "Enfermagem", "Médicos", "Geral"
+];
+
+export const SETORES = Array.from(new Set([...CORPORATIVO_SECTORS, ...UNIDADES_SECTORS]));
 
 export interface Task {
     id: string;
@@ -32,6 +69,9 @@ export interface Task {
     board_id: string | null;
     column_id: string | null;
     order_index: number;
+    unit?: string;
+    sector?: string;
+    created_by?: string;
 }
 
 export interface Company {
@@ -49,6 +89,9 @@ export interface TeamMember {
     name: string;
     avatar_url?: string;
     email?: string;
+    units?: string[];
+    sectors?: string[];
+    birth_date?: string;
 }
 
 export interface Notification {
@@ -57,7 +100,7 @@ export interface Notification {
     sender_name: string;
     task_id?: string;
     task_title?: string;
-    type: 'mention' | 'transfer' | 'chat';
+    type: 'mention' | 'transfer' | 'chat' | 'ticket';
     message: string;
     read: boolean;
     created_at: string;
@@ -92,7 +135,7 @@ interface TasksContextType {
     addCompany: (company: Partial<Company>) => Promise<void>;
     updateCompany: (id: string, company: Partial<Company>) => Promise<void>;
     deleteCompany: (id: string) => Promise<void>;
-    addTeamMember: (name: string, avatar_url: string, email?: string) => Promise<void>;
+    addTeamMember: (name: string, avatar_url: string, email?: string, units?: string[], sectors?: string[], password?: string, birth_date?: string) => Promise<void>;
     updateTeamMember: (id: string | number, updates: Partial<TeamMember>) => Promise<void>;
     deleteTeamMember: (id: string) => Promise<void>;
     notifications: Notification[];
@@ -100,6 +143,7 @@ interface TasksContextType {
     markNotificationAsRead: (id: string) => Promise<void>;
     deleteNotification: (id: string) => Promise<void>;
     clearAllNotifications: () => Promise<void>;
+    createNotification: (notif: Partial<Notification>) => Promise<void>;
     loading: boolean;
     isModalOpen: boolean;
     editingTask: Task | null;
@@ -107,14 +151,31 @@ interface TasksContextType {
     closeModal: () => void;
     session: any;
     createSharedReport: (title: string, data: any, filters: any) => Promise<string | null>;
-    addBoard: (name: string) => Promise<void>;
-    updateBoard: (id: string, name: string) => Promise<void>;
+    addBoard: (name: string, memberEmails?: string[]) => Promise<void>;
+    updateBoard: (id: string, name: string, memberEmails?: string[]) => Promise<void>;
     deleteBoard: (id: string) => Promise<void>;
     addColumn: (boardId: string, column: Partial<BoardColumn>) => Promise<void>;
     updateColumn: (columnId: string, updates: Partial<BoardColumn>) => Promise<void>;
     deleteColumn: (columnId: string) => Promise<void>;
     updateColumnsOrder: (orderedCols: { id: string; order_index: number }[]) => Promise<void>;
     updateTaskOrder: (taskId: string, newOrder: number, columnId?: string, statusName?: string) => Promise<void>;
+    UNIDADES: string[];
+    SETORES: string[];
+    activeUnit: string;
+    setActiveUnit: (unit: string) => void;
+    timelinePosts: TimelinePost[];
+    addTimelinePost: (post: any) => Promise<void>;
+    deleteTimelinePost: (id: string) => Promise<void>;
+    uploadTimelineImage: (file: File) => Promise<string>;
+    toggleLike: (postId: string) => Promise<void>;
+    addComment: (postId: string, content: string) => Promise<void>;
+    CORPORATIVO_SECTORS: string[];
+    UNIDADES_SECTORS: string[];
+    tickets: any[];
+    fetchTickets: () => Promise<void>;
+    addTicket: (ticket: any) => Promise<void>;
+    addTicketMessage: (ticketId: string, content: string) => Promise<void>;
+    updateTicketStatus: (id: string, status: 'aberto' | 'finalizado') => Promise<void>;
 }
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
@@ -129,6 +190,10 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [boardColumns, setBoardColumns] = useState<BoardColumn[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeBoardId, setActiveBoardId] = useState<string>('Todas');
+    const [activeUnit, setActiveUnit] = useState<string>('Todas');
+
+    const [timelinePosts, setTimelinePosts] = useState<TimelinePost[]>([]);
+    const [tickets, setTickets] = useState<any[]>([]);
 
     const [filters, setFilters] = useState<FilterState>({
         empresa: 'Todas',
@@ -141,7 +206,36 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     });
 
     const filteredTasks = useMemo(() => {
+        const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
+        const isMaster = 
+            currentUser?.sectors?.includes('Master') || 
+            currentUser?.sectors?.includes('Diretoria') || 
+            session?.user?.email?.toLowerCase() === 'institutohomem@gmail.com';
+
         return tasks.filter(task => {
+            // 1. Filtragem por Unidade Ativa
+            const matchesUnit = activeUnit === 'Todas' || task.unit === activeUnit;
+            if (!matchesUnit) return false;
+
+            // 2. Filtragem por Quadro Ativo
+            const matchesBoard = activeBoardId === 'Todas' || task.board_id === activeBoardId;
+            if (!matchesBoard) return false;
+
+            // 3. Permissões de Visualização (Risco Zero de exposição se não for Master)
+            if (!isMaster) {
+                const userSectors = currentUser?.sectors || [];
+                const taskBoard = boards.find(b => b.id === task.board_id);
+                const isUserInTaskSector = userSectors.includes(taskBoard?.name || '');
+                
+                const isAssigned = Array.isArray(task.assignee) && (
+                    task.assignee.includes(currentUser?.name || '') || 
+                    task.assignee.includes(currentUser?.email || '')
+                );
+
+                if (!isUserInTaskSector && !isAssigned) return false;
+            }
+
+            // 4. Filtros da barra de ferramentas
             if (filters.empresa !== 'Todas' && task.company_id !== filters.empresa && task.title !== filters.empresa) return false;
             if (filters.prioridade !== 'Todas' && task.priority !== filters.prioridade) return false;
             if (filters.status !== 'Todos' && task.status !== filters.status) return false;
@@ -157,7 +251,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             
             return true;
         });
-    }, [tasks, filters]);
+    }, [tasks, filters, session, teamMembers, activeUnit, activeBoardId, boards]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -188,9 +282,14 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     const fetchBoards = async () => {
-        const { data, error } = await supabase.from('boards').select('*').order('created_at', { ascending: true });
+        const { data, error } = await supabase.from('boards').select('*');
         if (!error && data) {
-            setBoards(data);
+            setBoards(data.sort((a, b) => a.name.localeCompare(b.name)));
+            
+            // Auto-select first board only if none selected
+            if (!activeBoardId && data.length > 0) {
+                setActiveBoardId(data[0].id);
+            }
         }
     };
 
@@ -207,10 +306,10 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 await supabase.rpc('update_overdue_tasks');
             }
 
-            // OPTIMIZATION: Select only necessary fields for Kanban/List views 
+            // OPTIMIZATION: Select only necessary fields for Kanban/List views (including unit and sector)
             const { data, error } = await supabase
                 .from('tasks')
-                .select('id, title, status, priority, company_id, due_date, assignee, board_id, column_id, order_index')
+                .select('id, title, status, priority, company_id, due_date, assignee, board_id, column_id, order_index, unit, sector, created_by')
                 .order('order_index', { ascending: true });
             
             if (error) {
@@ -235,16 +334,22 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
 
     const fetchCompanies = async () => {
-        const { data, error } = await supabase.from('companies').select('*').order('created_at', { ascending: false });
+        // OPTIMIZATION: Query only lightweight text columns. 
+        // Passwords and full social media JSONB are loaded on-demand in CompanyManager.
+        const { data, error } = await supabase
+            .from('companies')
+            .select('id, name, logo_url')
+            .order('created_at', { ascending: false });
+            
         if (!error && data) {
             setCompanies(data.map((c: any) => ({
                 id: c.id,
                 name: c.name,
-                color: c.social_media?.color || c.logo_url || '#4b5563',
-                logoBase64: c.social_media?.logoBase64 || '',
-                site: c.social_media?.site || '',
-                social: c.social_media?.social || '',
-                passwords: c.social_media?.passwords || []
+                color: c.logo_url || '#4b5563',
+                logoBase64: '',
+                site: '',
+                social: '',
+                passwords: []
             })));
         }
     };
@@ -491,23 +596,64 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     const fetchTeam = async () => {
-        const { data, error } = await supabase.from('team_members').select('*');
+        // OPTIMIZATION: Do not select `avatar_url` because raw base64 avatars exceed HTTP transfer size.
+        // It falls back to default UI-avatars in the frontend mapped list.
+        const { data, error } = await supabase
+            .from('team_members')
+            .select('id, name, email, birth_date, units, sectors');
+            
         if (!error && data) {
-            setTeamMembers(data);
+            setTeamMembers(data.map((m: any) => ({
+                ...m,
+                avatar_url: m.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random`
+            })));
         }
     };
 
-    const addTeamMember = async (name: string, avatar_url: string, email?: string) => {
-        const { data, error } = await supabase.from('team_members').insert([{
-            name,
-            avatar_url: avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-            email
-        }]).select();
+    const addTeamMember = async (
+        name: string, 
+        avatar_url: string, 
+        email?: string, 
+        units: string[] = [], 
+        sectors: string[] = [], 
+        password?: string, 
+        birth_date?: string
+    ) => {
+        try {
+            let userId = null;
+            if (email && password) {
+                if (supabaseAdmin) {
+                    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+                        email,
+                        password,
+                        email_confirm: true
+                    });
+                    if (authError) throw new Error('Erro Auth: ' + authError.message);
+                    userId = authData.user.id;
+                } else {
+                    console.warn('supabaseAdmin não disponível. Cadastro realizado apenas no banco de dados.');
+                }
+            }
 
-        if (error) {
-            console.error(error);
-        } else if (data) {
+            const { error: dbError } = await supabase.from('team_members').insert([{
+                id: userId || undefined,
+                name,
+                avatar_url: avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+                email,
+                units,
+                sectors,
+                birth_date
+            }]);
+
+            if (dbError) throw new Error('Erro Banco: ' + dbError.message);
+            
+            alert(supabaseAdmin 
+                ? 'Sucesso! Membro cadastrado.' 
+                : 'Membro cadastrado no banco com sucesso! (Aviso: A chave administrativa do Supabase não está configurada, então a senha de login não pôde ser criada automaticamente. Crie o login do usuário no console do Supabase).'
+            );
             fetchTeam();
+        } catch (err: any) {
+            alert('FALHA NO CADASTRO: ' + err.message);
         }
     };
 
@@ -521,24 +667,64 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     const deleteTeamMember = async (id: string) => {
-        const { error } = await supabase.from('team_members').delete().eq('id', id);
-        if (error) {
-            setTeamMembers(teamMembers.filter(m => m.id !== id));
-        } else {
-            fetchTeam();
+        console.log('Iniciando exclusão sincronizada do ID:', id);
+        try {
+            const { error: dbError } = await supabase.from('team_members').delete().eq('id', id);
+            
+            if (!dbError) {
+                if (supabaseAdmin) {
+                    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
+                    if (authError) {
+                        console.warn('Membro removido da tabela, mas houve erro ao remover do Auth:', authError.message);
+                    }
+                    alert('Membro e login removidos com sucesso!');
+                } else {
+                    alert('Membro excluído da tabela de Equipe! (Aviso: A chave de serviço administrativa do Supabase não está configurada, então o login correspondente deve ser excluído manualmente no painel).');
+                }
+                fetchTeam();
+            } else {
+                alert('Erro ao excluir da tabela de Equipe: ' + dbError.message);
+            }
+        } catch (err: any) {
+            alert('Erro ao excluir: ' + err.message);
         }
     };
 
-    const addBoard = async (name: string) => {
-        const { error } = await supabase.from('boards').insert([{ name }]);
-        if (error) alert(error.message);
-        else fetchBoards();
+    const addBoard = async (name: string, memberEmails: string[] = []) => {
+        const { data, error } = await supabase.from('boards').insert([{ name }]).select();
+        if (error) {
+            alert(error.message);
+        } else if (data) {
+            const boardId = data[0].id;
+            if (memberEmails.length > 0) {
+                const accessInserts = memberEmails.map(email => ({
+                    board_id: boardId,
+                    user_email: email
+                }));
+                await supabase.from('board_access').insert(accessInserts);
+            }
+            fetchBoards();
+        }
     };
 
-    const updateBoard = async (id: string, name: string) => {
-        const { error } = await supabase.from('boards').update({ name }).eq('id', id);
-        if (error) alert(error.message);
-        else fetchBoards();
+    const updateBoard = async (id: string, name: string, memberEmails: string[] = []) => {
+        const { error: updateError } = await supabase.from('boards').update({ name }).eq('id', id);
+        if (updateError) {
+            alert(updateError.message);
+            return;
+        }
+
+        // Atualiza membros: deleta existentes e reinsere novos
+        await supabase.from('board_access').delete().eq('board_id', id);
+        if (memberEmails.length > 0) {
+            const accessInserts = memberEmails.map(email => ({
+                board_id: id,
+                user_email: email
+            }));
+            await supabase.from('board_access').insert(accessInserts);
+        }
+        
+        fetchBoards();
     };
 
     const deleteBoard = async (id: string) => {
@@ -610,6 +796,245 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     };
 
+    const fetchTimeline = async () => {
+        const { data, error } = await supabase
+            .from('timeline_posts')
+            .select(`
+                *,
+                author:team_members(name, avatar_url),
+                likes:timeline_likes(user_id),
+                comments:timeline_comments(
+                    *,
+                    author:team_members(name, avatar_url)
+                )
+            `)
+            .order('created_at', { ascending: false });
+        
+        if (!error && data) {
+            const userId = session?.user?.id;
+
+            const formatted = data.map((p: any) => ({
+                ...p,
+                author_name: p.author?.name,
+                author_avatar: p.author?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.author?.name || 'Membro')}&background=random`,
+                likes_count: p.likes?.length || 0,
+                user_has_liked: p.likes?.some((l: any) => l.user_id === userId),
+                comments: (p.comments || []).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).map((c: any) => ({
+                    ...c,
+                    author_name: c.author?.name,
+                    author_avatar: c.author?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.author?.name || 'Membro')}&background=random`
+                }))
+            }));
+            setTimelinePosts(formatted);
+        }
+    };
+
+    const toggleLike = async (postId: string) => {
+        const userId = session?.user?.id;
+        if (!userId) return;
+
+        const { data: existing } = await supabase
+            .from('timeline_likes')
+            .select('id')
+            .eq('post_id', postId)
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        if (existing) {
+            await supabase.from('timeline_likes').delete().eq('id', existing.id);
+        } else {
+            await supabase.from('timeline_likes').insert([{ post_id: postId, user_id: userId }]);
+        }
+        fetchTimeline();
+    };
+
+    const addComment = async (postId: string, content: string) => {
+        const userEmail = session?.user?.email?.toLowerCase();
+        const currentUser = teamMembers.find(m => m.email?.toLowerCase() === userEmail);
+        const authorId = currentUser?.id || session?.user?.id;
+
+        if (!authorId || !content.trim()) return;
+
+        const { error } = await supabase.from('timeline_comments').insert([{
+            post_id: postId,
+            author_id: authorId,
+            content
+        }]);
+
+        if (error) alert("Erro ao comentar: " + error.message);
+        else fetchTimeline();
+    };
+
+    const addTimelinePost = async (post: Partial<TimelinePost>) => {
+        let authorId = post.author_id;
+
+        if (!authorId) {
+            const userEmail = session?.user?.email?.toLowerCase();
+            let member = teamMembers.find(m => m.email?.toLowerCase() === userEmail);
+            authorId = member?.id as string;
+            if (!authorId && userEmail === 'institutohomem@gmail.com') {
+                authorId = session?.user?.id;
+            }
+        }
+
+        if (!authorId) {
+            alert("Erro: Você precisa estar cadastrado na equipe para postar.");
+            return;
+        }
+
+        const { error } = await supabase.from('timeline_posts').insert([{
+            ...post,
+            author_id: authorId
+        }]);
+
+        if (error) {
+            alert("Erro ao postar: " + error.message);
+        } else {
+            fetchTimeline();
+        }
+    };
+
+    const uploadTimelineImage = async (file: File) => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `timeline/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('task-attachments')
+            .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('task-attachments')
+            .getPublicUrl(filePath);
+
+        return publicUrl;
+    };
+
+    const deleteTimelinePost = async (id: string) => {
+        const { error } = await supabase.from('timeline_posts').delete().eq('id', id);
+        if (error) alert("Erro ao excluir: " + error.message);
+        else fetchTimeline();
+    };
+
+    const fetchTickets = async () => {
+        const { data, error } = await supabase
+            .from('tickets')
+            .select(`
+                *,
+                sender:team_members!sender_id(id, name, avatar_url, sectors),
+                messages:ticket_messages(
+                    *,
+                    sender:team_members!sender_id(id, name, avatar_url)
+                )
+            `)
+            .order('created_at', { ascending: false });
+        
+        if (!error && data) {
+            const formatted = data.map((t: any) => ({
+                ...t,
+                sender_avatar: t.sender?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.sender?.name || 'Remetente')}&background=random`,
+                messages: (t.messages || []).map((m: any) => ({
+                    ...m,
+                    sender_avatar: m.sender?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.sender?.name || 'Membro')}&background=random`
+                }))
+            }));
+            setTickets(formatted);
+        }
+    };
+
+    const addTicket = async (ticketData: any) => {
+        const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
+        if (!currentUser) return;
+
+        const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+        const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const protocol = `${dateStr}-${randomStr}`;
+
+        const { error } = await supabase
+            .from('tickets')
+            .insert([{
+                ...ticketData,
+                protocol,
+                sender_id: currentUser.id,
+                status: 'aberto'
+            }]);
+
+        if (error) throw error;
+
+        // Criar Notificação para o Setor Destino
+        const membersInSector = teamMembers.filter(m => m.sectors?.includes(ticketData.target_sector));
+        for (const member of membersInSector) {
+            if (member.email) {
+                await supabase.from('notifications').insert([{
+                    recipient_email: member.email.toLowerCase(),
+                    sender_name: currentUser.name,
+                    type: 'ticket',
+                    message: `abriu um chamado para o seu setor: ${ticketData.subject}`
+                }]);
+            }
+        }
+
+        await fetchTickets();
+    };
+
+    const addTicketMessage = async (ticketId: string, content: string) => {
+        const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
+        if (!currentUser) return;
+
+        const { error } = await supabase
+            .from('ticket_messages')
+            .insert([{
+                ticket_id: ticketId,
+                sender_id: currentUser.id,
+                content
+            }]);
+
+        if (error) throw error;
+
+        // Notificar o outro lado
+        const ticket = tickets.find(t => t.id === ticketId);
+        if (ticket) {
+            const isSender = ticket.sender_id === currentUser.id;
+            if (isSender) {
+                const membersInSector = teamMembers.filter(m => m.sectors?.includes(ticket.target_sector) && m.id !== currentUser.id);
+                for (const member of membersInSector) {
+                    if (member.email) {
+                        await supabase.from('notifications').insert([{
+                            recipient_email: member.email.toLowerCase(),
+                            sender_name: currentUser.name,
+                            type: 'ticket',
+                            message: `respondeu no chamado: ${ticket.subject}`
+                        }]);
+                    }
+                }
+            } else {
+                const ticketSender = teamMembers.find(m => m.id === ticket.sender_id);
+                if (ticketSender?.email) {
+                    await supabase.from('notifications').insert([{
+                        recipient_email: ticketSender.email.toLowerCase(),
+                        sender_name: currentUser.name,
+                        type: 'ticket',
+                        message: `respondeu no seu chamado: ${ticket.subject}`
+                    }]);
+                }
+            }
+        }
+
+        await fetchTickets();
+    };
+
+    const updateTicketStatus = async (id: string, status: 'aberto' | 'finalizado') => {
+        const { error } = await supabase
+            .from('tickets')
+            .update({ status })
+            .eq('id', id);
+
+        if (error) throw error;
+        await fetchTickets();
+    };
+
     useEffect(() => {
         setFilters(prev => ({ ...prev, status: 'Todos' }));
     }, [activeBoardId]);
@@ -623,6 +1048,8 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         fetchCompanies();
         fetchTeam();
         fetchNotifications();
+        fetchTimeline();
+        fetchTickets();
 
         // Subscrição Realtime para atualizações automáticas
         const taskSubscription = supabase
@@ -632,6 +1059,9 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, () => fetchBoards())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members' }, () => fetchTeam())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, () => fetchCompanies())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'timeline_posts' }, () => fetchTimeline())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => fetchTickets())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ticket_messages' }, () => fetchTickets())
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
@@ -644,6 +1074,77 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             supabase.removeChannel(taskSubscription);
         };
     }, [session]);
+
+    const hasCheckedBirthdays = useRef(false);
+
+    useEffect(() => {
+        if (!session || teamMembers.length === 0 || hasCheckedBirthdays.current) return;
+
+        const checkBirthdays = async () => {
+            hasCheckedBirthdays.current = true;
+            const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            
+            const birthdayMembers = teamMembers.filter(m => 
+                m.birth_date && 
+                m.birth_date.startsWith(today) &&
+                m.sectors && m.sectors.length > 0 &&
+                m.name.toLowerCase() !== 'galudo'
+            );
+            
+            const galudo = teamMembers.find(m => m.name.toLowerCase().includes('galudo'));
+            const galudoId = galudo?.id;
+
+            for (const m of birthdayMembers) {
+                const todayISO = new Date().toISOString().split('T')[0];
+                
+                const { data: existing } = await supabase
+                    .from('timeline_posts')
+                    .select('id')
+                    .eq('is_automated', true)
+                    .ilike('content', `%${m.name}%`)
+                    .gte('created_at', `${todayISO}T00:00:00Z`);
+
+                if ((!existing || existing.length === 0) && galudoId) {
+                    const msg = `A Housih parabeniza ${m.name} por mais um ano de vida. Agradecemos por sua dedicação e contribuição à nossa equipe. Desejamos sucesso em seu novo ciclo profissional e pessoal.`;
+                    await addTimelinePost({
+                        content: msg,
+                        category: 'Comemoração',
+                        visibility: ['todos'],
+                        is_automated: true,
+                        author_id: galudoId as string
+                    });
+                }
+            }
+        };
+
+        checkBirthdays();
+    }, [teamMembers, session]);
+
+    useEffect(() => {
+        if (!session || teamMembers.length === 0 || timelinePosts.length === 0) return;
+        
+        const cleanupGhostBirthdays = async () => {
+            const automatedPosts = timelinePosts.filter(p => p.is_automated);
+            let shouldRefresh = false;
+            
+            for (const post of automatedPosts) {
+                const belongsToActiveMember = teamMembers.some(m => 
+                    m.name && post.content.includes(m.name)
+                );
+                
+                if (!belongsToActiveMember) {
+                    await supabase.from('timeline_posts').delete().eq('id', post.id);
+                    shouldRefresh = true;
+                }
+            }
+            
+            if (shouldRefresh) {
+                fetchTimeline();
+            }
+        };
+        
+        cleanupGhostBirthdays();
+    }, [timelinePosts, teamMembers, session]);
 
     const createSharedReport = async (title: string, data: any, filters: any) => {
         try {
@@ -676,7 +1177,12 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             createSharedReport,
             boards, boardColumns, activeBoardId, setActiveBoardId,
             addBoard, updateBoard, deleteBoard, addColumn, updateColumn, deleteColumn, updateColumnsOrder,
-            updateTaskOrder
+            updateTaskOrder,
+            UNIDADES, SETORES, activeUnit, setActiveUnit,
+            timelinePosts, addTimelinePost, deleteTimelinePost, uploadTimelineImage, toggleLike, addComment,
+            CORPORATIVO_SECTORS, UNIDADES_SECTORS,
+            tickets, fetchTickets, addTicket, addTicketMessage, updateTicketStatus,
+            createNotification
         }}>
             {children}
         </TasksContext.Provider>

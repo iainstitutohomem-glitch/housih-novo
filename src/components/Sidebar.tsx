@@ -18,14 +18,16 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
     const navItems = [
         { to: '/dashboard', icon: <PieChart size={20} />, label: 'Visão Geral' },
-        { to: '/kanban', icon: <LayoutDashboard size={20} />, label: 'Kanban' },
-        { to: '/companies', icon: <Building2 size={20} />, label: 'Empresas' },
-        { to: '/team', icon: <Users size={20} />, label: 'Equipe' },
-        { to: '/boards', icon: <Settings2 size={20} />, label: 'Config. Quadros' },
+        { to: '/kanban', icon: <LayoutDashboard size={20} />, label: 'Quadro de Tarefas' },
+        { to: '/timeline', icon: <Users size={20} />, label: 'Quadro de Avisos' },
+        { to: '/tickets', icon: <MessageSquare size={20} />, label: 'Chamados' },
     ];
 
     if (isAdmin) {
-        navItems.splice(2, 0, { to: '/agenda', icon: <Calendar size={20} />, label: 'Agenda' });
+        navItems.push({ to: '/agenda', icon: <Calendar size={20} />, label: 'Agenda' });
+        navItems.push({ to: '/companies', icon: <Building2 size={20} />, label: 'Empresas' });
+        navItems.push({ to: '/team', icon: <Users size={20} />, label: 'Equipe' });
+        navItems.push({ to: '/boards', icon: <Settings2 size={20} />, label: 'Config. Quadros' });
     }
 
     return (
@@ -105,7 +107,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 };
 
 const GroupList = () => {
-    const { conversations, setActiveConversation, activeConversation, deleteGroup } = useChat();
+    const { conversations, setActiveConversation, activeConversation, deleteGroup, setIsChatOpen } = useChat();
     const groups = conversations.filter(c => c.type === 'group');
 
     const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -126,7 +128,10 @@ const GroupList = () => {
             {groups.map(group => (
                 <div key={group.id} className="group relative">
                     <button
-                        onClick={() => setActiveConversation(group)}
+                        onClick={() => {
+                            setActiveConversation(group);
+                            setIsChatOpen(true);
+                        }}
                         className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors text-left ${activeConversation?.id === group.id ? 'bg-primary-50 text-primary-600' : 'hover:bg-gray-50 text-gray-700'
                             }`}
                     >
@@ -154,7 +159,7 @@ const GroupList = () => {
 
 const TeamPresenceSidebar = () => {
     const { teamMembers } = useTasks();
-    const { onlineUsers, startPrivateChat, activeConversation } = useChat();
+    const { onlineUsers, startPrivateChat, activeConversation, setIsChatOpen } = useChat();
     const { session } = useAuth();
 
     // Filtra membros que têm email cadastrado
@@ -170,7 +175,12 @@ const TeamPresenceSidebar = () => {
                 {eligibleMembers.map((member) => (
                     <button
                         key={member.id}
-                        onClick={() => member.email && startPrivateChat(member.email)}
+                        onClick={() => {
+                            if (member.email) {
+                                setIsChatOpen(true);
+                                startPrivateChat(member.email);
+                            }
+                        }}
                         className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors group text-left ${
                             (activeConversation?.type === 'direct' && 
                              activeConversation.participants.some(p => p.toLowerCase() === member.email?.toLowerCase()))

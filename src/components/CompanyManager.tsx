@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Building2, Plus, Trash2, Edit, Camera, Globe, Lock, Key } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 import type { Company } from '../context/TasksContext';
+import { supabase } from '../lib/supabase';
 
 const PRESET_COLORS = [
     '#2563eb', // Blue
@@ -28,15 +29,46 @@ export const CompanyManager = () => {
     const [formSocial, setFormSocial] = useState('');
     const [formPasswords, setFormPasswords] = useState<{ id: number, service: string, login: string, pass: string }[]>([]);
 
-    const openForm = (company?: Company) => {
+    const openForm = async (company?: Company) => {
         if (company) {
-            setEditingCompany(company);
-            setFormName(company.name || '');
-            setFormColor(company.color || PRESET_COLORS[0]);
-            setFormLogo(company.logoBase64 || '');
-            setFormSite(company.site || '');
-            setFormSocial(company.social || '');
-            setFormPasswords(company.passwords || []);
+            try {
+                const { data, error } = await supabase
+                    .from('companies')
+                    .select('*')
+                    .eq('id', company.id)
+                    .single();
+
+                if (error) throw error;
+
+                if (data) {
+                    const sm = data.social_media || {};
+                    const fetchedCompany = {
+                        id: data.id,
+                        name: data.name,
+                        color: sm.color || data.logo_url || PRESET_COLORS[0],
+                        logoBase64: sm.logoBase64 || '',
+                        site: sm.site || '',
+                        social: sm.social || '',
+                        passwords: sm.passwords || []
+                    };
+                    setEditingCompany(fetchedCompany);
+                    setFormName(data.name || '');
+                    setFormColor(sm.color || data.logo_url || PRESET_COLORS[0]);
+                    setFormLogo(sm.logoBase64 || '');
+                    setFormSite(sm.site || '');
+                    setFormSocial(sm.social || '');
+                    setFormPasswords(sm.passwords || []);
+                }
+            } catch (err) {
+                console.error("Failed to load company details:", err);
+                setEditingCompany(company);
+                setFormName(company.name || '');
+                setFormColor(company.color || PRESET_COLORS[0]);
+                setFormLogo(company.logoBase64 || '');
+                setFormSite(company.site || '');
+                setFormSocial(company.social || '');
+                setFormPasswords(company.passwords || []);
+            }
         } else {
             setEditingCompany(null);
             setFormName('');

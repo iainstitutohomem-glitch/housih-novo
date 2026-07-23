@@ -11,10 +11,12 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationBell } from './components/NotificationBell';
 import { BoardManager } from './components/BoardManager';
 import { CalendarManager } from './components/CalendarManager';
-import { Plus, Menu } from 'lucide-react';
+import { Timeline } from './components/Timeline';
+import { TicketManager } from './components/TicketManager';
+import { Plus, Menu, MessageSquare } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { ChatDrawer } from './components/Chat/ChatDrawer';
-import { ChatProvider } from './context/ChatContext';
+import { ChatProvider, useChat } from './context/ChatContext';
 import { AIChatDrawer } from './components/AIChatDrawer';
 import { Sparkles, Eye, Share2, X, Check, Copy, LogOut } from 'lucide-react';
 import { SharedReportPage } from './components/SharedReportPage';
@@ -75,11 +77,13 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
 
   const getTitle = () => {
     switch (location.pathname) {
-      case '/kanban': return 'Quadro Kanban';
+      case '/kanban': return 'Quadro de Tarefas';
       case '/companies': return 'Gestão de Empresas';
       case '/team': return 'Nossa Equipe';
       case '/boards': return 'Config. de Quadros';
       case '/agenda': return 'Agenda';
+      case '/timeline': return 'Quadro de Avisos';
+      case '/tickets': return 'Central de Chamados';
       default: return 'Visão Geral';
     }
   };
@@ -142,7 +146,6 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
           <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none"></div>
           {children}
         </div>
-        <ChatDrawer />
         <AIChatDrawer isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
 
         {/* Share Modal */}
@@ -234,17 +237,76 @@ function App() {
                         <Route path="/team" element={<TeamManager />} />
                         <Route path="/boards" element={<BoardManager />} />
                         <Route path="/agenda" element={<CalendarManager />} />
+                        <Route path="/timeline" element={<Timeline />} />
+                        <Route path="/tickets" element={<TicketManager />} />
                       </Routes>
                     </DashboardLayout>
                   </ProtectedRoute>
                 } />
               </Routes>
             </div>
+            <ChatDrawerPortal />
           </BrowserRouter>
         </ChatProvider>
       </TasksProvider>
     </AuthProvider>
   );
 }
+
+import React, { Component } from 'react';
+import type { ErrorInfo } from 'react';
+
+class ChatErrorBoundary extends Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("ChatDrawer Error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed bottom-4 right-4 w-96 p-6 bg-red-50 border-2 border-red-500 rounded-xl z-[10000] shadow-2xl">
+          <h2 className="text-red-700 font-black mb-2">Erro Fatal no Chat!</h2>
+          <p className="text-xs text-red-600 mb-4">{this.state.error?.toString()}</p>
+          <pre className="text-[9px] bg-red-100 p-2 rounded overflow-auto max-h-48 text-red-800">
+            {this.state.error?.stack}
+          </pre>
+          <button onClick={() => this.setState({hasError: false})} className="mt-4 w-full bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700">Tentar Novamente</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const ChatDrawerPortal = () => {
+  const { isChatOpen, setIsChatOpen } = useChat();
+  const { session } = useAuth();
+  if (!session) return null;
+
+  return (
+    <ChatErrorBoundary>
+      <ChatDrawer />
+      {!isChatOpen && (
+        <button 
+          onClick={() => setIsChatOpen(true)}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-primary-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-primary-700 hover:scale-110 transition-all duration-300 z-[9999] group active:scale-95 border-4 border-white"
+          title="Abrir Chat"
+        >
+          <MessageSquare size={24} className="group-hover:rotate-12 transition-transform" />
+          <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white animate-pulse"></div>
+        </button>
+      )}
+    </ChatErrorBoundary>
+  );
+};
 
 export default App;

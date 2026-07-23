@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Calendar } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
@@ -9,10 +9,22 @@ export const KanbanBoard = () => {
         filteredTasks, loading, companies, 
         openModal, teamMembers, updateTask,
         boards, boardColumns, activeBoardId, setActiveBoardId,
-        updateTaskOrder
+        updateTaskOrder, activeUnit, setActiveUnit, UNIDADES
     } = useTasks();
     const [transferringTaskId, setTransferringTaskId] = useState<string | null>(null);
     const leaveTimeoutRef = useRef<any>(null);
+    const unitScrollRef = useRef<HTMLDivElement>(null);
+    const boardScrollRef = useRef<HTMLDivElement>(null);
+
+    const scroll = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
+        if (ref.current) {
+            const scrollAmount = 300;
+            ref.current.scrollBy({
+                left: direction === 'left' ? -scrollAmount : scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
 
     // Determinar o quadro atual se não houver um selecionado (ou se estiver em "Todas")
     const currentBoard = useMemo(() => {
@@ -21,6 +33,17 @@ export const KanbanBoard = () => {
         }
         return boards.find(b => b.id === activeBoardId);
     }, [boards, activeBoardId]);
+
+    const userUnits = useMemo(() => {
+        return ['Todas', ...UNIDADES];
+    }, [UNIDADES]);
+
+    // Seleção automática da primeira unidade disponível
+    useEffect(() => {
+        if (activeUnit === 'Todas' && !userUnits.includes('Todas') && userUnits.length > 0) {
+            setActiveUnit(userUnits[0]);
+        }
+    }, [userUnits, activeUnit, setActiveUnit]);
 
     const currentColumns = useMemo(() => {
         if (!currentBoard) return [];
@@ -114,21 +137,73 @@ export const KanbanBoard = () => {
     return (
         <div className="flex flex-col h-full w-full bg-transparent overflow-hidden">
             <div className="px-6 pt-6 flex-shrink-0">
-                <div className="flex justify-between items-center mb-2">
-                    <div className="flex gap-2">
-                        {boards.map(b => (
-                            <button
-                                key={b.id}
-                                onClick={() => setActiveBoardId(b.id)}
-                                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm ${
-                                    (activeBoardId === b.id || (activeBoardId === 'Todas' && b.is_default))
-                                    ? 'bg-primary-500 text-white shadow-primary-200'
-                                    : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
-                                }`}
-                            >
-                                {b.name}
-                            </button>
-                        ))}
+                <div className="flex flex-col gap-4 mb-4">
+                    {/* Filtro de Unidades */}
+                    <div className="flex items-center gap-3 bg-white/50 p-2 rounded-2xl border border-white/50 shadow-sm relative group">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap pl-2 border-r border-gray-200 pr-3">Unidade</span>
+                        
+                        <button 
+                            onClick={() => scroll(unitScrollRef, 'left')}
+                            className="absolute left-[85px] z-10 bg-white/80 hover:bg-white p-1 rounded-full shadow-md border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                        </button>
+
+                        <div ref={unitScrollRef} className="flex gap-2 overflow-x-auto no-scrollbar py-1 flex-1 relative">
+                            {userUnits.map(unit => (
+                                <button
+                                    key={unit}
+                                    onClick={() => setActiveUnit(unit)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap border ${
+                                        activeUnit === unit
+                                        ? 'bg-primary-600 text-white border-primary-600 shadow-md shadow-primary-200'
+                                        : 'bg-white text-gray-500 border-gray-100 hover:border-primary-200 hover:text-primary-600'
+                                    }`}
+                                >
+                                    {unit}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={() => scroll(unitScrollRef, 'right')}
+                            className="absolute right-2 z-10 bg-white/80 hover:bg-white p-1 rounded-full shadow-md border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                        </button>
+                    </div>
+
+                    {/* Filtro de Quadros (Setores) */}
+                    <div className="relative group">
+                        <button 
+                            onClick={() => scroll(boardScrollRef, 'left')}
+                            className="absolute left-[-10px] top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-1.5 rounded-full shadow-md border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                        </button>
+
+                        <div ref={boardScrollRef} className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                            {boards.map(b => (
+                                <button
+                                    key={b.id}
+                                    onClick={() => setActiveBoardId(b.id)}
+                                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm whitespace-nowrap ${
+                                        (activeBoardId === b.id || (activeBoardId === 'Todas' && b.is_default))
+                                        ? 'bg-gray-800 text-white'
+                                        : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
+                                    }`}
+                                >
+                                    {b.name}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={() => scroll(boardScrollRef, 'right')}
+                            className="absolute right-[-10px] top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-1.5 rounded-full shadow-md border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                        </button>
                     </div>
                 </div>
                 <TaskFilterBar />

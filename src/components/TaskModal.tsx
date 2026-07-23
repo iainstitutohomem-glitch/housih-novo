@@ -6,7 +6,8 @@ import { useTasks } from '../context/TasksContext';
 export const TaskModal = () => {
     const { 
         isModalOpen, closeModal, editingTask, addTask, updateTask, deleteTask, 
-        companies, teamMembers, session, boards, boardColumns, activeBoardId 
+        companies, teamMembers, session, boards, boardColumns, activeBoardId,
+        UNIDADES, SETORES
     } = useTasks();
 
     const [title, setTitle] = useState('');
@@ -17,6 +18,8 @@ export const TaskModal = () => {
     const [columnId, setColumnId] = useState<string | null>(null);
     const [dueDate, setDueDate] = useState('');
     const [priority, setPriority] = useState('Média');
+    const [unit, setUnit] = useState('Geral');
+    const [sector, setSector] = useState('Comercial');
     const [observations, setObservations] = useState('');
     const [observationsHistory, setObservationsHistory] = useState('');
     const [checklist, setChecklist] = useState<{
@@ -233,6 +236,8 @@ export const TaskModal = () => {
             setStatus('Não Iniciado');
             setDueDate('');
             setPriority('Média');
+            setUnit('Geral');
+            setSector('Comercial');
             setObservations('');
             setObservationsHistory('');
             setChecklist([]);
@@ -262,6 +267,8 @@ export const TaskModal = () => {
                     setDueDate('');
                 }
                 setPriority(editingTask.priority || 'Média');
+                setUnit(editingTask.unit || 'Geral');
+                setSector(editingTask.sector || 'Comercial');
                 setObservations(''); // Limpa o campo de digitação para novos comentários
                 setObservationsHistory(editingTask.observations || '');
                 setChecklist(editingTask.checklist || []);
@@ -273,6 +280,8 @@ export const TaskModal = () => {
                 setBoardId(defBoard);
                 const defCol = boardColumns.find(c => c.board_id === defBoard)?.id || null;
                 setColumnId(defCol);
+                setUnit('Geral');
+                setSector('Comercial');
                 setObservations('');
                 setObservationsHistory('');
             }
@@ -291,6 +300,9 @@ export const TaskModal = () => {
                 board_id: boardId,
                 column_id: columnId,
                 priority,
+                unit,
+                sector,
+                created_by: editingTask ? editingTask.created_by : (session?.user?.email || 'Sistema'),
                 due_date: dueDate ? new Date(`${dueDate}T12:00:00`).toISOString() : new Date().toISOString(),
                 observations: observationsHistory + (observations.trim() ? `\n[${new Date().toLocaleString('pt-BR')}] ${teamMembers.find(m => m.email === session?.user?.email)?.name || 'Sistema'}: ${observations.trim()}` : ''),
                 checklist,
@@ -445,6 +457,26 @@ export const TaskModal = () => {
                                             <option value="Nenhuma">Nenhuma</option>
                                             {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                         </select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Unidade</label>
+                                            <select
+                                                value={unit}
+                                                onChange={(e) => setUnit(e.target.value)}
+                                                className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
+                                                {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Setor</label>
+                                            <select
+                                                value={sector}
+                                                onChange={(e) => setSector(e.target.value)}
+                                                className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
+                                                {SETORES.map(s => <option key={s} value={s}>{s}</option>)}
+                                            </select>
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>

@@ -6,12 +6,15 @@ import { useChat } from '../context/ChatContext';
 
 export const TeamManager = () => {
     const { user } = useAuth();
-    const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember } = useTasks();
+    const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember, UNIDADES, SETORES } = useTasks();
     const { startPrivateChat } = useChat();
     const [isAdding, setIsAdding] = useState(false);
     const [newName, setNewName] = useState('');
     const [newEmail, setNewEmail] = useState('');
     const [newPassword, setNewPassword] = useState('');
+    const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
+    const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
+    const [birthDate, setBirthDate] = useState('');
     const [avatarBase64, setAvatarBase64] = useState<string>('');
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,14 +30,25 @@ export const TeamManager = () => {
 
     const handleAdd = async () => {
         if (newName.trim()) {
-            await addTeamMember(newName, avatarBase64, newEmail);
-            alert('Membro registrado na lista da Equipe! Para ativar o login com a senha que você definiu, certifique-se de cadastrar este mesmo e-mail na aba "Authentication" do seu Supabase.');
+            await addTeamMember(newName, avatarBase64, newEmail, selectedUnits, selectedSectors, newPassword, birthDate);
+            alert('Membro registrado na lista da Equipe!');
             setNewName('');
             setNewEmail('');
             setNewPassword('');
+            setSelectedUnits([]);
+            setSelectedSectors([]);
+            setBirthDate('');
             setAvatarBase64('');
             setIsAdding(false);
         }
+    };
+
+    const toggleUnit = (unit: string) => {
+        setSelectedUnits(prev => prev.includes(unit) ? prev.filter(u => u !== unit) : [...prev, unit]);
+    };
+
+    const toggleSector = (sector: string) => {
+        setSelectedSectors(prev => prev.includes(sector) ? prev.filter(s => s !== sector) : [...prev, sector]);
     };
 
     return (
@@ -94,16 +108,61 @@ export const TeamManager = () => {
                                     />
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Senha Provisória</label>
-                                <input
-                                    type="password"
-                                    placeholder="••••••••"
-                                    value={newPassword}
-                                    onChange={e => setNewPassword(e.target.value)}
-                                    className="w-full max-w-md bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                                />
-                                <p className="text-[10px] text-gray-400 mt-1">Dica: O membro poderá alterar esta senha no primeiro login.</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Unidades (Selecione várias)</label>
+                                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 max-h-40 overflow-y-auto no-scrollbar grid grid-cols-1 gap-2 pretty-scrollbar-y">
+                                        {UNIDADES.map(u => (
+                                            <label key={u} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded-lg transition-colors">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={selectedUnits.includes(u)}
+                                                    onChange={() => toggleUnit(u)}
+                                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                                />
+                                                <span className="text-sm text-gray-700">{u}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Setores (Selecione vários)</label>
+                                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 max-h-40 overflow-y-auto no-scrollbar grid grid-cols-1 gap-2 pretty-scrollbar-y">
+                                        {SETORES.map(s => (
+                                            <label key={s} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded-lg transition-colors">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={selectedSectors.includes(s)}
+                                                    onChange={() => toggleSector(s)}
+                                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                                />
+                                                <span className="text-sm text-gray-700">{s}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Senha Provisória</label>
+                                    <input
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data de Nascimento</label>
+                                    <input
+                                        type="text"
+                                        placeholder="DD/MM/AAAA"
+                                        value={birthDate}
+                                        onChange={e => setBirthDate(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                                    />
+                                </div>
                             </div>
                             <div className="flex gap-4 pt-2">
                                 <button onClick={handleAdd} className="bg-gray-800 text-white px-6 py-2.5 rounded-xl hover:bg-gray-700 transition-colors shadow-sm">
@@ -160,6 +219,16 @@ export const TeamManager = () => {
                         </div>
                         <h3 className="text-lg font-semibold text-gray-800">{member.name}</h3>
                         <p className="text-xs text-gray-500 mt-1">{user?.email === member.email ? 'Você' : 'Membro da Equipe'}</p>
+                        <div className="flex flex-wrap justify-center gap-1 mt-2">
+                            {member.units?.map(u => (
+                                <span key={u} className="text-[9px] bg-primary-50 text-primary-700 px-2 py-0.5 rounded-full font-medium">{u}</span>
+                            ))}
+                            {member.sectors?.map(s => (
+                                <span key={s} className="text-[9px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">{s}</span>
+                            ))}
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-2">{member.email}</p>
+                        {member.birth_date && <p className="text-[9px] text-gray-300 mt-0.5">B-day: {member.birth_date}</p>}
 
                         {member.email && user?.email !== member.email && (
                             <button

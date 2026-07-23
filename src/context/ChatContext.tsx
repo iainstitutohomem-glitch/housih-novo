@@ -28,6 +28,8 @@ interface ChatContextType {
     conversations: Conversation[];
     messages: Record<string, ChatMessage[]>;
     onlineUsers: Set<string>;
+    isChatOpen: boolean;
+    setIsChatOpen: (open: boolean) => void;
     activeConversation: Conversation | null;
     setActiveConversation: (conv: Conversation | null) => void;
     sendMessage: (content: string, type?: 'text' | 'file' | 'task', metadata?: any) => Promise<void>;
@@ -42,10 +44,11 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const { session } = useAuth();
-    const { teamMembers } = useTasks();
+    const { teamMembers, createNotification } = useTasks();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
     const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+    const [isChatOpen, setIsChatOpen] = useState(false);
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -188,6 +191,8 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const startPrivateChat = async (recipientEmail: string) => {
         const userEmail = session?.user?.email;
         if (!userEmail) return;
+
+        setIsChatOpen(true);
 
         // Check if exists
         const existing = conversations.find(c =>
@@ -342,6 +347,23 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             await supabase.from('chat_conversations')
                 .update({ last_message_at: new Date().toISOString() })
                 .eq('id', activeConversation.id);
+
+            // Dispara notificação para os participantes
+            const safeParticipants = (activeConversation.participants || []).map(p => p ? p.toLowerCase() : '');
+            safeParticipants.forEach(async (participantEmail) => {
+                if (participantEmail && participantEmail !== userEmail.toLowerCase()) {
+                    let notifMessage = 'enviou uma nova mensagem para você.';
+                    if (activeConversation.type === 'group') {
+                        notifMessage = `enviou uma mensagem no grupo ${activeConversation.name || 'Equipe'}.`;
+                    }
+                    
+                    await createNotification({
+                        recipient_email: participantEmail,
+                        type: 'chat',
+                        message: notifMessage
+                    });
+                }
+            });
         }
     };
 
@@ -368,6 +390,8 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             conversations, 
             messages, 
             onlineUsers, 
+            isChatOpen,
+            setIsChatOpen,
             activeConversation, 
             setActiveConversation, 
             sendMessage, 

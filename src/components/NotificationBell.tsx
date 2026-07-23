@@ -1,14 +1,35 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Check, Trash2, Calendar, User, X } from 'lucide-react';
+import { Bell, Check, Trash2, Calendar, User, X, MessageSquare } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
+import { useChat } from '../context/ChatContext';
 
 export const NotificationBell = () => {
-    const { notifications, markNotificationAsRead, deleteNotification, clearAllNotifications, openModal, tasks } = useTasks();
+    const { notifications, markNotificationAsRead, deleteNotification, clearAllNotifications, openModal, tasks, teamMembers } = useTasks();
+    const { setIsChatOpen, startPrivateChat } = useChat();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const handleNotificationClick = (notif: any) => {
         markNotificationAsRead(notif.id);
+        
+        if (notif.type === 'ticket') {
+            window.location.href = '/tickets';
+            setIsOpen(false);
+            return;
+        }
+
+        if (notif.type === 'chat') {
+            const sender = teamMembers.find(m => m.name === notif.sender_name);
+            if (sender && sender.email) {
+                setIsChatOpen(true);
+                startPrivateChat(sender.email);
+            } else {
+                setIsChatOpen(true);
+            }
+            setIsOpen(false);
+            return;
+        }
+
         const task = tasks.find(t => t.id === notif.task_id);
         if (task) {
             openModal(task);
@@ -81,8 +102,14 @@ export const NotificationBell = () => {
                                         className={`p-4 hover:bg-primary-50/30 transition-colors relative group cursor-pointer ${!notif.read ? 'bg-blue-50/30' : ''}`}
                                     >
                                         <div className="flex gap-3">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${notif.type === 'transfer' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>
-                                                {notif.type === 'transfer' ? <User size={18} /> : <Bell size={18} />}
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                                notif.type === 'ticket' ? 'bg-blue-100 text-blue-600' : 
+                                                notif.type === 'transfer' ? 'bg-indigo-100 text-indigo-600' : 
+                                                'bg-amber-100 text-amber-600'
+                                            }`}>
+                                                {notif.type === 'ticket' ? <MessageSquare size={18} /> : 
+                                                 notif.type === 'transfer' ? <User size={18} /> : 
+                                                 <Bell size={18} />}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-start mb-1">
