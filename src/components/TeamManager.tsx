@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Camera, MessageSquare } from 'lucide-react';
+import { Plus, Trash2, Camera, MessageSquare, Pencil, X, Save } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
+import type { TeamMember } from '../context/TasksContext';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 
@@ -8,6 +9,9 @@ export const TeamManager = () => {
     const { user } = useAuth();
     const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember, UNIDADES, SETORES } = useTasks();
     const { startPrivateChat } = useChat();
+    const isMaster = user?.email === 'institutohomem@gmail.com';
+
+    // ── Add new member state ──
     const [isAdding, setIsAdding] = useState(false);
     const [newName, setNewName] = useState('');
     const [newEmail, setNewEmail] = useState('');
@@ -17,51 +21,84 @@ export const TeamManager = () => {
     const [birthDate, setBirthDate] = useState('');
     const [avatarBase64, setAvatarBase64] = useState<string>('');
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // ── Edit member state ──
+    const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editBirthDate, setEditBirthDate] = useState('');
+    const [editUnits, setEditUnits] = useState<string[]>([]);
+    const [editSectors, setEditSectors] = useState<string[]>([]);
+    const [editAvatar, setEditAvatar] = useState('');
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) => {
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setAvatarBase64(reader.result as string);
-            };
+            reader.onloadend = () => setter(reader.result as string);
             reader.readAsDataURL(file);
         }
     };
 
+    // ── Add handlers ──
     const handleAdd = async () => {
         if (newName.trim()) {
             await addTeamMember(newName, avatarBase64, newEmail, selectedUnits, selectedSectors, newPassword, birthDate);
             alert('Membro registrado na lista da Equipe!');
-            setNewName('');
-            setNewEmail('');
-            setNewPassword('');
-            setSelectedUnits([]);
-            setSelectedSectors([]);
-            setBirthDate('');
-            setAvatarBase64('');
+            setNewName(''); setNewEmail(''); setNewPassword('');
+            setSelectedUnits([]); setSelectedSectors([]);
+            setBirthDate(''); setAvatarBase64('');
             setIsAdding(false);
         }
     };
 
-    const toggleUnit = (unit: string) => {
+    const toggleUnit = (unit: string) =>
         setSelectedUnits(prev => prev.includes(unit) ? prev.filter(u => u !== unit) : [...prev, unit]);
+
+    const toggleSector = (sector: string) =>
+        setSelectedSectors(prev => prev.includes(sector) ? prev.filter(s => s !== sector) : [...prev, sector]);
+
+    // ── Edit handlers ──
+    const openEdit = (member: TeamMember) => {
+        setEditingMember(member);
+        setEditName(member.name || '');
+        setEditBirthDate(member.birth_date || '');
+        setEditUnits(member.units || []);
+        setEditSectors(member.sectors || []);
+        setEditAvatar(member.avatar_url || '');
+        setIsAdding(false);
     };
 
-    const toggleSector = (sector: string) => {
-        setSelectedSectors(prev => prev.includes(sector) ? prev.filter(s => s !== sector) : [...prev, sector]);
+    const closeEdit = () => setEditingMember(null);
+
+    const handleSaveEdit = async () => {
+        if (!editingMember) return;
+        await updateTeamMember(editingMember.id, {
+            name: editName,
+            birth_date: editBirthDate,
+            units: editUnits,
+            sectors: editSectors,
+            ...(editAvatar !== editingMember.avatar_url ? { avatar_url: editAvatar } : {})
+        });
+        closeEdit();
     };
+
+    const toggleEditUnit = (unit: string) =>
+        setEditUnits(prev => prev.includes(unit) ? prev.filter(u => u !== unit) : [...prev, unit]);
+
+    const toggleEditSector = (sector: string) =>
+        setEditSectors(prev => prev.includes(sector) ? prev.filter(s => s !== sector) : [...prev, sector]);
 
     return (
         <div className="w-full flex flex-col h-full gap-6">
+            {/* Header */}
             <div className="flex justify-between items-center bg-white/60 backdrop-blur-md p-6 rounded-2xl border border-white/40 shadow-sm">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Equipe</h2>
                     <p className="text-sm text-gray-500 mt-1">Gerencie os membros da equipe e os responsáveis pelas tarefas</p>
                 </div>
                 <div className="flex gap-3">
-                    {user?.email === 'institutohomem@gmail.com' && (
+                    {isMaster && (
                         <button
-                            onClick={() => setIsAdding(true)}
+                            onClick={() => { setIsAdding(true); closeEdit(); }}
                             className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all"
                         >
                             <Plus size={18} /> Novo Membro
@@ -70,6 +107,7 @@ export const TeamManager = () => {
                 </div>
             </div>
 
+            {/* Add new member form */}
             {isAdding && (
                 <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl border border-white/40 shadow-sm animate-in fade-in slide-in-from-top-4 space-y-4">
                     <h3 className="font-semibold text-gray-800">Cadastrar Novo Membro</h3>
@@ -81,7 +119,7 @@ export const TeamManager = () => {
                                 ) : (
                                     <Camera size={32} className="text-gray-400 group-hover:text-primary-500 transition-colors" />
                                 )}
-                                <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                <input type="file" accept="image/*" onChange={e => handleFileChange(e, setAvatarBase64)} className="absolute inset-0 opacity-0 cursor-pointer" />
                             </div>
                             <span className="text-xs text-gray-500">Adicionar Foto</span>
                         </div>
@@ -89,23 +127,13 @@ export const TeamManager = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Nome Completo</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Ex: João Silva"
-                                        value={newName}
-                                        onChange={e => setNewName(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                                    />
+                                    <input type="text" placeholder="Ex: João Silva" value={newName} onChange={e => setNewName(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">E-mail de Login</label>
-                                    <input
-                                        type="email"
-                                        placeholder="joao@empresa.com"
-                                        value={newEmail}
-                                        onChange={e => setNewEmail(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                                    />
+                                    <input type="email" placeholder="joao@empresa.com" value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -114,12 +142,8 @@ export const TeamManager = () => {
                                     <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 max-h-40 overflow-y-auto no-scrollbar grid grid-cols-1 gap-2 pretty-scrollbar-y">
                                         {UNIDADES.map(u => (
                                             <label key={u} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded-lg transition-colors">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={selectedUnits.includes(u)}
-                                                    onChange={() => toggleUnit(u)}
-                                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                                                />
+                                                <input type="checkbox" checked={selectedUnits.includes(u)} onChange={() => toggleUnit(u)}
+                                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
                                                 <span className="text-sm text-gray-700">{u}</span>
                                             </label>
                                         ))}
@@ -130,12 +154,8 @@ export const TeamManager = () => {
                                     <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 max-h-40 overflow-y-auto no-scrollbar grid grid-cols-1 gap-2 pretty-scrollbar-y">
                                         {SETORES.map(s => (
                                             <label key={s} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded-lg transition-colors">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={selectedSectors.includes(s)}
-                                                    onChange={() => toggleSector(s)}
-                                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                                                />
+                                                <input type="checkbox" checked={selectedSectors.includes(s)} onChange={() => toggleSector(s)}
+                                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
                                                 <span className="text-sm text-gray-700">{s}</span>
                                             </label>
                                         ))}
@@ -145,58 +165,143 @@ export const TeamManager = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Senha Provisória</label>
-                                    <input
-                                        type="password"
-                                        placeholder="••••••••"
-                                        value={newPassword}
-                                        onChange={e => setNewPassword(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                                    />
+                                    <input type="password" placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data de Nascimento</label>
-                                    <input
-                                        type="text"
-                                        placeholder="DD/MM/AAAA"
-                                        value={birthDate}
-                                        onChange={e => setBirthDate(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                                    />
+                                    <input type="text" placeholder="DD/MM/AAAA" value={birthDate} onChange={e => setBirthDate(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
                                 </div>
                             </div>
                             <div className="flex gap-4 pt-2">
                                 <button onClick={handleAdd} className="bg-gray-800 text-white px-6 py-2.5 rounded-xl hover:bg-gray-700 transition-colors shadow-sm">
                                     Salvar Membro e Gerar Acesso
                                 </button>
-                                <button onClick={() => setIsAdding(false)} className="text-gray-500 px-4 hover:text-gray-800 transition-colors">
-                                    Cancelar
-                                </button>
+                                <button onClick={() => setIsAdding(false)} className="text-gray-500 px-4 hover:text-gray-800 transition-colors">Cancelar</button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
+            {/* Edit member modal/drawer */}
+            {editingMember && (
+                <div className="bg-white/90 backdrop-blur-md p-6 rounded-2xl border border-primary-200 shadow-xl animate-in fade-in slide-in-from-top-4 space-y-5">
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
+                            <Pencil size={18} className="text-primary-500" />
+                            Editar: {editingMember.name}
+                        </h3>
+                        <button onClick={closeEdit} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all"><X size={20} /></button>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-6 items-start">
+                        {/* Avatar */}
+                        <div className="flex flex-col items-center gap-2 shrink-0">
+                            <div className="w-24 h-24 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-md relative group cursor-pointer">
+                                {editAvatar ? (
+                                    <img src={editAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-3xl font-bold text-primary-600">{editName.charAt(0).toUpperCase()}</span>
+                                )}
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Camera size={22} className="text-white" />
+                                </div>
+                                <input type="file" accept="image/*" onChange={e => handleFileChange(e, setEditAvatar)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                            </div>
+                            <span className="text-xs text-gray-400">Trocar foto</span>
+                        </div>
+
+                        <div className="flex-1 w-full space-y-4">
+                            {/* Name & Birth Date */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Nome Completo</label>
+                                    <input type="text" value={editName} onChange={e => setEditName(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data de Nascimento</label>
+                                    <input type="text" placeholder="DD/MM/AAAA" value={editBirthDate} onChange={e => setEditBirthDate(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                                </div>
+                            </div>
+
+                            {/* Units & Sectors */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Unidades</label>
+                                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 max-h-44 overflow-y-auto pretty-scrollbar-y space-y-1">
+                                        {UNIDADES.map(u => (
+                                            <label key={u} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded-lg transition-colors">
+                                                <input type="checkbox" checked={editUnits.includes(u)} onChange={() => toggleEditUnit(u)}
+                                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                                                <span className="text-sm text-gray-700">{u}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Setores</label>
+                                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 max-h-44 overflow-y-auto pretty-scrollbar-y space-y-1">
+                                        {SETORES.map(s => (
+                                            <label key={s} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded-lg transition-colors">
+                                                <input type="checkbox" checked={editSectors.includes(s)} onChange={() => toggleEditSector(s)}
+                                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                                                <span className="text-sm text-gray-700">{s}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-3 pt-1">
+                                <button onClick={handleSaveEdit} className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-sm transition-all">
+                                    <Save size={16} /> Salvar Alterações
+                                </button>
+                                <button onClick={closeEdit} className="text-gray-500 px-4 hover:text-gray-800 transition-colors">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Member cards grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 overflow-y-auto no-scrollbar pb-8">
                 {teamMembers.map(member => (
                     <div key={member.id} className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-white/50 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col items-center text-center">
-                        {user?.email === 'institutohomem@gmail.com' && (
-                            <button
-                                onClick={() => { if (window.confirm('Tem certeza que deseja remover este membro da equipe?')) deleteTeamMember(member.id.toString()); }}
-                                className="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        )}
+                        {/* Edit & Delete buttons — top right */}
+                        <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {isMaster && (
+                                <button
+                                    onClick={() => openEdit(member)}
+                                    className="p-2 text-primary-500 bg-primary-50 hover:bg-primary-100 rounded-full transition-colors shadow-sm"
+                                    title="Editar membro"
+                                >
+                                    <Pencil size={15} />
+                                </button>
+                            )}
+                            {isMaster && (
+                                <button
+                                    onClick={() => { if (window.confirm('Tem certeza que deseja remover este membro da equipe?')) deleteTeamMember(member.id.toString()); }}
+                                    className="p-2 text-red-400 bg-red-50 hover:bg-red-100 rounded-full transition-colors shadow-sm"
+                                    title="Remover membro"
+                                >
+                                    <Trash2 size={15} />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Avatar with hover to change photo */}
                         <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center font-bold text-2xl text-primary-700 mb-4 border-4 border-white shadow-sm overflow-hidden relative group/avatar">
                             {member.avatar_url ? (
                                 <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
                             ) : (
                                 member.name.charAt(0).toUpperCase()
                             )}
-
-                            {/* Option to change photo if it's the current user OR if user is the Master Admin */}
-                            {(user?.email === member.email || user?.email === 'institutohomem@gmail.com') && (
+                            {(user?.email === member.email || isMaster) && (
                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-pointer">
                                     <Camera size={24} className="text-white" />
                                     <input
@@ -217,8 +322,10 @@ export const TeamManager = () => {
                                 </div>
                             )}
                         </div>
+
                         <h3 className="text-lg font-semibold text-gray-800">{member.name}</h3>
                         <p className="text-xs text-gray-500 mt-1">{user?.email === member.email ? 'Você' : 'Membro da Equipe'}</p>
+
                         <div className="flex flex-wrap justify-center gap-1 mt-2">
                             {member.units?.map(u => (
                                 <span key={u} className="text-[9px] bg-primary-50 text-primary-700 px-2 py-0.5 rounded-full font-medium">{u}</span>
@@ -228,7 +335,7 @@ export const TeamManager = () => {
                             ))}
                         </div>
                         <p className="text-[10px] text-gray-400 mt-2">{member.email}</p>
-                        {member.birth_date && <p className="text-[9px] text-gray-300 mt-0.5">B-day: {member.birth_date}</p>}
+                        {member.birth_date && <p className="text-[9px] text-gray-300 mt-0.5">🎂 {member.birth_date}</p>}
 
                         {member.email && user?.email !== member.email && (
                             <button
