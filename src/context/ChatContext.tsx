@@ -22,6 +22,7 @@ export interface Conversation {
     type: 'direct' | 'group';
     last_message_at: string;
     participants: string[];
+    unread_count?: number;
 }
 
 interface ChatContextType {
@@ -38,6 +39,7 @@ interface ChatContextType {
     deleteGroup: (id: string) => Promise<void>;
     uploadFile: (file: File) => Promise<{ url: string; name: string }>;
     loading: boolean;
+    totalUnreadCount: number;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -116,17 +118,22 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
                 const { data: convs, error: cError } = await supabase
                     .from('chat_conversations')
-                    .select('*, chat_participants(user_email)')
+                    .select('*, chat_participants(user_email, unread_count)')
                     .in('id', convIds)
                     .order('last_message_at', { ascending: false });
 
                 if (cError) console.error("Error fetching conversations:", cError);
 
                 if (convs) {
-                    const mapped = convs.map(c => ({
-                        ...c,
-                        participants: c.chat_participants.map((p: any) => p.user_email as string)
-                    }));
+                    const mapped = convs.map(c => {
+                        const myParticipantInfo = c.chat_participants.find((p: any) => p.user_email?.toLowerCase() === userEmail.toLowerCase());
+                        const unreadCount = myParticipantInfo?.unread_count || 0;
+                        return {
+                            ...c,
+                            participants: c.chat_participants.map((p: any) => p.user_email as string),
+                            unread_count: unreadCount
+                        };
+                    });
                     setConversations(mapped);
                 }
             }
@@ -146,6 +153,21 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             channel.unsubscribe();
         };
     }, [session]);
+
+    // 2b. Reset unread count when opening a conversation
+    useEffect(() => {
+        if (activeConversation && activeConversation.unread_count && activeConversation.unread_count > 0 && session?.user?.email) {
+            supabase.from('chat_participants').update({ unread_count: 0 })
+                .eq('conversation_id', activeConversation.id)
+                .ilike('user_email', session.user.email)
+                .then(({ error }) => {
+                    if (!error) {
+                        setConversations(prev => prev.map(c => c.id === activeConversation.id ? { ...c, unread_count: 0 } : c));
+                        setActiveConversation(prev => prev ? { ...prev, unread_count: 0 } : prev);
+                    }
+                });
+        }
+    }, [activeConversation, session?.user?.email]);
 
     // 3. Fetch Messages for Active Conversation
     useEffect(() => {
@@ -385,6 +407,8 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
         return { url: data.publicUrl, name: file.name };
     };
 
+    const totalUnreadCount = conversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+
     return (
         <ChatContext.Provider value={{ 
             conversations, 
@@ -399,7 +423,8 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
             createGroup, 
             deleteGroup,
             uploadFile, 
-            loading 
+            loading,
+            totalUnreadCount
         }}>
             {children}
         </ChatContext.Provider>

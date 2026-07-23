@@ -288,7 +288,7 @@ class ChatErrorBoundary extends Component<{children: React.ReactNode}, {hasError
 }
 
 const ChatDrawerPortal = () => {
-  const { isChatOpen, setIsChatOpen } = useChat();
+  const { isChatOpen, setIsChatOpen, totalUnreadCount } = useChat();
   const { session } = useAuth();
   if (!session) return null;
 
@@ -302,7 +302,13 @@ const ChatDrawerPortal = () => {
           title="Abrir Chat"
         >
           <MessageSquare size={24} className="group-hover:rotate-12 transition-transform" />
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white animate-pulse"></div>
+          {totalUnreadCount > 0 ? (
+            <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[11px] font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-white animate-bounce shadow-sm">
+              {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+            </div>
+          ) : (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white animate-pulse"></div>
+          )}
         </button>
       )}
     </ChatErrorBoundary>

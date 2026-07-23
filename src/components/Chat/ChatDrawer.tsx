@@ -74,9 +74,16 @@ export const ChatDrawer = () => {
                                             )}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="font-semibold text-gray-800 text-sm truncate">
-                                                {isGroup ? conv.name : otherMember?.name || 'Usuário'}
-                                            </h4>
+                                            <div className="flex justify-between items-center">
+                                                <h4 className="font-semibold text-gray-800 text-sm truncate">
+                                                    {isGroup ? conv.name : otherMember?.name || 'Usuário'}
+                                                </h4>
+                                                {(conv.unread_count || 0) > 0 && (
+                                                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ml-2">
+                                                        {conv.unread_count}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <p className="text-[10px] text-gray-400 truncate">
                                                 {isGroup ? `${conv.participants.length} integrantes` : (isUserOnline ? 'Online agora' : 'Offline')}
                                             </p>
