@@ -1,7 +1,8 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Calendar } from 'lucide-react';
+import { Calendar, Plus } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
+import { useAuth } from '../context/AuthContext';
 import { TaskFilterBar } from './TaskFilterBar';
 
 export const KanbanBoard = () => {
@@ -9,54 +10,106 @@ export const KanbanBoard = () => {
         filteredTasks, loading, companies, 
         openModal, teamMembers, updateTask,
         boards, boardColumns, activeBoardId, setActiveBoardId,
-        updateTaskOrder, activeUnit, setActiveUnit, UNIDADES
+        activeParentBoardId, setActiveParentBoardId,
+        updateTaskOrder, activeUnit, setActiveUnit, UNIDADES,
+        addBoard
     } = useTasks();
+    const { user } = useAuth();
+    const isMaster = user?.email === 'institutohomem@gmail.com';
+
     const [transferringTaskId, setTransferringTaskId] = useState<string | null>(null);
+    const [addingSubBoardForParent, setAddingSubBoardForParent] = useState<string | null>(null);
+    const [newSubBoardName, setNewSubBoardName] = useState('');
     const leaveTimeoutRef = useRef<any>(null);
     const unitScrollRef = useRef<HTMLDivElement>(null);
-    const boardScrollRef = useRef<HTMLDivElement>(null);
+    const parentBoardScrollRef = useRef<HTMLDivElement>(null);
+    const subBoardScrollRef = useRef<HTMLDivElement>(null);
 
     const scroll = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
         if (ref.current) {
-            const scrollAmount = 300;
-            ref.current.scrollBy({
-                left: direction === 'left' ? -scrollAmount : scrollAmount,
-                behavior: 'smooth'
-            });
+            ref.current.scrollBy({ left: direction === 'left' ? -300 : 300, behavior: 'smooth' });
         }
     };
 
-    // Determinar o quadro atual se não houver um selecionado (ou se estiver em "Todas")
+    // Separate boards into parent boards (no parent_board_id) and sub-boards (with parent_board_id)
+    const parentBoards = useMemo(() => boards.filter(b => !b.parent_board_id), [boards]);
+    const subBoardsOf = (parentId: string) => boards.filter(b => b.parent_board_id === parentId);
+
+    const userUnits = useMemo(() => ['Todas', ...UNIDADES], [UNIDADES]);
+
+    // Determine the active sub-boards for the selected parent
+    const activeSubBoards = useMemo(() => {
+        if (!activeParentBoardId || activeParentBoardId === 'Todas') return [];
+        return subBoardsOf(activeParentBoardId);
+    }, [boards, activeParentBoardId]);
+
+    const hasSubBoards = activeSubBoards.length > 0;
+
+    // Determine current board (the one whose columns/tasks we show)
     const currentBoard = useMemo(() => {
-        if (activeBoardId === 'Todas') {
-            return boards.find(b => b.is_default) || boards[0];
+        // If we selected a sub-board directly
+        if (activeBoardId && activeBoardId !== 'Todas') {
+            return boards.find(b => b.id === activeBoardId);
         }
-        return boards.find(b => b.id === activeBoardId);
+        return null;
     }, [boards, activeBoardId]);
 
-    const userUnits = useMemo(() => {
-        return ['Todas', ...UNIDADES];
-    }, [UNIDADES]);
-
-    // Seleção automática da primeira unidade disponível
+    // On mount: auto-select first parent board
     useEffect(() => {
-        if (activeUnit === 'Todas' && !userUnits.includes('Todas') && userUnits.length > 0) {
-            setActiveUnit(userUnits[0]);
+        if (parentBoards.length > 0 && activeParentBoardId === 'Todas') {
+            const defaultParent = parentBoards.find(b => b.is_default) || parentBoards[0];
+            handleSelectParent(defaultParent.id);
         }
-    }, [userUnits, activeUnit, setActiveUnit]);
+    }, [parentBoards]);
+
+    const handleSelectParent = (parentId: string) => {
+        setActiveParentBoardId(parentId);
+        setAddingSubBoardForParent(null);
+        // Check if this parent has sub-boards
+        const subs = boards.filter(b => b.parent_board_id === parentId);
+        if (subs.length > 0) {
+            // Select first sub-board
+            setActiveBoardId(subs[0].id);
+        } else {
+            // Parent IS the board itself (no sub-boards)
+            setActiveBoardId(parentId);
+        }
+    };
+
+    const handleSelectSubBoard = (subId: string) => {
+        setActiveBoardId(subId);
+    };
+
+    // When boards load and active parent changes, auto-select first sub-board
+    useEffect(() => {
+        if (activeParentBoardId && activeParentBoardId !== 'Todas') {
+            const subs = boards.filter(b => b.parent_board_id === activeParentBoardId);
+            if (subs.length > 0) {
+                // Only auto-select if current activeBoardId is not already a sub of this parent
+                const currentIsSubOfParent = subs.some(s => s.id === activeBoardId);
+                if (!currentIsSubOfParent) {
+                    setActiveBoardId(subs[0].id);
+                }
+            } else {
+                // No sub-boards: parent IS the active board
+                if (activeBoardId !== activeParentBoardId) {
+                    setActiveBoardId(activeParentBoardId);
+                }
+            }
+        }
+    }, [boards, activeParentBoardId]);
 
     const currentColumns = useMemo(() => {
         if (!currentBoard) return [];
         return boardColumns.filter(col => col.board_id === currentBoard.id);
     }, [boardColumns, currentBoard]);
 
-    // Sincronizar o activeBoardId se estiver como 'Todas' ao entrar no Kanban
-    useEffect(() => {
-        if (activeBoardId === 'Todas' && boards.length > 0) {
-            const defaultBoard = boards.find(b => b.is_default) || boards[0];
-            setActiveBoardId(defaultBoard.id);
-        }
-    }, [activeBoardId, boards, setActiveBoardId]);
+    const handleAddSubBoard = async () => {
+        if (!newSubBoardName.trim() || !addingSubBoardForParent) return;
+        await addBoard(newSubBoardName.trim(), [], addingSubBoardForParent);
+        setNewSubBoardName('');
+        setAddingSubBoardForParent(null);
+    };
 
     const handleMouseEnter = (taskId: string) => {
         if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
@@ -64,46 +117,36 @@ export const KanbanBoard = () => {
     };
 
     const handleMouseLeave = () => {
-        leaveTimeoutRef.current = setTimeout(() => {
-            setTransferringTaskId(null);
-        }, 300); // 300ms de tolerância
+        leaveTimeoutRef.current = setTimeout(() => setTransferringTaskId(null), 300);
     };
 
     const onDragEnd = async (result: any) => {
         if (!result.destination) return;
         const { source, destination, draggableId } = result;
-
         const destColId = destination.droppableId;
         const destColumn = currentColumns.find(c => c.id === destColId);
         if (!destColumn) return;
 
-        // Get all tasks currently in the destination column, sorted by order_index
         const tasksInDest = filteredTasks
             .filter(t => t.column_id === destColId || (t.board_id === destColumn.board_id && t.status === destColumn.title))
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
         let newOrder: number;
-
         if (tasksInDest.length === 0) {
             newOrder = 0;
         } else if (destination.index === 0) {
-            // Dragged to top
             newOrder = (tasksInDest[0].order_index || 0) - 1000;
         } else if (destination.index >= tasksInDest.length) {
-            // Dragged to bottom
             newOrder = (tasksInDest[tasksInDest.length - 1].order_index || 0) + 1000;
         } else {
-            // Dragged between two tasks
             const prevTask = tasksInDest[destination.index - 1];
             const nextTask = tasksInDest[destination.index];
             newOrder = ((prevTask.order_index || 0) + (nextTask.order_index || 0)) / 2;
         }
 
-        // If moved to a different column, update both status/column and order
         if (source.droppableId !== destination.droppableId) {
             await updateTaskOrder(draggableId, newOrder, destColumn.id, destColumn.title);
         } else {
-            // Same column reordering
             if (source.index !== destination.index) {
                 await updateTaskOrder(draggableId, newOrder);
             }
@@ -114,20 +157,15 @@ export const KanbanBoard = () => {
         if (status === 'Concluído') return 'bg-green-50 text-green-600 border-green-200';
         if (status === 'Cancelado') return 'bg-gray-50 text-gray-400 border-gray-100 opacity-60';
         if (!dateStr) return 'bg-gray-50 text-gray-500 border-gray-100';
-        
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        
         const parts = dateStr.split('T')[0].split('-');
         const taskDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-
-        const diffTime = taskDate.getTime() - today.getTime();
-        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 0) return 'bg-red-50 text-red-600 border-red-200'; // Hoje
-        if (diffDays === 1) return 'bg-amber-50 text-amber-600 border-amber-200'; // Amanhã
-        if (diffDays < 0) return 'bg-red-100 text-red-800 border-red-300 font-bold'; // Atrasado
-        return 'bg-gray-50 text-gray-500 border-gray-100'; // Futuro
+        const diffDays = Math.round((taskDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) return 'bg-red-50 text-red-600 border-red-200';
+        if (diffDays === 1) return 'bg-amber-50 text-amber-600 border-amber-200';
+        if (diffDays < 0) return 'bg-red-100 text-red-800 border-red-300 font-bold';
+        return 'bg-gray-50 text-gray-500 border-gray-100';
     };
 
     if (loading) {
@@ -137,18 +175,17 @@ export const KanbanBoard = () => {
     return (
         <div className="flex flex-col h-full w-full bg-transparent overflow-hidden">
             <div className="px-6 pt-6 flex-shrink-0">
-                <div className="flex flex-col gap-4 mb-4">
+                <div className="flex flex-col gap-3 mb-4">
+
                     {/* Filtro de Unidades */}
                     <div className="flex items-center gap-3 bg-white/50 p-2 rounded-2xl border border-white/50 shadow-sm relative group">
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap pl-2 border-r border-gray-200 pr-3">Unidade</span>
-                        
                         <button 
                             onClick={() => scroll(unitScrollRef, 'left')}
                             className="absolute left-[85px] z-10 bg-white/80 hover:bg-white p-1 rounded-full shadow-md border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                             <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                         </button>
-
                         <div ref={unitScrollRef} className="flex gap-2 overflow-x-auto no-scrollbar py-1 flex-1 relative">
                             {userUnits.map(unit => (
                                 <button
@@ -164,7 +201,6 @@ export const KanbanBoard = () => {
                                 </button>
                             ))}
                         </div>
-
                         <button 
                             onClick={() => scroll(unitScrollRef, 'right')}
                             className="absolute right-2 z-10 bg-white/80 hover:bg-white p-1 rounded-full shadow-md border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -173,22 +209,21 @@ export const KanbanBoard = () => {
                         </button>
                     </div>
 
-                    {/* Filtro de Quadros (Setores) */}
+                    {/* Filtro de Quadros Principais (Setores) */}
                     <div className="relative group">
                         <button 
-                            onClick={() => scroll(boardScrollRef, 'left')}
+                            onClick={() => scroll(parentBoardScrollRef, 'left')}
                             className="absolute left-[-10px] top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-1.5 rounded-full shadow-md border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                             <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                         </button>
-
-                        <div ref={boardScrollRef} className="flex gap-2 overflow-x-auto no-scrollbar py-1">
-                            {boards.map(b => (
+                        <div ref={parentBoardScrollRef} className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                            {parentBoards.map(b => (
                                 <button
                                     key={b.id}
-                                    onClick={() => setActiveBoardId(b.id)}
+                                    onClick={() => handleSelectParent(b.id)}
                                     className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm whitespace-nowrap ${
-                                        (activeBoardId === b.id || (activeBoardId === 'Todas' && b.is_default))
+                                        activeParentBoardId === b.id
                                         ? 'bg-gray-800 text-white'
                                         : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
                                     }`}
@@ -197,24 +232,72 @@ export const KanbanBoard = () => {
                                 </button>
                             ))}
                         </div>
-
                         <button 
-                            onClick={() => scroll(boardScrollRef, 'right')}
+                            onClick={() => scroll(parentBoardScrollRef, 'right')}
                             className="absolute right-[-10px] top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white p-1.5 rounded-full shadow-md border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                             <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                         </button>
                     </div>
+
+                    {/* Filtro de Subquadros — aparece só se o setor tiver subquadros */}
+                    {(hasSubBoards || (isMaster && activeParentBoardId && activeParentBoardId !== 'Todas')) && (
+                        <div className="flex items-center gap-2 pl-2 border-l-4 border-primary-200 animate-in slide-in-from-top-1 duration-200">
+                            <span className="text-[10px] font-black text-primary-400 uppercase tracking-widest whitespace-nowrap pr-2">Subquadro</span>
+                            <div ref={subBoardScrollRef} className="flex gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1">
+                                {activeSubBoards.map(sub => (
+                                    <button
+                                        key={sub.id}
+                                        onClick={() => handleSelectSubBoard(sub.id)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap border ${
+                                            activeBoardId === sub.id
+                                            ? 'bg-primary-500 text-white border-primary-500 shadow-sm'
+                                            : 'bg-white text-gray-500 border-gray-200 hover:border-primary-300 hover:text-primary-600'
+                                        }`}
+                                    >
+                                        {sub.name}
+                                    </button>
+                                ))}
+
+                                {/* Botão + Subquadro só para master */}
+                                {isMaster && (
+                                    addingSubBoardForParent === activeParentBoardId ? (
+                                        <div className="flex items-center gap-1 animate-in fade-in zoom-in-95 duration-150">
+                                            <input
+                                                autoFocus
+                                                type="text"
+                                                value={newSubBoardName}
+                                                onChange={e => setNewSubBoardName(e.target.value)}
+                                                onKeyDown={e => { if (e.key === 'Enter') handleAddSubBoard(); if (e.key === 'Escape') { setAddingSubBoardForParent(null); setNewSubBoardName(''); } }}
+                                                placeholder="Nome do subquadro..."
+                                                className="text-xs px-2 py-1.5 border border-primary-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-400 bg-white w-40"
+                                            />
+                                            <button onClick={handleAddSubBoard} className="text-xs px-2 py-1.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 font-semibold">✓</button>
+                                            <button onClick={() => { setAddingSubBoardForParent(null); setNewSubBoardName(''); }} className="text-xs px-2 py-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200">✕</button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setAddingSubBoardForParent(activeParentBoardId)}
+                                            className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-dashed border-primary-300 text-primary-500 hover:bg-primary-50 transition-all whitespace-nowrap flex items-center gap-1"
+                                        >
+                                            <Plus size={12} /> Subquadro
+                                        </button>
+                                    )
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                 </div>
                 <TaskFilterBar />
             </div>
 
             <div className="flex-1 flex gap-6 overflow-x-auto px-6 pb-6 h-full mt-2 pretty-scrollbar">
                 <DragDropContext onDragEnd={onDragEnd}>
-                        {currentColumns.map((col) => {
-                            const tasksInCol = filteredTasks
-                                .filter((t) => t.column_id === col.id)
-                                .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+                    {currentColumns.map((col) => {
+                        const tasksInCol = filteredTasks
+                            .filter((t) => t.column_id === col.id)
+                            .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
                         return (
                             <Droppable key={col.id} droppableId={col.id}>
@@ -272,9 +355,7 @@ export const KanbanBoard = () => {
                                                                                 );
                                                                             })
                                                                         ) : (
-                                                                            <div className="w-6 h-6 rounded-full bg-gray-50 text-gray-300 flex items-center justify-center border border-dashed border-gray-200">
-                                                                                ?
-                                                                            </div>
+                                                                            <div className="w-6 h-6 rounded-full bg-gray-50 text-gray-300 flex items-center justify-center border border-dashed border-gray-200">?</div>
                                                                         )}
                                                                         {task.assignee && task.assignee.length > 3 && (
                                                                             <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-bold border-2 border-white z-[0]">
@@ -289,7 +370,6 @@ export const KanbanBoard = () => {
                                                                     {/* Transfer Popover */}
                                                                     {transferringTaskId === task.id && (
                                                                         <>
-                                                                            {/* Invisible Bridge to bridge the gap */}
                                                                             <div className="absolute left-0 bottom-full w-full h-4 bg-transparent" />
                                                                             <div className="absolute left-0 bottom-full mb-1 bg-white rounded-xl shadow-2xl border border-gray-100 p-2 z-50 w-52 animate-in fade-in slide-in-from-bottom-2">
                                                                                 <p className="text-[10px] font-bold text-gray-400 mb-2 px-1 uppercase tracking-wide">Gerenciar Responsáveis</p>

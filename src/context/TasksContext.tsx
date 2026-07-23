@@ -23,6 +23,7 @@ export interface Board {
     name: string;
     is_default: boolean;
     member_emails?: string[];
+    parent_board_id?: string | null;
 }
 
 export interface BoardColumn {
@@ -151,9 +152,11 @@ interface TasksContextType {
     closeModal: () => void;
     session: any;
     createSharedReport: (title: string, data: any, filters: any) => Promise<string | null>;
-    addBoard: (name: string, memberEmails?: string[]) => Promise<void>;
+    addBoard: (name: string, memberEmails?: string[], parentBoardId?: string | null) => Promise<void>;
     updateBoard: (id: string, name: string, memberEmails?: string[]) => Promise<void>;
     deleteBoard: (id: string) => Promise<void>;
+    activeParentBoardId: string;
+    setActiveParentBoardId: (id: string) => void;
     addColumn: (boardId: string, column: Partial<BoardColumn>) => Promise<void>;
     updateColumn: (columnId: string, updates: Partial<BoardColumn>) => Promise<void>;
     deleteColumn: (columnId: string) => Promise<void>;
@@ -190,6 +193,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [boardColumns, setBoardColumns] = useState<BoardColumn[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeBoardId, setActiveBoardId] = useState<string>('Todas');
+    const [activeParentBoardId, setActiveParentBoardId] = useState<string>('Todas');
     const [activeUnit, setActiveUnit] = useState<string>('Todas');
 
     const [timelinePosts, setTimelinePosts] = useState<TimelinePost[]>([]);
@@ -691,8 +695,10 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     };
 
-    const addBoard = async (name: string, memberEmails: string[] = []) => {
-        const { data, error } = await supabase.from('boards').insert([{ name }]).select();
+    const addBoard = async (name: string, memberEmails: string[] = [], parentBoardId?: string | null) => {
+        const payload: any = { name };
+        if (parentBoardId) payload.parent_board_id = parentBoardId;
+        const { data, error } = await supabase.from('boards').insert([payload]).select();
         if (error) {
             alert(error.message);
         } else if (data) {
@@ -1176,7 +1182,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             isModalOpen, editingTask, openModal, closeModal, addCompany, updateCompany, deleteCompany, addTeamMember, updateTeamMember, deleteTeamMember,
             notifications, fetchNotifications, markNotificationAsRead, deleteNotification, clearAllNotifications, session,
             createSharedReport,
-            boards, boardColumns, activeBoardId, setActiveBoardId,
+            boards, boardColumns, activeBoardId, setActiveBoardId, activeParentBoardId, setActiveParentBoardId,
             addBoard, updateBoard, deleteBoard, addColumn, updateColumn, deleteColumn, updateColumnsOrder,
             updateTaskOrder,
             UNIDADES, SETORES, activeUnit, setActiveUnit,
