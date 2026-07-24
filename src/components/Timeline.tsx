@@ -68,14 +68,18 @@ export const Timeline = () => {
             if (selectedImage) {
                 imageUrl = await uploadTimelineImage(selectedImage);
             }
-
-            await addTimelinePost({
+            const payload: any = {
                 content,
                 category,
                 visibility,
-                image_url: imageUrl,
                 is_automated: false
-            });
+            };
+            
+            if (imageUrl) {
+                payload.image_url = imageUrl;
+            }
+
+            await addTimelinePost(payload);
             
             setContent('');
             setVisibility(['todos']);
