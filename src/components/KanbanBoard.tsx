@@ -58,7 +58,7 @@ export const KanbanBoard = () => {
             
             if (currentUser && currentUser.sectors && currentUser.sectors.length > 0) {
                 // Try to find a parent board that matches any of the user's sectors
-                const sectorBoard = parentBoards.find(b => currentUser.sectors.includes(b.name));
+                const sectorBoard = parentBoards.find(b => currentUser.sectors!.includes(b.name));
                 if (sectorBoard) {
                     defaultParent = sectorBoard;
                 }
