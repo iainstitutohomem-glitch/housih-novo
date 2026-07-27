@@ -232,7 +232,10 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             if (!isMaster) {
                 const userSectors = currentUser?.sectors || [];
                 const taskBoard = boards.find(b => b.id === task.board_id);
-                const isUserInTaskSector = userSectors.includes(taskBoard?.name || '');
+                const taskParentBoard = boards.find(b => b.id === taskBoard?.parent_board_id);
+                
+                const isUserInTaskSector = userSectors.includes(taskBoard?.name || '') || 
+                                           userSectors.includes(taskParentBoard?.name || '');
                 
                 const isAssigned = Array.isArray(task.assignee) && (
                     task.assignee.includes(currentUser?.name || '') || 
