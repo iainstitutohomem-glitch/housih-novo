@@ -13,6 +13,8 @@ export const KanbanBoard = () => {
         activeParentBoardId, setActiveParentBoardId,
         updateTaskOrder, activeUnit, setActiveUnit, UNIDADES
     } = useTasks();
+
+    const [isFiltersExpanded, setIsFiltersExpanded] = useState(true);
     const { session } = useAuth();
 
     const [transferringTaskId, setTransferringTaskId] = useState<string | null>(null);
@@ -170,8 +172,27 @@ export const KanbanBoard = () => {
 
     return (
         <div className="flex flex-col h-full w-full bg-transparent overflow-hidden">
-            <div className="px-6 pt-6 flex-shrink-0">
-                <div className="flex flex-col gap-3 mb-4">
+            <div className="px-6 pt-4 flex-shrink-0">
+                <div className="flex justify-end mb-2">
+                    <button
+                        onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-primary-600 transition-colors bg-white/50 px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm"
+                    >
+                        {isFiltersExpanded ? (
+                            <>
+                                <span>Ocultar Filtros</span>
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                            </>
+                        ) : (
+                            <>
+                                <span>Mostrar Filtros</span>
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                            </>
+                        )}
+                    </button>
+                </div>
+
+                <div className={`flex flex-col gap-3 transition-all duration-300 ease-in-out ${isFiltersExpanded ? 'max-h-[500px] opacity-100 mb-4' : 'max-h-0 opacity-0 overflow-hidden'}`}>
 
                     {/* Filtro de Unidades */}
                     <div className="flex items-center gap-3 bg-white/50 p-2 rounded-2xl border border-white/50 shadow-sm relative group">
@@ -254,9 +275,8 @@ export const KanbanBoard = () => {
                             ))}
                         </div>
                     )}
-
+                    <TaskFilterBar />
                 </div>
-                <TaskFilterBar />
             </div>
 
             <div className="flex-1 flex gap-6 overflow-x-auto px-6 pb-6 h-full mt-2 pretty-scrollbar">
