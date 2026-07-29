@@ -140,7 +140,6 @@ export const TaskModal = () => {
 
         lines.forEach((line, index) => {
             const trimmedLine = line.trim();
-            if (trimmedLine.length === 0) return; // skip empty lines
 
             // Try to parse as header with colon
             const matchWithColon = trimmedLine.match(/^\[(.*?)\]\s*(.*?):\s*(.*)$/);
