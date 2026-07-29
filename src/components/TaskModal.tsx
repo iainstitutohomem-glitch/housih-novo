@@ -1059,7 +1059,13 @@ export const TaskModal = () => {
                                                                             a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-bold" />
                                                                         }}
                                                                     >
-                                                                        {item.content}
+                                                                        {(() => {
+                                                                            let text = item.content || '';
+                                                                            while (text.includes('\n\n')) {
+                                                                                text = text.replace(/\n\n/g, '\n&nbsp;\n');
+                                                                            }
+                                                                            return text;
+                                                                        })()}
                                                                     </ReactMarkdown>
                                                                 </div>
                                                             )}
