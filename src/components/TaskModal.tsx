@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
+import TurndownService from 'turndown';
 import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus, Download, Paperclip, HelpCircle, Activity } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
@@ -923,6 +924,30 @@ export const TaskModal = () => {
                                                     setShowMentionList(true);
                                                 } else {
                                                     setShowMentionList(false);
+                                                }
+                                            }}
+                                            onPaste={(e) => {
+                                                const html = e.clipboardData.getData('text/html');
+                                                if (html) {
+                                                    e.preventDefault();
+                                                    const turndownService = new TurndownService();
+                                                    const markdown = turndownService.turndown(html);
+                                                    
+                                                    // Insert markdown at cursor position
+                                                    const start = e.currentTarget.selectionStart;
+                                                    const end = e.currentTarget.selectionEnd;
+                                                    const currentVal = observations;
+                                                    const newVal = currentVal.substring(0, start) + markdown + currentVal.substring(end);
+                                                    
+                                                    setObservations(newVal);
+                                                    
+                                                    // Update cursor position after state update
+                                                    setTimeout(() => {
+                                                        if (obsTextareaRef.current) {
+                                                            obsTextareaRef.current.selectionStart = start + markdown.length;
+                                                            obsTextareaRef.current.selectionEnd = start + markdown.length;
+                                                        }
+                                                    }, 0);
                                                 }
                                             }}
                                             className="w-full bg-transparent text-xs text-gray-700 py-2.5 px-3 focus:outline-none focus:ring-0 resize-none min-h-[70px] border-none"
