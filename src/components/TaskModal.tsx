@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import remarkBreaks from 'remark-breaks';
 import TurndownService from 'turndown';
 import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus, Download, Paperclip, HelpCircle, Activity } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
@@ -1054,15 +1053,17 @@ export const TaskModal = () => {
                                                             ) : (
                                                                 <div className="bg-gray-100 border border-gray-150/50 text-gray-800 text-[11px] py-1.5 px-2.5 rounded-xl rounded-tl-none inline-block max-w-full leading-relaxed shadow-sm break-words">
                                                                     <ReactMarkdown 
-                                                                        remarkPlugins={[remarkBreaks]}
                                                                         components={{
                                                                             a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-bold" />
                                                                         }}
                                                                     >
                                                                         {(() => {
                                                                             let text = item.content || '';
+                                                                            // Force single newlines to break by adding two spaces
+                                                                            text = text.replace(/\n/g, '  \n');
+                                                                            // Force multiple empty lines to render using zero-width space
                                                                             while (text.includes('\n\n')) {
-                                                                                text = text.replace(/\n\n/g, '\n&nbsp;\n');
+                                                                                text = text.replace(/\n\n/g, '\n\u200B\n');
                                                                             }
                                                                             return text;
                                                                         })()}
