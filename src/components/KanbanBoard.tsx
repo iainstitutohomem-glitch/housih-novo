@@ -2,10 +2,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Calendar } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
-import { 
-    Plus, Search, 
-    Filter, LayoutGrid, AlertCircle, TrendingUp, HelpCircle, AlertTriangle, ArrowUpCircle, Bell
-} from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { TaskFilterBar } from './TaskFilterBar';
 
