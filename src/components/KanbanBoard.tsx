@@ -2,8 +2,24 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Calendar } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
+import { 
+    Plus, Search, 
+    Filter, LayoutGrid, AlertCircle, TrendingUp, HelpCircle, AlertTriangle, ArrowUpCircle, Bell
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { TaskFilterBar } from './TaskFilterBar';
+
+const SECTOR_DESCRIPTIONS: Record<string, string> = {
+    'Arquitetura e Obras': 'Projetos arquitetônicos, reformas, manutenção física e obras das unidades.',
+    'Atendimento Comercial': 'Suporte ao cliente, dúvidas, acompanhamento de contratos e vendas.',
+    'Cobrança': 'Tratativas de atrasos, renegociações, emissão de 2ª via e inadimplência.',
+    'Comercial': 'Novos negócios, propostas comerciais, parcerias e metas de vendas.',
+    'Comunicação & Marketing': 'Redes sociais, campanhas, materiais gráficos, eventos e comunicados.',
+    'Financeiro': 'Pagamentos, recebimentos, notas fiscais, reembolsos e fluxo de caixa.',
+    'Jurídico': 'Análise de contratos, processos judiciais, dúvidas legais e notificações.',
+    'Operações & Projetos Internos': 'Processos internos, melhoria contínua, auditorias e implantações.',
+    'RH': 'Folha de pagamento, benefícios, férias, recrutamento, admissões e clima.'
+};
 
 export const KanbanBoard = () => {
     const { 
@@ -236,17 +252,27 @@ export const KanbanBoard = () => {
                         </button>
                         <div ref={parentBoardScrollRef} className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                             {parentBoards.map(b => (
-                                <button
-                                    key={b.id}
-                                    onClick={() => handleSelectParent(b.id)}
-                                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm whitespace-nowrap ${
-                                        activeParentBoardId === b.id
-                                        ? 'bg-gray-800 text-white'
-                                        : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
-                                    }`}
-                                >
-                                    {b.name}
-                                </button>
+                                <div key={b.id} className="relative group/tooltip flex-shrink-0">
+                                    <button
+                                        onClick={() => handleSelectParent(b.id)}
+                                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm whitespace-nowrap ${
+                                            activeParentBoardId === b.id
+                                            ? 'bg-gray-800 text-white'
+                                            : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
+                                        }`}
+                                    >
+                                        {b.name}
+                                    </button>
+                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-800 text-white text-[11px] font-medium leading-relaxed p-2.5 rounded-xl shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all z-50 pointer-events-none">
+                                        <div className="flex items-start gap-2">
+                                            <HelpCircle size={14} className="text-primary-400 mt-0.5 flex-shrink-0" />
+                                            <span>
+                                                {SECTOR_DESCRIPTIONS[b.name] || 'Clique para visualizar os quadros e tarefas deste setor.'}
+                                            </span>
+                                        </div>
+                                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-800"></div>
+                                    </div>
+                                </div>
                             ))}
                         </div>
                         <button 
