@@ -22,6 +22,7 @@ const SECTOR_DESCRIPTIONS: Record<string, string> = {
 };
 
 export const KanbanBoard = () => {
+    const [hoveredSector, setHoveredSector] = useState<{name: string, rect: DOMRect} | null>(null);
     const { 
         filteredTasks, loading, companies, 
         openModal, teamMembers, updateTask,
@@ -252,27 +253,19 @@ export const KanbanBoard = () => {
                         </button>
                         <div ref={parentBoardScrollRef} className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                             {parentBoards.map(b => (
-                                <div key={b.id} className="relative group/tooltip flex-shrink-0">
-                                    <button
-                                        onClick={() => handleSelectParent(b.id)}
-                                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm whitespace-nowrap ${
-                                            activeParentBoardId === b.id
-                                            ? 'bg-gray-800 text-white'
-                                            : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
-                                        }`}
-                                    >
-                                        {b.name}
-                                    </button>
-                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-800 text-white text-[11px] font-medium leading-relaxed p-2.5 rounded-xl shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all z-50 pointer-events-none">
-                                        <div className="flex items-start gap-2">
-                                            <HelpCircle size={14} className="text-primary-400 mt-0.5 flex-shrink-0" />
-                                            <span>
-                                                {SECTOR_DESCRIPTIONS[b.name] || 'Clique para visualizar os quadros e tarefas deste setor.'}
-                                            </span>
-                                        </div>
-                                        <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-gray-800"></div>
-                                    </div>
-                                </div>
+                                <button
+                                    key={b.id}
+                                    onMouseEnter={(e) => setHoveredSector({ name: b.name, rect: e.currentTarget.getBoundingClientRect() })}
+                                    onMouseLeave={() => setHoveredSector(null)}
+                                    onClick={() => handleSelectParent(b.id)}
+                                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm whitespace-nowrap ${
+                                        activeParentBoardId === b.id
+                                        ? 'bg-gray-800 text-white'
+                                        : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'
+                                    }`}
+                                >
+                                    {b.name}
+                                </button>
                             ))}
                         </div>
                         <button 
@@ -444,6 +437,26 @@ export const KanbanBoard = () => {
                     })}
                 </DragDropContext>
             </div>
+            
+            {/* Global Tooltip for Sectors */}
+            {hoveredSector && (
+                <div 
+                    className="fixed z-[9999] w-64 bg-gray-800 text-white text-[11px] font-medium leading-relaxed p-2.5 rounded-xl shadow-xl pointer-events-none animate-in fade-in zoom-in-95 duration-150"
+                    style={{
+                        top: hoveredSector.rect.bottom + 8,
+                        left: hoveredSector.rect.left + (hoveredSector.rect.width / 2),
+                        transform: 'translateX(-50%)'
+                    }}
+                >
+                    <div className="flex items-start gap-2">
+                        <HelpCircle size={14} className="text-primary-400 mt-0.5 flex-shrink-0" />
+                        <span>
+                            {SECTOR_DESCRIPTIONS[hoveredSector.name] || 'Clique para visualizar os quadros e tarefas deste setor.'}
+                        </span>
+                    </div>
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-gray-800"></div>
+                </div>
+            )}
         </div>
     );
 };
