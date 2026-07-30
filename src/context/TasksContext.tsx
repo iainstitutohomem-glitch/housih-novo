@@ -965,14 +965,22 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             .order('created_at', { ascending: false });
         
         if (!error && data) {
-            const formatted = data.map((t: any) => ({
-                ...t,
-                sender_avatar: t.sender?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.sender?.name || 'Remetente')}&background=random`,
-                messages: (t.messages || []).map((m: any) => ({
-                    ...m,
-                    sender_avatar: m.sender?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.sender?.name || 'Membro')}&background=random`
-                }))
-            }));
+            const formatted = data.map((t: any) => {
+                const match = t.subject?.match(/^\[(.*?)\]\s*(.*)$/);
+                const theme = match ? match[1] : 'GERAL';
+                const subject = match ? match[2] : t.subject;
+                
+                return {
+                    ...t,
+                    theme,
+                    subject,
+                    sender_avatar: t.sender?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.sender?.name || 'Remetente')}&background=random`,
+                    messages: (t.messages || []).map((m: any) => ({
+                        ...m,
+                        sender_avatar: m.sender?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.sender?.name || 'Membro')}&background=random`
+                    }))
+                };
+            });
             setTickets(formatted);
         }
     };
@@ -985,10 +993,14 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
         const protocol = `${dateStr}-${randomStr}`;
 
+        const { theme, subject, ...rest } = ticketData;
+        const finalSubject = theme ? `[${theme}] ${subject}` : subject;
+
         const { error } = await supabase
             .from('tickets')
             .insert([{
-                ...ticketData,
+                ...rest,
+                subject: finalSubject,
                 protocol,
                 sender_id: currentUser.id,
                 status: 'aberto'
