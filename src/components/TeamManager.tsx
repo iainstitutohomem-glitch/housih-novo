@@ -9,7 +9,11 @@ export const TeamManager = () => {
     const { user } = useAuth();
     const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember, UNIDADES, SETORES, addUnit, deleteUnit } = useTasks();
     const { startPrivateChat } = useChat();
-    const isMaster = user?.email === 'institutohomem@gmail.com';
+    const currentUser = teamMembers.find(m => m.email?.toLowerCase() === user?.email?.toLowerCase());
+    const isMaster = 
+        currentUser?.sectors?.includes('Master') || 
+        currentUser?.sectors?.includes('Diretoria') || 
+        user?.email?.toLowerCase() === 'institutohomem@gmail.com';
 
     // ── Add new member state ──
     const [isAdding, setIsAdding] = useState(false);
