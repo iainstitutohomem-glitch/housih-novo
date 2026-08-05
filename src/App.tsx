@@ -60,6 +60,12 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
+  const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
+  const hasAIAccess = currentUser?.role === 'Líder' || 
+                      currentUser?.sectors?.includes('Master') || 
+                      currentUser?.sectors?.includes('Diretoria') || 
+                      session?.user?.email?.toLowerCase() === 'institutohomem@gmail.com';
+
   const handleCreateReport = async () => {
       setIsGenerating(true);
       const reportId = await createSharedReport(reportTitle, filteredTasks, {});
@@ -113,13 +119,15 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                 <Eye size={16} /> Visualizar
               </button>
             )}
-            <button 
-              onClick={() => setIsAIOpen(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-primary-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-500/20 hover:scale-105 transition-all active:scale-95"
-            >
-              <Sparkles size={16} />
-              <span className="hidden md:inline text-[10px] uppercase tracking-wider">IA Assistente</span>
-            </button>
+            {hasAIAccess && (
+              <button 
+                onClick={() => setIsAIOpen(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-primary-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-500/20 hover:scale-105 transition-all active:scale-95"
+              >
+                <Sparkles size={16} />
+                <span className="hidden md:inline text-[10px] uppercase tracking-wider">IA Assistente</span>
+              </button>
+            )}
             <div className="hidden lg:flex items-center mr-2">
                 <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white shadow-sm hover:scale-110 transition-all cursor-help" title={session?.user?.email}>
                     <img 

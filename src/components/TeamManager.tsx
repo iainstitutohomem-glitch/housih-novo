@@ -20,6 +20,7 @@ export const TeamManager = () => {
     const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
     const [birthDate, setBirthDate] = useState('');
     const [avatarBase64, setAvatarBase64] = useState<string>('');
+    const [newRole, setNewRole] = useState<string>('Membro');
 
     // ── Manage Units state ──
     const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
@@ -32,6 +33,7 @@ export const TeamManager = () => {
     const [editUnits, setEditUnits] = useState<string[]>([]);
     const [editSectors, setEditSectors] = useState<string[]>([]);
     const [editAvatar, setEditAvatar] = useState('');
+    const [editRole, setEditRole] = useState<string>('Membro');
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) => {
         const file = e.target.files?.[0];
@@ -45,11 +47,11 @@ export const TeamManager = () => {
     // ── Add handlers ──
     const handleAdd = async () => {
         if (newName.trim()) {
-            await addTeamMember(newName, avatarBase64, newEmail, selectedUnits, selectedSectors, newPassword, birthDate);
+            await addTeamMember(newName, avatarBase64, newEmail, selectedUnits, selectedSectors, newRole, newPassword, birthDate);
             alert('Membro registrado na lista da Equipe!');
             setNewName(''); setNewEmail(''); setNewPassword('');
             setSelectedUnits([]); setSelectedSectors([]);
-            setBirthDate(''); setAvatarBase64('');
+            setBirthDate(''); setAvatarBase64(''); setNewRole('Membro');
             setIsAdding(false);
         }
     };
@@ -81,6 +83,7 @@ export const TeamManager = () => {
         setEditUnits(member.units || []);
         setEditSectors(member.sectors || []);
         setEditAvatar(member.avatar_url || '');
+        setEditRole(member.role || 'Membro');
         setIsAdding(false);
     };
 
@@ -93,6 +96,7 @@ export const TeamManager = () => {
             birth_date: editBirthDate,
             units: editUnits,
             sectors: editSectors,
+            role: editRole,
             ...(editAvatar !== editingMember.avatar_url ? { avatar_url: editAvatar } : {})
         });
         closeEdit();
@@ -221,7 +225,15 @@ export const TeamManager = () => {
                                     </div>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Papel</label>
+                                    <select value={newRole} onChange={e => setNewRole(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50">
+                                        <option value="Membro">Membro Normal</option>
+                                        <option value="Líder">Líder de Setor</option>
+                                    </select>
+                                </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Senha Provisória</label>
                                     <input type="password" placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)}
@@ -273,17 +285,27 @@ export const TeamManager = () => {
                         </div>
 
                         <div className="flex-1 w-full space-y-4">
-                            {/* Name & Birth Date */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
+                            {/* Name, Role & Birth Date */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="sm:col-span-2">
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Nome Completo</label>
                                     <input type="text" value={editName} onChange={e => setEditName(e.target.value)}
                                         className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data de Nascimento</label>
-                                    <input type="text" placeholder="DD/MM/AAAA" value={editBirthDate} onChange={e => setEditBirthDate(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Papel</label>
+                                        <select value={editRole} onChange={e => setEditRole(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50">
+                                            <option value="Membro">Membro Normal</option>
+                                            <option value="Líder">Líder de Setor</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data de Nascimento</label>
+                                        <input type="text" placeholder="DD/MM/AAAA" value={editBirthDate} onChange={e => setEditBirthDate(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                                    </div>
                                 </div>
                             </div>
 
@@ -383,7 +405,7 @@ export const TeamManager = () => {
                         </div>
 
                         <h3 className="text-lg font-semibold text-gray-800">{member.name}</h3>
-                        <p className="text-xs text-gray-500 mt-1">{user?.email === member.email ? 'Você' : 'Membro da Equipe'}</p>
+                        <p className="text-xs font-bold text-primary-600 mt-1">{member.role === 'Líder' ? 'Líder de Setor' : (member.email === 'institutohomem@gmail.com' ? 'Administrador' : 'Membro da Equipe')}</p>
 
                         <div className="flex flex-wrap justify-center gap-1 mt-2">
                             {member.units?.map(u => (

@@ -46,7 +46,7 @@ export const DEFAULT_UNIDADES = [
 export const CORPORATIVO_SECTORS = [
     "Arquitetura e Obras", "Atendimento Comercial", "Cobrança", "Comercial", 
     "Comunicação & Marketing", "Financeiro", "Jurídico", 
-    "Operações & Projetos Internos", "RH", "Geral"
+    "Operações & Projetos Internos", "RH", "TI", "Controladoria", "Geral"
 ];
 
 export const UNIDADES_SECTORS = [
@@ -92,6 +92,7 @@ export interface TeamMember {
     email?: string;
     units?: string[];
     sectors?: string[];
+    role?: string;
     birth_date?: string;
 }
 
@@ -631,7 +632,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const fetchTeam = async () => {
         const { data, error } = await supabase
             .from('team_members')
-            .select('id, name, email, avatar_url, birth_date, units, sectors');
+            .select('id, name, email, avatar_url, birth_date, units, sectors, role');
             
         if (!error && data) {
             setTeamMembers(data.map((m: any) => ({
@@ -643,10 +644,11 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     const addTeamMember = async (
         name: string, 
-        avatar_url: string, 
+        avatar_url?: string, 
         email?: string, 
         units: string[] = [], 
         sectors: string[] = [], 
+        role: string = 'Membro',
         password?: string, 
         birth_date?: string
     ) => {
@@ -673,6 +675,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 email,
                 units,
                 sectors,
+                role,
                 birth_date
             }]);
 
