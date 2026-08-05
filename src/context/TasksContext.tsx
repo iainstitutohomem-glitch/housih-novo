@@ -325,9 +325,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             
             if (error) {
                 console.error("Fetch tasks error:", error);
-                if (!silent && !error.message?.toLowerCase().includes('jwt expired')) {
-                    alert("ERRO CRITICAL DE DADOS: " + error.message);
-                }
+                // Removed disruptive alert for fetch errors. JWT expired and other transient errors should fail silently.
             } else if (data) {
                 const updatedData = data.map((t: any) => {
                     if (!Array.isArray(t.assignee)) {
