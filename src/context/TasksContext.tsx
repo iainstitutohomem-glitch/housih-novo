@@ -325,7 +325,9 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             
             if (error) {
                 console.error("Fetch tasks error:", error);
-                if (!silent) alert("ERRO CRITICAL DE DADOS: " + error.message);
+                if (!silent && !error.message?.toLowerCase().includes('jwt expired')) {
+                    alert("ERRO CRITICAL DE DADOS: " + error.message);
+                }
             } else if (data) {
                 const updatedData = data.map((t: any) => {
                     if (!Array.isArray(t.assignee)) {
