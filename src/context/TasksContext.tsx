@@ -137,7 +137,7 @@ interface TasksContextType {
     addCompany: (company: Partial<Company>) => Promise<void>;
     updateCompany: (id: string, company: Partial<Company>) => Promise<void>;
     deleteCompany: (id: string) => Promise<void>;
-    addTeamMember: (name: string, avatar_url: string, email?: string, units?: string[], sectors?: string[], password?: string, birth_date?: string) => Promise<void>;
+    addTeamMember: (name: string, avatar_url?: string, email?: string, units?: string[], sectors?: string[], role?: string, password?: string, birth_date?: string) => Promise<void>;
     updateTeamMember: (id: string | number, updates: Partial<TeamMember>) => Promise<void>;
     deleteTeamMember: (id: string) => Promise<void>;
     notifications: Notification[];
