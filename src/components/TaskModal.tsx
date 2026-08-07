@@ -425,13 +425,20 @@ export const TaskModal = () => {
             <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden relative z-10 border border-white/50 animate-in fade-in zoom-in-95 duration-200 flex flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-100 shrink-0">
-                    <input
-                        type="text"
-                        placeholder="Título da Tarefa..."
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 placeholder-gray-300 w-full text-gray-800"
-                    />
+                    <div className="flex flex-col w-full">
+                        <input
+                            type="text"
+                            placeholder="Título da Tarefa..."
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="text-2xl font-bold bg-transparent border-none focus:outline-none focus:ring-0 placeholder-gray-300 w-full text-gray-800"
+                        />
+                        {editingTask?.created_by && (
+                            <span className="text-xs text-gray-400 mt-1 px-4 font-medium">
+                                Solicitado por: <span className="text-gray-500">{teamMembers.find(m => m.email === editingTask.created_by)?.name || editingTask.created_by.split('@')[0]}</span>
+                            </span>
+                        )}
+                    </div>
                     <button onClick={closeModal} className="p-2 bg-gray-100/50 hover:bg-gray-100 rounded-full text-gray-500 transition-colors ml-4 shrink-0">
                         <X size={20} />
                     </button>
@@ -503,7 +510,7 @@ export const TaskModal = () => {
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responsáveis</label>
                                         <div className="space-y-2 max-h-40 overflow-y-auto p-3 bg-gray-50 border border-gray-200 rounded-xl pretty-scrollbar-y">
-                                            {teamMembers && teamMembers.map(member => (
+                                            {teamMembers && teamMembers.filter(m => m.sectors?.includes(sector)).map(member => (
                                                 <label key={member.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer group">
                                                     <input 
                                                         type="checkbox" 
@@ -527,8 +534,8 @@ export const TaskModal = () => {
                                                     <span className="text-sm text-gray-700 group-hover:text-primary-700 font-medium">{member.name}</span>
                                                 </label>
                                             ))}
-                                            {(!teamMembers || teamMembers.length === 0) && (
-                                                <p className="text-xs text-gray-400 italic text-center py-2">Nenhum membro da equipe encontrado.</p>
+                                            {(!teamMembers || teamMembers.filter(m => m.sectors?.includes(sector)).length === 0) && (
+                                                <p className="text-xs text-gray-400 italic text-center py-2">Nenhum membro da equipe encontrado neste setor.</p>
                                             )}
                                         </div>
                                         {assignees.length > 0 && (

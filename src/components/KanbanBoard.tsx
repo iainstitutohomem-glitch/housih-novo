@@ -335,7 +335,12 @@ export const KanbanBoard = () => {
                                                                 borderLeftColor: companies.find(c => c.id === task.company_id || c.name === task.title)?.color || '#e5e7eb'
                                                             }}
                                                         >
-                                                            <h4 className="font-medium text-gray-800 mb-2">{task.title}</h4>
+                                                            <h4 className="font-medium text-gray-800 mb-1">{task.title}</h4>
+                                                            {task.created_by && (
+                                                                <p className="text-[10px] text-gray-400 mb-2 font-medium">
+                                                                    Solicitado por: <span className="text-gray-500">{teamMembers.find(m => m.email === task.created_by)?.name || task.created_by.split('@')[0]}</span>
+                                                                </p>
+                                                            )}
                                                             <div className="flex justify-between items-center text-xs mt-3">
                                                                 <div 
                                                                     className="flex items-center gap-2 relative group-avatar"
