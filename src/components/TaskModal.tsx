@@ -29,7 +29,9 @@ export const TaskModal = () => {
         done: boolean;
         due_date?: string | null;
         assignees?: string[];
+        sub_items?: { id: number, text: string, done: boolean }[];
     }[]>([]);
+    const [editingChecklistItemId, setEditingChecklistItemId] = useState<number | null>(null);
     const [attachments, setAttachments] = useState<{ name: string, data: string }[]>([]);
     const [newChecklistItem, setNewChecklistItem] = useState('');
     const [mentionSearch, setMentionSearch] = useState('');
@@ -719,6 +721,14 @@ export const TaskModal = () => {
 
                                                         <button
                                                             type="button"
+                                                            onClick={() => setEditingChecklistItemId(item.id)}
+                                                            className="text-gray-300 hover:text-primary-500 transition-all p-1.5"
+                                                            title="Detalhes Avançados (Sub-tarefas)"
+                                                        >
+                                                            <Plus size={14} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
                                                             onClick={() => setChecklist(checklist.filter(c => c.id !== item.id))}
                                                             className="text-gray-300 hover:text-red-500 transition-all p-1.5"
                                                         >
@@ -727,34 +737,54 @@ export const TaskModal = () => {
                                                     </div>
                                                 </div>
 
-                                                {/* Detalhes do item (data e fotos dos responsáveis) */}
-                                                {(item.due_date || itemAssignees.length > 0) && (
-                                                    <div className="flex items-center gap-3 ml-8">
-                                                        {item.due_date && (
-                                                            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${isOverdue ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
-                                                                <Calendar size={10} />
-                                                                {new Date(item.due_date).toLocaleDateString('pt-BR')}
+                                                {/* Detalhes do item (data, responsáveis e sub-tarefas) */}
+                                                {(item.due_date || itemAssignees.length > 0 || (item.sub_items && item.sub_items.length > 0)) && (
+                                                    <div className="flex flex-col gap-2 ml-8 mt-1">
+                                                        <div className="flex items-center gap-3">
+                                                            {item.due_date && (
+                                                                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${isOverdue ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
+                                                                    <Calendar size={10} />
+                                                                    {new Date(item.due_date).toLocaleDateString('pt-BR')}
+                                                                </div>
+                                                            )}
+                                                            {itemAssignees.length > 0 && (
+                                                                <div className="flex -space-x-1.5 overflow-hidden">
+                                                                    {itemAssignees.map((name: string) => {
+                                                                        const member = teamMembers.find(m => m.name === name);
+                                                                        return (
+                                                                            <div key={name} className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-primary-50 text-primary-700 rounded-md text-[10px] font-bold border border-primary-100">
+                                                                                <div className="w-4 h-4 rounded-full overflow-hidden flex-shrink-0">
+                                                                                    {member?.avatar_url ? (
+                                                                                        <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
+                                                                                    ) : (
+                                                                                        <div className="w-full h-full bg-primary-200 flex items-center justify-center text-[8px] font-bold text-primary-700">
+                                                                                            {name.charAt(0)}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                                {name}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {item.sub_items && item.sub_items.length > 0 && (
+                                                            <div className="flex flex-col gap-1.5 mt-1 border-l-2 border-gray-100 pl-3">
+                                                                {item.sub_items.map(sub => (
+                                                                    <div key={sub.id} className="flex items-center gap-2 group/sub">
+                                                                        <button onClick={() => {
+                                                                            setChecklist(checklist.map(c => c.id === item.id ? { ...c, sub_items: c.sub_items?.map(s => s.id === sub.id ? { ...s, done: !s.done } : s) } : c));
+                                                                        }}>
+                                                                            {sub.done ? <CheckCircle2 size={12} className="text-primary-500" /> : <Circle size={12} className="text-gray-300 hover:text-primary-400" />}
+                                                                        </button>
+                                                                        <span className={`text-[11px] ${sub.done ? 'line-through text-gray-400' : 'text-gray-600'}`}>
+                                                                            {sub.text}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
                                                             </div>
                                                         )}
-                                                        <div className="flex -space-x-1.5 overflow-hidden">
-                                                            {itemAssignees.map((name: string) => {
-                                                                const member = teamMembers.find(m => m.name === name);
-                                                                return (
-                                                                    <div key={name} className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-primary-50 text-primary-700 rounded-md text-[10px] font-bold border border-primary-100">
-                                                                        <div className="w-4 h-4 rounded-full overflow-hidden flex-shrink-0">
-                                                                            {member?.avatar_url ? (
-                                                                                <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
-                                                                            ) : (
-                                                                                <div className="w-full h-full bg-primary-200 flex items-center justify-center text-[8px] font-bold text-primary-700">
-                                                                                    {name.charAt(0)}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                        {name}
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
@@ -1247,6 +1277,136 @@ export const TaskModal = () => {
                     </div>
                 </div>
             </div>
+            
+            {/* Modal de Detalhes do Checklist */}
+            {editingChecklistItemId !== null && (
+                <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setEditingChecklistItemId(null)}>
+                    <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        {(() => {
+                            const item = checklist.find(c => c.id === editingChecklistItemId);
+                            if (!item) return null;
+                            const isOverdue = item.due_date ? new Date(item.due_date) < new Date(new Date().setHours(0,0,0,0)) && !item.done : false;
+                            
+                            return (
+                                <>
+                                    <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
+                                        <h3 className="text-lg font-black text-gray-800 tracking-tight">Detalhes do Checklist</h3>
+                                        <button onClick={() => setEditingChecklistItemId(null)} className="p-2 hover:bg-white rounded-xl transition-all text-gray-400 hover:text-gray-600 shadow-sm border border-transparent hover:border-gray-100">
+                                            <X size={20} />
+                                        </button>
+                                    </div>
+                                    <div className="p-6 overflow-y-auto pretty-scrollbar-y flex-1 space-y-6">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Descrição da Tarefa</label>
+                                            <input 
+                                                type="text" 
+                                                value={item.text} 
+                                                onChange={e => setChecklist(checklist.map(c => c.id === item.id ? { ...c, text: e.target.value } : c))}
+                                                className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all font-medium"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data Limite</label>
+                                                <input 
+                                                    type="date" 
+                                                    value={item.due_date || ''}
+                                                    onChange={e => setChecklist(checklist.map(c => c.id === item.id ? { ...c, due_date: e.target.value } : c))}
+                                                    className={`w-full bg-gray-50 border text-sm py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all ${isOverdue ? 'border-red-300 text-red-600' : 'border-gray-200 text-gray-700'}`}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responsáveis</label>
+                                                <div className="relative group/users">
+                                                    <div className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm py-2.5 px-4 rounded-xl flex items-center justify-between cursor-pointer">
+                                                        <span className="truncate">{item.assignees && item.assignees.length > 0 ? item.assignees.join(', ') : 'Nenhum'}</span>
+                                                        <UserPlus size={16} className="text-gray-400" />
+                                                    </div>
+                                                    <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] hidden group-hover/users:block">
+                                                        <div className="max-h-40 overflow-y-auto space-y-1 pretty-scrollbar-y">
+                                                            {teamMembers.map(member => (
+                                                                <label key={member.id} className="flex items-center gap-2 p-2 hover:bg-primary-50 rounded-lg cursor-pointer transition-colors">
+                                                                    <input 
+                                                                        type="checkbox"
+                                                                        className="w-4 h-4 text-primary-600 rounded"
+                                                                        checked={(item.assignees || []).includes(member.name)}
+                                                                        onChange={(e) => {
+                                                                            const newAssignees = e.target.checked 
+                                                                                ? [...(item.assignees || []), member.name]
+                                                                                : (item.assignees || []).filter(name => name !== member.name);
+                                                                            setChecklist(checklist.map(c => c.id === item.id ? { ...c, assignees: newAssignees } : c));
+                                                                        }}
+                                                                    />
+                                                                    <span className="text-xs font-medium text-gray-700">{member.name}</span>
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Sub-tarefas</label>
+                                            </div>
+                                            <div className="space-y-2 mb-3">
+                                                {item.sub_items && item.sub_items.length > 0 ? item.sub_items.map(sub => (
+                                                    <div key={sub.id} className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl group/sub">
+                                                        <button onClick={() => setChecklist(checklist.map(c => c.id === item.id ? { ...c, sub_items: c.sub_items?.map(s => s.id === sub.id ? { ...s, done: !s.done } : s) } : c))}>
+                                                            {sub.done ? <CheckCircle2 size={18} className="text-primary-500" /> : <Circle size={18} className="text-gray-300 hover:text-primary-400" />}
+                                                        </button>
+                                                        <input 
+                                                            type="text" 
+                                                            value={sub.text}
+                                                            onChange={e => setChecklist(checklist.map(c => c.id === item.id ? { ...c, sub_items: c.sub_items?.map(s => s.id === sub.id ? { ...s, text: e.target.value } : s) } : c))}
+                                                            className={`flex-1 bg-transparent border-none focus:outline-none text-sm ${sub.done ? 'line-through text-gray-400' : 'text-gray-700'}`}
+                                                        />
+                                                        <button 
+                                                            onClick={() => setChecklist(checklist.map(c => c.id === item.id ? { ...c, sub_items: c.sub_items?.filter(s => s.id !== sub.id) } : c))}
+                                                            className="text-gray-300 hover:text-red-500 opacity-0 group-hover/sub:opacity-100 transition-all p-1"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    </div>
+                                                )) : (
+                                                    <div className="text-center py-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                                        <p className="text-xs text-gray-400 font-medium">Nenhuma sub-tarefa criada</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 p-2 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 focus-within:border-primary-300 focus-within:bg-white transition-all">
+                                                <Plus size={16} className="text-gray-400" />
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Adicionar sub-tarefa..."
+                                                    className="flex-1 bg-transparent border-none text-sm focus:outline-none text-gray-600"
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                                            const text = e.currentTarget.value.trim();
+                                                            const newSub = { id: Date.now(), text, done: false };
+                                                            setChecklist(checklist.map(c => c.id === item.id ? { ...c, sub_items: [...(c.sub_items || []), newSub] } : c));
+                                                            e.currentTarget.value = '';
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end">
+                                        <button 
+                                            onClick={() => setEditingChecklistItemId(null)}
+                                            className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-black shadow-lg shadow-primary-600/30 transition-all active:scale-95"
+                                        >
+                                            Concluído
+                                        </button>
+                                    </div>
+                                </>
+                            );
+                        })()}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
