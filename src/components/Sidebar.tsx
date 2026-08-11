@@ -48,22 +48,18 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0
                 ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:w-20 lg:hover:w-64 group'}
             `}>
-                <div className="flex items-center justify-between px-2 mb-10 mt-2 h-8 relative">
-                    {/* Logo completa (Mobile sempre visível quando aberto, Desktop só no hover) */}
-                    <img 
-                        src="/logo.png" 
-                        alt="Housih Logo" 
-                        className="h-6 object-contain absolute left-4 lg:left-4 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300 w-auto" 
-                    />
+                <div className="flex items-center justify-between lg:justify-center lg:group-hover:justify-start px-2 mb-10 mt-2 h-8">
+                    {/* Mobile Logo */}
+                    <img src="/logo.png" className="h-6 lg:hidden" alt="Logo Housih" />
                     
-                    {/* Logo ícone (Apenas Desktop, visível quando fechado) */}
-                    <img 
-                        src="/logo-icon.png" 
-                        alt="H" 
-                        className="h-6 object-contain absolute left-4 lg:left-7 lg:opacity-100 lg:group-hover:opacity-0 transition-opacity duration-300 hidden lg:block w-auto" 
-                    />
+                    {/* Desktop Hover Full Logo */}
+                    <img src="/logo.png" className="h-6 hidden lg:group-hover:block" alt="Logo Housih" />
+                    
+                    {/* Desktop Minimized Icon Logo */}
+                    <img src="/logo-icon.png" className="h-6 hidden lg:block lg:group-hover:hidden" alt="Logo Icon" />
 
-                    <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-gray-600 absolute right-2 z-10">
+                    {/* Close Button (Mobile Only) */}
+                    <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-gray-600">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
