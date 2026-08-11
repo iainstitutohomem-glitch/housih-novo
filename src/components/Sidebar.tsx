@@ -50,13 +50,13 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             `}>
                 <div className="flex items-center justify-between lg:justify-center lg:group-hover:justify-start px-2 mb-10 mt-2 h-8">
                     {/* Mobile Logo */}
-                    <img src="/logo.png?v=2" className="h-6 lg:hidden" alt="Logo Housih" />
+                    <img src="/logo.png?v=3" className="h-6 w-auto shrink-0 lg:hidden" alt="Logo Housih" />
                     
                     {/* Desktop Hover Full Logo */}
-                    <img src="/logo.png?v=3" className="h-6 hidden lg:group-hover:block" alt="Logo Housih" />
+                    <img src="/logo.png?v=3" className="h-6 w-auto shrink-0 hidden lg:group-hover:block" alt="Logo Housih" />
                     
                     {/* Desktop Minimized Icon Logo */}
-                    <img src="/logo-icon.png?v=3" className="h-6 hidden lg:block lg:group-hover:hidden" alt="Logo Icon" onError={(e) => {
+                    <img src="/logo-icon.png?v=4" className="h-6 w-auto shrink-0 hidden lg:block lg:group-hover:hidden" alt="Logo Icon" onError={(e) => {
                         e.currentTarget.style.display = 'none';
                         const fallback = document.getElementById('fallback-logo');
                         if (fallback) fallback.style.display = '';
