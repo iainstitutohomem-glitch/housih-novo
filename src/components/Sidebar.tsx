@@ -34,6 +34,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     }
 
     const [isHovered, setIsHovered] = useState(false);
+    const isExpanded = isHovered || isOpen;
 
     return (
         <>
@@ -51,14 +52,15 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 className={`
                 fixed inset-y-0 left-0 bg-white/90 backdrop-blur-xl border-r border-gray-200/50 flex flex-col pt-8 pb-6 px-4 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 
                 transform transition-all duration-300 ease-in-out md:relative md:translate-x-0
-                ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full md:w-20 md:hover:w-64'}
+                ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'}
+                ${isExpanded ? 'md:w-64' : 'md:w-20'}
             `}>
                 <div className="flex items-center justify-between px-2 mb-8 mt-2 h-10">
-                    {/* Render full logo if hovered on desktop or sidebar is open, else render icon logo */}
-                    {isHovered || isOpen ? (
-                        <img src="/logo.png?v=12" className="h-7 w-auto shrink-0 object-contain" alt="Housih Logo" />
+                    {/* Render full logo if expanded (hovered or open), else render icon logo */}
+                    {isExpanded ? (
+                        <img src="/logo.png?v=20" className="h-7 w-auto shrink-0 object-contain" alt="Housih Logo" />
                     ) : (
-                        <img src="/logo-icon.png?v=12" className="h-9 w-auto shrink-0 object-contain mx-auto" alt="Housih Icon" />
+                        <img src="/logo-icon.png?v=20" className="h-8 w-auto shrink-0 object-contain mx-auto" alt="Housih Icon" />
                     )}
 
                     {/* Close Button (Mobile Only) */}
@@ -75,7 +77,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                             key={item.to}
                             to={item.to}
                             onClick={() => {
-                                if (window.innerWidth < 1024) onClose();
+                                if (window.innerWidth < 768) onClose();
                             }}
                             title={item.label}
                             className={({ isActive }) =>
@@ -86,36 +88,42 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                             }
                         >
                             <div className="shrink-0">{item.icon}</div>
-                            <span className="whitespace-nowrap opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">{item.label}</span>
+                            {isExpanded && (
+                                <span className="whitespace-nowrap transition-opacity duration-300">{item.label}</span>
+                            )}
                         </NavLink>
                     ))}
 
-                    <div className="pt-8 px-2 space-y-6 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
-                        <TeamPresenceSidebar />
+                    {isExpanded && (
+                        <div className="pt-8 px-2 space-y-6 transition-opacity duration-300">
+                            <TeamPresenceSidebar />
 
-                        <div>
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">
-                                    Grupos
-                                </h3>
-                                {isLeader && (
-                                    <button
-                                        onClick={() => setIsGroupModalOpen(true)}
-                                        className="p-1 hover:bg-primary-50 text-primary-600 rounded-md transition-colors shrink-0"
-                                        title="Criar Novo Grupo"
-                                    >
-                                        <Plus size={16} />
-                                    </button>
-                                )}
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">
+                                        Grupos
+                                    </h3>
+                                    {isLeader && (
+                                        <button
+                                            onClick={() => setIsGroupModalOpen(true)}
+                                            className="p-1 hover:bg-primary-50 text-primary-600 rounded-md transition-colors shrink-0"
+                                            title="Criar Novo Grupo"
+                                        >
+                                            <Plus size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                                <GroupList />
                             </div>
-                            <GroupList />
                         </div>
-                    </div>
+                    )}
                 </nav>
 
                 <button onClick={signOut} title="Sair" className="flex items-center gap-3 px-3 py-3 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors mt-8 shrink-0 overflow-hidden">
                     <div className="shrink-0"><LogOut size={20} /></div>
-                    <span className="font-medium whitespace-nowrap opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Sair</span>
+                    {isExpanded && (
+                        <span className="font-medium whitespace-nowrap transition-opacity duration-300">Sair</span>
+                    )}
                 </button>
             </aside>
 
