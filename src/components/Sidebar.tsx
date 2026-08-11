@@ -13,8 +13,11 @@ interface SidebarProps {
 
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     const { session, signOut } = useAuth();
+    const { teamMembers } = useTasks();
     const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
     const isAdmin = session?.user?.email === 'institutohomem@gmail.com';
+    const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
+    const isLeader = currentUser?.role === 'Líder' || isAdmin;
 
     const navItems = [
         { to: '/dashboard', icon: <PieChart size={20} />, label: 'Visão Geral' },
@@ -41,12 +44,15 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             )}
 
             <aside className={`
-                fixed inset-y-0 left-0 w-64 bg-white/70 backdrop-blur-md border-r border-gray-200/50 flex flex-col pt-8 pb-6 px-4 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 
-                transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
-                ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+                fixed inset-y-0 left-0 bg-white/90 backdrop-blur-xl border-r border-gray-200/50 flex flex-col pt-8 pb-6 px-4 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 
+                transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0
+                ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:w-20 lg:hover:w-64 group'}
             `}>
-                <div className="flex items-center justify-between px-2 mb-10 mt-2">
-                    <img src="/logo.png" alt="Housih Logo" className="h-6 object-contain" />
+                <div className="flex items-center justify-between px-2 mb-10 mt-2 h-8 overflow-hidden">
+                    <img src="/logo.png" alt="Housih Logo" className="h-6 object-contain min-w-max lg:opacity-0 lg:group-hover:opacity-100 transition-opacity" />
+                    <div className="hidden lg:flex w-full justify-center items-center lg:group-hover:hidden absolute inset-0">
+                        <img src="/logo-icon.png" alt="H" className="h-6 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    </div>
                     <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-gray-600">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -54,7 +60,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     </button>
                 </div>
 
-                <nav className="flex-1 space-y-2 overflow-y-auto no-scrollbar">
+                <nav className="flex-1 space-y-2 overflow-y-auto no-scrollbar overflow-x-hidden">
                     {navItems.map((item) => (
                         <NavLink
                             key={item.to}
@@ -62,42 +68,45 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                             onClick={() => {
                                 if (window.innerWidth < 1024) onClose();
                             }}
+                            title={item.label}
                             className={({ isActive }) =>
-                                `flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 ${isActive
+                                `flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 relative ${isActive
                                     ? 'bg-primary-50 text-primary-600 font-medium'
                                     : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
                                 }`
                             }
                         >
-                            {item.icon}
-                            <span>{item.label}</span>
+                            <div className="shrink-0">{item.icon}</div>
+                            <span className="whitespace-nowrap opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">{item.label}</span>
                         </NavLink>
                     ))}
 
-                    <div className="pt-8 px-2 space-y-6">
+                    <div className="pt-8 px-2 space-y-6 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">
                         <TeamPresenceSidebar />
 
                         <div>
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">
                                     Grupos
                                 </h3>
-                                <button
-                                    onClick={() => setIsGroupModalOpen(true)}
-                                    className="p-1 hover:bg-primary-50 text-primary-600 rounded-md transition-colors"
-                                    title="Criar Novo Grupo"
-                                >
-                                    <Plus size={16} />
-                                </button>
+                                {isLeader && (
+                                    <button
+                                        onClick={() => setIsGroupModalOpen(true)}
+                                        className="p-1 hover:bg-primary-50 text-primary-600 rounded-md transition-colors shrink-0"
+                                        title="Criar Novo Grupo"
+                                    >
+                                        <Plus size={16} />
+                                    </button>
+                                )}
                             </div>
                             <GroupList />
                         </div>
                     </div>
                 </nav>
 
-                <button onClick={signOut} className="flex items-center gap-3 px-3 py-3 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors mt-8 shrink-0">
-                    <LogOut size={20} />
-                    <span className="font-medium">Sair</span>
+                <button onClick={signOut} title="Sair" className="flex items-center gap-3 px-3 py-3 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors mt-8 shrink-0 overflow-hidden">
+                    <div className="shrink-0"><LogOut size={20} /></div>
+                    <span className="font-medium whitespace-nowrap opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">Sair</span>
                 </button>
             </aside>
 

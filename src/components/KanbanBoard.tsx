@@ -43,7 +43,19 @@ export const KanbanBoard = () => {
     };
 
     // Separate boards into parent boards (no parent_board_id) and sub-boards (with parent_board_id)
-    const parentBoards = useMemo(() => boards.filter(b => !b.parent_board_id), [boards]);
+    const currentUser = useMemo(() => teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase()), [teamMembers, session]);
+    
+    const parentBoards = useMemo(() => {
+        let pBoards = boards.filter(b => !b.parent_board_id);
+        const userUnits = currentUser?.units || [];
+        const isCorporativo = userUnits.includes('Corporativo');
+        
+        if (!isCorporativo && currentUser) {
+            const unitAllowedBoards = ['Recepção', 'Administrativo', 'Enfermagem', 'Comercial', 'Médico'];
+            pBoards = pBoards.filter(b => unitAllowedBoards.includes(b.name));
+        }
+        return pBoards;
+    }, [boards, currentUser]);
     const subBoardsOf = (parentId: string) => boards.filter(b => b.parent_board_id === parentId);
 
     const userUnits = useMemo(() => ['Todas', ...UNIDADES], [UNIDADES]);
@@ -65,11 +77,27 @@ export const KanbanBoard = () => {
         return null;
     }, [boards, activeBoardId]);
 
+    const hasOpenedTaskFromUrl = useRef(false);
+
+    useEffect(() => {
+        if (!hasOpenedTaskFromUrl.current && filteredTasks.length > 0) {
+            const searchParams = new URLSearchParams(window.location.search);
+            const taskId = searchParams.get('task');
+            if (taskId) {
+                const taskToOpen = filteredTasks.find(t => t.id === taskId);
+                if (taskToOpen) {
+                    openModal(taskToOpen);
+                    hasOpenedTaskFromUrl.current = true;
+                    window.history.replaceState(null, '', '/kanban');
+                }
+            }
+        }
+    }, [filteredTasks, openModal]);
+
     // On mount: auto-select first parent board based on user sector
     useEffect(() => {
         // Wait until teamMembers are loaded so we can find the currentUser
         if (parentBoards.length > 0 && teamMembers.length > 0 && activeParentBoardId === 'Todas') {
-            const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
             let defaultParent = parentBoards.find(b => b.is_default) || parentBoards[0];
             
             if (currentUser && currentUser.sectors && currentUser.sectors.length > 0) {
@@ -82,7 +110,7 @@ export const KanbanBoard = () => {
             
             handleSelectParent(defaultParent.id);
         }
-    }, [parentBoards, teamMembers, session, activeParentBoardId]);
+    }, [parentBoards, teamMembers, session, activeParentBoardId, currentUser]);
 
     const handleSelectParent = (parentId: string) => {
         setActiveParentBoardId(parentId);

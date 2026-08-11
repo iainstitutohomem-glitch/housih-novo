@@ -81,7 +81,8 @@ export const TicketManager = () => {
         if (isMaster) return matchesStatus && matchesSearch;
         
         const isOwner = t.sender_id === currentUser?.id;
-        const isTarget = currentUser?.sectors?.includes(t.target_sector);
+        const isLeader = currentUser?.role === 'Líder';
+        const isTarget = currentUser?.sectors?.includes(t.target_sector) && isLeader;
         
         return matchesStatus && matchesSearch && (isOwner || isTarget);
     });

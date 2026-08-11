@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useTasks } from '../context/TasksContext';
+import { useTasks, DEFAULT_UNIDADES } from '../context/TasksContext';
 import { useAuth } from '../context/AuthContext';
 import { 
     Send, Trash2, Heart, MessageSquare, 
@@ -46,7 +46,8 @@ export const Timeline = () => {
 
     const allSectors = Array.from(new Set([
         ...(CORPORATIVO_SECTORS || []), 
-        ...(UNIDADES_SECTORS || [])
+        ...(UNIDADES_SECTORS || []),
+        ...(DEFAULT_UNIDADES || [])
     ])).sort();
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,7 +138,9 @@ export const Timeline = () => {
 
         if (postVisibility.includes('todos')) return true;
         const userSectors = currentUser?.sectors || [];
-        if (Array.isArray(userSectors) && postVisibility.some(v => userSectors.includes(v))) return true;
+        const userUnits = currentUser?.units || [];
+        const userPermissions = [...(Array.isArray(userSectors) ? userSectors : []), ...(Array.isArray(userUnits) ? userUnits : [])];
+        if (postVisibility.some(v => userPermissions.includes(v))) return true;
         if (currentUser && post.author_id === currentUser.id) return true;
         return false;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -169,8 +172,9 @@ export const Timeline = () => {
                 <div className="max-w-2xl mx-auto space-y-6">
                     
                     {/* Create Post Box */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
-                        <div className="flex gap-4">
+                    {(currentUser?.role === 'Líder' || isMaster) && (
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
+                            <div className="flex gap-4">
                             <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 ring-2 ring-gray-50 shadow-sm">
                                 {currentUser?.avatar_url ? (
                                     <img src={currentUser.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -262,9 +266,10 @@ export const Timeline = () => {
                             </button>
                         </div>
                     </div>
+                    )}
 
-                    {/* Feed */}
-                    <div className="space-y-4">
+                    {/* Posts List */}
+                    <div className="space-y-6">
                         {filteredPosts.map(post => {
                             const author = (teamMembers || []).find(m => m.id === post.author_id);
                             const isBirthday = post.category === 'Comemoração' && post.is_automated;

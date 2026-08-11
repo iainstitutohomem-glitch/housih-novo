@@ -50,7 +50,7 @@ export const CORPORATIVO_SECTORS = [
 ];
 
 export const UNIDADES_SECTORS = [
-    "Recepção", "Administrativo", "Gestor/Assessor", "Enfermagem", "Médicos", "Geral"
+    "Recepção", "Administrativo", "Gestor/Assessor", "Enfermagem", "Médico", "Geral"
 ];
 
 export const SETORES = Array.from(new Set([...CORPORATIVO_SECTORS, ...UNIDADES_SECTORS]));
@@ -229,21 +229,33 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             const matchesBoard = activeBoardId === 'Todas' || task.board_id === activeBoardId;
             if (!matchesBoard) return false;
 
-            // 3. Permissões de Visualização (Risco Zero de exposição se não for Master)
+            // 3. Permissões de Visualização (Risco Zero de exposição)
             if (!isMaster) {
-                const userSectors = currentUser?.sectors || [];
-                const taskBoard = boards.find(b => b.id === task.board_id);
-                const taskParentBoard = boards.find(b => b.id === taskBoard?.parent_board_id);
-                
-                const isUserInTaskSector = userSectors.includes(taskBoard?.name || '') || 
-                                           userSectors.includes(taskParentBoard?.name || '');
-                
-                const isAssigned = Array.isArray(task.assignee) && (
-                    task.assignee.includes(currentUser?.name || '') || 
-                    task.assignee.includes(currentUser?.email || '')
-                );
+                const userUnits = currentUser?.units || [];
+                const isCorporativo = userUnits.includes('Corporativo');
+                const isLeader = currentUser?.role === 'Líder';
 
-                if (!isUserInTaskSector && !isAssigned) return false;
+                if (isLeader && isCorporativo) {
+                    // Líder Corporativo vê TUDO
+                } else if (!isCorporativo) {
+                    // Usuários de Unidade (Membros ou Líderes) veem todas as tarefas da sua unidade
+                    if (!userUnits.includes(task.unit || '')) return false;
+                } else {
+                    // Membros do Corporativo veem apenas seu setor ou tarefas atribuídas
+                    const userSectors = currentUser?.sectors || [];
+                    const taskBoard = boards.find(b => b.id === task.board_id);
+                    const taskParentBoard = boards.find(b => b.id === taskBoard?.parent_board_id);
+                    
+                    const isUserInTaskSector = userSectors.includes(taskBoard?.name || '') || 
+                                               userSectors.includes(taskParentBoard?.name || '');
+                    
+                    const isAssigned = Array.isArray(task.assignee) && (
+                        task.assignee.includes(currentUser?.name || '') || 
+                        task.assignee.includes(currentUser?.email || '')
+                    );
+
+                    if (!isUserInTaskSector && !isAssigned) return false;
+                }
             }
 
             // 4. Filtros da barra de ferramentas

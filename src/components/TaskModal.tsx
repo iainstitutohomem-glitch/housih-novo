@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import TurndownService from 'turndown';
-import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus, Download, Paperclip, HelpCircle, Activity } from 'lucide-react';
+import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus, Download, Paperclip, HelpCircle, Activity, Link } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const TaskModal = () => {
@@ -439,9 +439,25 @@ export const TaskModal = () => {
                             </span>
                         )}
                     </div>
-                    <button onClick={closeModal} className="p-2 bg-gray-100/50 hover:bg-gray-100 rounded-full text-gray-500 transition-colors ml-4 shrink-0">
-                        <X size={20} />
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                        {editingTask && (
+                            <button 
+                                onClick={() => {
+                                    const url = `${window.location.origin}/kanban?task=${editingTask.id}`;
+                                    navigator.clipboard.writeText(url);
+                                    alert('Link da tarefa copiado para a área de transferência!');
+                                }}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 rounded-lg transition-colors text-xs font-bold"
+                                title="Copiar Link da Tarefa"
+                            >
+                                <Link size={16} />
+                                <span className="hidden sm:inline">Copiar Link</span>
+                            </button>
+                        )}
+                        <button onClick={closeModal} className="p-2 bg-gray-100/50 hover:bg-gray-100 rounded-full text-gray-500 transition-colors ml-2">
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Grid Body */}
@@ -510,7 +526,19 @@ export const TaskModal = () => {
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responsáveis</label>
                                         <div className="space-y-2 max-h-40 overflow-y-auto p-3 bg-gray-50 border border-gray-200 rounded-xl pretty-scrollbar-y">
-                                            {teamMembers && teamMembers.filter(m => m.sectors?.includes(sector)).map(member => (
+                                            {teamMembers && teamMembers.filter(m => {
+                                                if (!m.sectors) return false;
+                                                if (Array.isArray(m.sectors)) return m.sectors.includes(sector);
+                                                if (typeof m.sectors === 'string') {
+                                                    try {
+                                                        const parsed = JSON.parse(m.sectors);
+                                                        return Array.isArray(parsed) && parsed.includes(sector);
+                                                    } catch {
+                                                        return (m.sectors as string).includes(sector);
+                                                    }
+                                                }
+                                                return false;
+                                            }).map(member => (
                                                 <label key={member.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer group">
                                                     <input 
                                                         type="checkbox" 
@@ -534,7 +562,19 @@ export const TaskModal = () => {
                                                     <span className="text-sm text-gray-700 group-hover:text-primary-700 font-medium">{member.name}</span>
                                                 </label>
                                             ))}
-                                            {(!teamMembers || teamMembers.filter(m => m.sectors?.includes(sector)).length === 0) && (
+                                            {(!teamMembers || teamMembers.filter(m => {
+                                                if (!m.sectors) return false;
+                                                if (Array.isArray(m.sectors)) return m.sectors.includes(sector);
+                                                if (typeof m.sectors === 'string') {
+                                                    try {
+                                                        const parsed = JSON.parse(m.sectors);
+                                                        return Array.isArray(parsed) && parsed.includes(sector);
+                                                    } catch {
+                                                        return (m.sectors as string).includes(sector);
+                                                    }
+                                                }
+                                                return false;
+                                            }).length === 0) && (
                                                 <p className="text-xs text-gray-400 italic text-center py-2">Nenhum membro da equipe encontrado neste setor.</p>
                                             )}
                                         </div>
