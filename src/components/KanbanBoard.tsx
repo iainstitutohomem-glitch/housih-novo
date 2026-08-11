@@ -57,11 +57,11 @@ export const KanbanBoard = () => {
             // Usuário de unidade vê apenas quadros da unidade
             pBoards = pBoards.filter(b => unitBoards.includes(b.name));
         } else if (isUserCorporativo) {
-            if (activeUnit && activeUnit !== 'Todas' && activeUnit !== 'Corporativo') {
+            if (activeUnit && activeUnit !== 'Corporativo') {
                 // Corporativo filtrando uma unidade específica
                 pBoards = pBoards.filter(b => unitBoards.includes(b.name));
             } else {
-                // Corporativo vendo 'Todas' ou 'Corporativo'
+                // Corporativo vendo 'Corporativo'
                 pBoards = pBoards.filter(b => corporativoBoards.includes(b.name));
             }
         }
@@ -69,7 +69,7 @@ export const KanbanBoard = () => {
     }, [boards, currentUser, activeUnit]);
     const subBoardsOf = (parentId: string) => boards.filter(b => b.parent_board_id === parentId);
 
-    const userUnits = useMemo(() => ['Todas', ...UNIDADES], [UNIDADES]);
+    const userUnits = useMemo(() => UNIDADES, [UNIDADES]);
 
     // Determine the active sub-boards for the selected parent
     const activeSubBoards = useMemo(() => {

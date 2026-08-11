@@ -197,7 +197,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [activeBoardId, setActiveBoardId] = useState<string>('Todas');
     const [activeParentBoardId, setActiveParentBoardId] = useState<string>('Todas');
-    const [activeUnit, setActiveUnit] = useState<string>('Todas');
+    const [activeUnit, setActiveUnit] = useState<string>('Corporativo');
     const [dbUnits, setDbUnits] = useState<string[]>([]);
 
     const [timelinePosts, setTimelinePosts] = useState<TimelinePost[]>([]);
@@ -222,7 +222,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         return tasks.filter(task => {
             // 1. Filtragem por Unidade Ativa
-            const matchesUnit = activeUnit === 'Todas' || task.unit === activeUnit;
+            const matchesUnit = activeUnit === 'Corporativo' || task.unit === activeUnit || (!task.unit && activeUnit === 'Corporativo');
             if (!matchesUnit) return false;
 
             // 2. Filtragem por Quadro Ativo
