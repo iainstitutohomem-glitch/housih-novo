@@ -40,7 +40,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             {/* Mobile Overlay */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+                    className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
                     onClick={onClose}
                 />
             )}
@@ -50,19 +50,19 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 onMouseLeave={() => setIsHovered(false)}
                 className={`
                 fixed inset-y-0 left-0 bg-white/90 backdrop-blur-xl border-r border-gray-200/50 flex flex-col pt-8 pb-6 px-4 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 
-                transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0
-                ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:w-20 lg:hover:w-64'}
+                transform transition-all duration-300 ease-in-out md:relative md:translate-x-0
+                ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full md:w-20 md:hover:w-64'}
             `}>
                 <div className="flex items-center justify-between px-2 mb-8 mt-2 h-10">
                     {/* Render full logo if hovered on desktop or sidebar is open, else render icon logo */}
                     {isHovered || isOpen ? (
-                        <img src="/logo.png?v=10" className="h-7 w-auto shrink-0 object-contain" alt="Housih Logo" />
+                        <img src="/logo.png?v=12" className="h-7 w-auto shrink-0 object-contain" alt="Housih Logo" />
                     ) : (
-                        <img src="/logo-icon.png?v=10" className="h-9 w-auto shrink-0 object-contain mx-auto" alt="Housih Icon" />
+                        <img src="/logo-icon.png?v=12" className="h-9 w-auto shrink-0 object-contain mx-auto" alt="Housih Icon" />
                     )}
 
                     {/* Close Button (Mobile Only) */}
-                    <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-gray-600">
+                    <button onClick={onClose} className="md:hidden p-2 text-gray-400 hover:text-gray-600">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -86,11 +86,11 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                             }
                         >
                             <div className="shrink-0">{item.icon}</div>
-                            <span className="whitespace-nowrap opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">{item.label}</span>
+                            <span className="whitespace-nowrap opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">{item.label}</span>
                         </NavLink>
                     ))}
 
-                    <div className="pt-8 px-2 space-y-6 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="pt-8 px-2 space-y-6 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
                         <TeamPresenceSidebar />
 
                         <div>
@@ -115,7 +115,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
                 <button onClick={signOut} title="Sair" className="flex items-center gap-3 px-3 py-3 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors mt-8 shrink-0 overflow-hidden">
                     <div className="shrink-0"><LogOut size={20} /></div>
-                    <span className="font-medium whitespace-nowrap opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">Sair</span>
+                    <span className="font-medium whitespace-nowrap opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">Sair</span>
                 </button>
             </aside>
 

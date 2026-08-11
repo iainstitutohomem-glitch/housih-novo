@@ -102,7 +102,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
             >
               <Menu size={24} />
             </button>
