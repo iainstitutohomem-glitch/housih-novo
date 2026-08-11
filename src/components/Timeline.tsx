@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
     Send, Trash2, Heart, MessageSquare, 
     Shield, Check, Image as ImageIcon, X, Loader2,
-    Smile
+    Smile, Building2
 } from 'lucide-react';
 
 const CATEGORIES = ['Geral', 'Aviso', 'Comemoração', 'Dúvida', 'Sucesso'];
@@ -29,6 +29,7 @@ export const Timeline = () => {
     const [visibility, setVisibility] = useState<string[]>(['todos']);
     const [filterCategory, setFilterCategory] = useState('Todas');
     const [isSectorSelectorOpen, setIsSectorSelectorOpen] = useState(false);
+    const [isUnitSelectorOpen, setIsUnitSelectorOpen] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [emojiCategory, setEmojiCategory] = useState('Rostos');
     
@@ -46,7 +47,10 @@ export const Timeline = () => {
 
     const allSectors = Array.from(new Set([
         ...(CORPORATIVO_SECTORS || []), 
-        ...(UNIDADES_SECTORS || []),
+        ...(UNIDADES_SECTORS || [])
+    ])).sort();
+
+    const allUnits = Array.from(new Set([
         ...(DEFAULT_UNIDADES || [])
     ])).sort();
 
@@ -242,14 +246,33 @@ export const Timeline = () => {
                                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                                 <div className="relative">
+                                    <button onClick={() => setIsUnitSelectorOpen(!isUnitSelectorOpen)} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-600">
+                                        <Building2 size={14} className="text-blue-500" />
+                                        {visibility.includes('todos') ? 'UNIDADES (TODAS)' : `UNIDADES (${visibility.filter(v => allUnits.includes(v)).length})`}
+                                    </button>
+                                    {isUnitSelectorOpen && (
+                                        <div className="absolute top-full mt-2 left-0 w-64 bg-white border border-gray-200 shadow-xl rounded-xl z-50 max-h-60 overflow-y-auto p-2">
+                                            <button onClick={() => toggleSector('todos')} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between ${visibility.includes('todos') ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50'}`}>
+                                                TODAS AS UNIDADES E SETORES {visibility.includes('todos') && <Check size={14} />}
+                                            </button>
+                                            <div className="h-[1px] bg-gray-100 my-1" />
+                                            {allUnits.map(u => (
+                                                <button key={u} onClick={() => toggleSector(u)} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between ${visibility.includes(u) ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50'}`}>
+                                                    {u} {visibility.includes(u) && <Check size={14} />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="relative">
                                     <button onClick={() => setIsSectorSelectorOpen(!isSectorSelectorOpen)} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-600">
                                         <Shield size={14} className="text-primary-500" />
-                                        {visibility.includes('todos') ? 'PARA: TODOS' : `SETORES (${visibility.length})`}
+                                        {visibility.includes('todos') ? 'SETORES (TODOS)' : `SETORES (${visibility.filter(v => allSectors.includes(v)).length})`}
                                     </button>
                                     {isSectorSelectorOpen && (
                                         <div className="absolute top-full mt-2 left-0 w-64 bg-white border border-gray-200 shadow-xl rounded-xl z-50 max-h-60 overflow-y-auto p-2">
                                             <button onClick={() => toggleSector('todos')} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between ${visibility.includes('todos') ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50'}`}>
-                                                TODOS OS SETORES {visibility.includes('todos') && <Check size={14} />}
+                                                TODAS AS UNIDADES E SETORES {visibility.includes('todos') && <Check size={14} />}
                                             </button>
                                             <div className="h-[1px] bg-gray-100 my-1" />
                                             {allSectors.map(s => (

@@ -51,7 +51,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 <div className="flex items-center justify-between px-2 mb-10 mt-2 h-8 overflow-hidden">
                     <img src="/logo.png" alt="Housih Logo" className="h-6 object-contain min-w-max lg:opacity-0 lg:group-hover:opacity-100 transition-opacity" />
                     <div className="hidden lg:flex w-full justify-center items-center lg:group-hover:hidden absolute inset-0">
-                        <img src="/logo-icon.png" alt="H" className="h-6 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                        <img src="/logo-icon.png" alt="H" className="h-6 object-contain" />
                     </div>
                     <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-gray-600">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
