@@ -33,6 +33,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         navItems.push({ to: '/boards', icon: <Settings2 size={20} />, label: 'Config. Quadros' });
     }
 
+    const [isHovered, setIsHovered] = useState(false);
+
     return (
         <>
             {/* Mobile Overlay */}
@@ -43,20 +45,21 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 />
             )}
 
-            <aside className={`
+            <aside 
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                className={`
                 fixed inset-y-0 left-0 bg-white/90 backdrop-blur-xl border-r border-gray-200/50 flex flex-col pt-8 pb-6 px-4 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 
                 transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0
-                ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:w-20 lg:hover:w-64 group'}
+                ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:w-20 lg:hover:w-64'}
             `}>
-                <div className="flex items-center justify-between lg:justify-center lg:group-hover:justify-start px-2 mb-8 mt-2 h-10">
-                    {/* Mobile Logo */}
-                    <img src="/logo.png?v=4" className="h-7 w-auto shrink-0 lg:hidden object-contain" alt="Logo Housih" />
-                    
-                    {/* Desktop Hover Full Logo */}
-                    <img src="/logo.png?v=4" className="h-7 w-auto shrink-0 hidden lg:group-hover:block object-contain" alt="Logo Housih" />
-                    
-                    {/* Desktop Minimized Icon Logo */}
-                    <img src="/logo-icon.png?v=5" className="h-10 w-auto shrink-0 hidden lg:block lg:group-hover:hidden object-contain" alt="Logo Icon" />
+                <div className="flex items-center justify-between px-2 mb-8 mt-2 h-10">
+                    {/* Render full logo if hovered on desktop or sidebar is open, else render icon logo */}
+                    {isHovered || isOpen ? (
+                        <img src="/logo.png?v=10" className="h-7 w-auto shrink-0 object-contain" alt="Housih Logo" />
+                    ) : (
+                        <img src="/logo-icon.png?v=10" className="h-9 w-auto shrink-0 object-contain mx-auto" alt="Housih Icon" />
+                    )}
 
                     {/* Close Button (Mobile Only) */}
                     <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-gray-600">
