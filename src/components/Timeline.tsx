@@ -45,13 +45,17 @@ export const Timeline = () => {
     const currentUser = (teamMembers || []).find(m => m.email?.toLowerCase() === userEmail);
     const isMaster = userEmail === 'institutohomem@gmail.com';
 
-    const allSectors = Array.from(new Set([
-        ...(CORPORATIVO_SECTORS || []), 
-        ...(UNIDADES_SECTORS || [])
-    ])).sort();
-
     const allUnits = Array.from(new Set([
         ...(DEFAULT_UNIDADES || [])
+    ])).sort();
+
+    const selectedUnitsForSectors = visibility.filter(v => allUnits.includes(v));
+    const hasCorporativo = selectedUnitsForSectors.includes('Corporativo');
+    const hasOtherUnits = selectedUnitsForSectors.some(v => v !== 'Corporativo');
+
+    const allSectors = Array.from(new Set([
+        ...(visibility.includes('todos') || hasCorporativo ? CORPORATIVO_SECTORS || [] : []), 
+        ...(visibility.includes('todos') || hasOtherUnits ? UNIDADES_SECTORS || [] : [])
     ])).sort();
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
