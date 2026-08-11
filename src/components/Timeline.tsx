@@ -116,18 +116,6 @@ export const Timeline = () => {
         setContent(prev => prev + emoji);
     };
 
-    const toggleSector = (sector: string) => {
-        if (sector === 'todos') {
-            setVisibility(['todos']);
-        } else {
-            const current = visibility.filter(v => v !== 'todos');
-            const next = current.includes(sector) 
-                ? current.filter(v => v !== sector) 
-                : [...current, sector];
-            setVisibility(next.length === 0 ? ['todos'] : next);
-        }
-    };
-
     const filteredPosts = (timelinePosts || []).filter(post => {
         if (!post) return false;
         if (filterCategory !== 'Todas' && post.category !== filterCategory) return false;
@@ -249,41 +237,140 @@ export const Timeline = () => {
                                 <select value={category} onChange={(e) => setCategory(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-bold text-gray-600 focus:ring-0">
                                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
-                                <div className="relative">
-                                    <button onClick={() => setIsUnitSelectorOpen(!isUnitSelectorOpen)} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-600">
+                                
+                                {/* Overlay to close dropdowns when clicking outside */}
+                                {(isUnitSelectorOpen || isSectorSelectorOpen) && (
+                                    <div 
+                                        className="fixed inset-0 z-40 bg-transparent" 
+                                        onClick={() => {
+                                            setIsUnitSelectorOpen(false);
+                                            setIsSectorSelectorOpen(false);
+                                        }}
+                                    />
+                                )}
+
+                                {/* Selector de Unidades */}
+                                <div className="relative z-50">
+                                    <button 
+                                        type="button"
+                                        onClick={() => {
+                                            setIsUnitSelectorOpen(!isUnitSelectorOpen);
+                                            setIsSectorSelectorOpen(false);
+                                        }} 
+                                        className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+                                    >
                                         <Building2 size={14} className="text-blue-500" />
-                                        {visibility.includes('todos') ? 'UNIDADES (TODAS)' : `UNIDADES (${visibility.filter(v => allUnits.includes(v)).length})`}
+                                        {visibility.includes('todos') 
+                                            ? 'UNIDADES: TODAS' 
+                                            : visibility.filter(v => allUnits.includes(v)).length > 0 
+                                                ? `UNIDADE: ${visibility.filter(v => allUnits.includes(v)).join(', ')}`
+                                                : 'UNIDADES (TODAS)'
+                                        }
                                     </button>
+
                                     {isUnitSelectorOpen && (
-                                        <div className="absolute top-full mt-2 left-0 w-64 bg-white border border-gray-200 shadow-xl rounded-xl z-50 max-h-60 overflow-y-auto p-2">
-                                            <button onClick={() => toggleSector('todos')} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between ${visibility.includes('todos') ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50'}`}>
+                                        <div className="absolute top-full mt-2 left-0 w-64 bg-white border border-gray-200 shadow-2xl rounded-xl z-50 max-h-60 overflow-y-auto p-2">
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    setVisibility(['todos']);
+                                                    setIsUnitSelectorOpen(false);
+                                                }} 
+                                                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between ${visibility.includes('todos') ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50'}`}
+                                            >
                                                 TODAS AS UNIDADES E SETORES {visibility.includes('todos') && <Check size={14} />}
                                             </button>
                                             <div className="h-[1px] bg-gray-100 my-1" />
-                                            {allUnits.map(u => (
-                                                <button key={u} onClick={() => toggleSector(u)} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between ${visibility.includes(u) ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50'}`}>
-                                                    {u} {visibility.includes(u) && <Check size={14} />}
-                                                </button>
-                                            ))}
+                                            {allUnits.map(u => {
+                                                const isSelected = visibility.includes(u);
+                                                return (
+                                                    <button 
+                                                        key={u} 
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const currentNoTodos = visibility.filter(v => v !== 'todos');
+                                                            const next = currentNoTodos.includes(u)
+                                                                ? currentNoTodos.filter(v => v !== u)
+                                                                : [...currentNoTodos, u];
+                                                            setVisibility(next.length === 0 ? ['todos'] : next);
+                                                        }} 
+                                                        className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between ${isSelected ? 'bg-primary-50 text-primary-700 font-bold' : 'hover:bg-gray-50 text-gray-700'}`}
+                                                    >
+                                                        {u} {isSelected && <Check size={14} />}
+                                                    </button>
+                                                );
+                                            })}
+                                            <div className="h-[1px] bg-gray-100 my-1" />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setIsUnitSelectorOpen(false)} 
+                                                className="w-full py-1.5 bg-gray-800 text-white text-[10px] font-bold rounded-lg hover:bg-gray-900 mt-1"
+                                            >
+                                                CONCLUÍDO
+                                            </button>
                                         </div>
                                     )}
                                 </div>
-                                <div className="relative">
-                                    <button onClick={() => setIsSectorSelectorOpen(!isSectorSelectorOpen)} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-600">
+
+                                {/* Selector de Setores */}
+                                <div className="relative z-50">
+                                    <button 
+                                        type="button"
+                                        onClick={() => {
+                                            setIsSectorSelectorOpen(!isSectorSelectorOpen);
+                                            setIsUnitSelectorOpen(false);
+                                        }} 
+                                        className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+                                    >
                                         <Shield size={14} className="text-primary-500" />
-                                        {visibility.includes('todos') ? 'SETORES (TODOS)' : `SETORES (${visibility.filter(v => allSectors.includes(v)).length})`}
+                                        {visibility.includes('todos') 
+                                            ? 'SETORES: TODOS' 
+                                            : visibility.filter(v => allSectors.includes(v)).length > 0 
+                                                ? `SETOR: ${visibility.filter(v => allSectors.includes(v)).join(', ')}`
+                                                : 'SETORES (TODOS)'
+                                        }
                                     </button>
+
                                     {isSectorSelectorOpen && (
-                                        <div className="absolute top-full mt-2 left-0 w-64 bg-white border border-gray-200 shadow-xl rounded-xl z-50 max-h-60 overflow-y-auto p-2">
-                                            <button onClick={() => toggleSector('todos')} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between ${visibility.includes('todos') ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50'}`}>
-                                                TODAS AS UNIDADES E SETORES {visibility.includes('todos') && <Check size={14} />}
+                                        <div className="absolute top-full mt-2 left-0 w-64 bg-white border border-gray-200 shadow-2xl rounded-xl z-50 max-h-60 overflow-y-auto p-2">
+                                            <button 
+                                                type="button"
+                                                onClick={() => {
+                                                    setVisibility(['todos']);
+                                                    setIsSectorSelectorOpen(false);
+                                                }} 
+                                                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between ${visibility.includes('todos') ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50'}`}
+                                            >
+                                                TODOS OS SETORES {visibility.includes('todos') && <Check size={14} />}
                                             </button>
                                             <div className="h-[1px] bg-gray-100 my-1" />
-                                            {allSectors.map(s => (
-                                                <button key={s} onClick={() => toggleSector(s)} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between ${visibility.includes(s) ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50'}`}>
-                                                    {s} {visibility.includes(s) && <Check size={14} />}
-                                                </button>
-                                            ))}
+                                            {allSectors.map(s => {
+                                                const isSelected = visibility.includes(s);
+                                                return (
+                                                    <button 
+                                                        key={s} 
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const currentNoTodos = visibility.filter(v => v !== 'todos');
+                                                            const next = currentNoTodos.includes(s)
+                                                                ? currentNoTodos.filter(v => v !== s)
+                                                                : [...currentNoTodos, s];
+                                                            setVisibility(next.length === 0 ? ['todos'] : next);
+                                                        }} 
+                                                        className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between ${isSelected ? 'bg-primary-50 text-primary-700 font-bold' : 'hover:bg-gray-50 text-gray-700'}`}
+                                                    >
+                                                        {s} {isSelected && <Check size={14} />}
+                                                    </button>
+                                                );
+                                            })}
+                                            <div className="h-[1px] bg-gray-100 my-1" />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setIsSectorSelectorOpen(false)} 
+                                                className="w-full py-1.5 bg-gray-800 text-white text-[10px] font-bold rounded-lg hover:bg-gray-900 mt-1"
+                                            >
+                                                CONCLUÍDO
+                                            </button>
                                         </div>
                                     )}
                                 </div>
