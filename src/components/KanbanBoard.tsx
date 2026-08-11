@@ -70,19 +70,33 @@ export const KanbanBoard = () => {
     const subBoardsOf = (parentId: string) => boards.filter(b => b.parent_board_id === parentId);
 
     const userUnits = useMemo(() => {
+        let myUnits: string[] = [];
+        if (currentUser?.units) {
+            if (Array.isArray(currentUser.units)) {
+                myUnits = currentUser.units;
+            } else if (typeof currentUser.units === 'string') {
+                try {
+                    const parsed = JSON.parse(currentUser.units);
+                    myUnits = Array.isArray(parsed) ? parsed : [currentUser.units];
+                } catch {
+                    myUnits = [currentUser.units];
+                }
+            }
+        }
+
         const isMaster = 
             currentUser?.sectors?.includes('Master') || 
             currentUser?.sectors?.includes('Diretoria') || 
             session?.user?.email?.toLowerCase() === 'institutohomem@gmail.com';
             
-        const isCorporativo = currentUser?.units?.includes('Corporativo');
+        const isCorporativo = myUnits.includes('Corporativo');
 
         if (isMaster || isCorporativo || !currentUser) {
             return UNIDADES;
         }
 
-        const myUnits = currentUser.units || [];
-        return UNIDADES.filter(u => myUnits.includes(u));
+        const filtered = UNIDADES.filter(u => myUnits.includes(u));
+        return filtered.length > 0 ? filtered : myUnits;
     }, [UNIDADES, currentUser, session]);
 
     // Determine the active sub-boards for the selected parent

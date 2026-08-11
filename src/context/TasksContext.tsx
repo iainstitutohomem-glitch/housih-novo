@@ -666,10 +666,38 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             .select('id, name, email, avatar_url, birth_date, units, sectors, role');
             
         if (!error && data) {
-            setTeamMembers(data.map((m: any) => ({
-                ...m,
-                avatar_url: m.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random`
-            })));
+            setTeamMembers(data.map((m: any) => {
+                let units: string[] = [];
+                if (Array.isArray(m.units)) {
+                    units = m.units;
+                } else if (typeof m.units === 'string') {
+                    try {
+                        const parsed = JSON.parse(m.units);
+                        units = Array.isArray(parsed) ? parsed : [m.units];
+                    } catch {
+                        units = [m.units];
+                    }
+                }
+
+                let sectors: string[] = [];
+                if (Array.isArray(m.sectors)) {
+                    sectors = m.sectors;
+                } else if (typeof m.sectors === 'string') {
+                    try {
+                        const parsed = JSON.parse(m.sectors);
+                        sectors = Array.isArray(parsed) ? parsed : [m.sectors];
+                    } catch {
+                        sectors = [m.sectors];
+                    }
+                }
+
+                return {
+                    ...m,
+                    units,
+                    sectors,
+                    avatar_url: m.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random`
+                };
+            }));
         }
     };
 
