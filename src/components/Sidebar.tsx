@@ -48,22 +48,15 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0
                 ${isOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:w-20 lg:hover:w-64 group'}
             `}>
-                <div className="flex items-center justify-between lg:justify-center lg:group-hover:justify-start px-2 mb-10 mt-2 h-8">
+                <div className="flex items-center justify-between lg:justify-center lg:group-hover:justify-start px-2 mb-8 mt-2 h-10">
                     {/* Mobile Logo */}
-                    <img src="/logo.png?v=3" className="h-6 w-auto shrink-0 lg:hidden" alt="Logo Housih" />
+                    <img src="/logo.png?v=4" className="h-7 w-auto shrink-0 lg:hidden object-contain" alt="Logo Housih" />
                     
                     {/* Desktop Hover Full Logo */}
-                    <img src="/logo.png?v=3" className="h-6 w-auto shrink-0 hidden lg:group-hover:block" alt="Logo Housih" />
+                    <img src="/logo.png?v=4" className="h-7 w-auto shrink-0 hidden lg:group-hover:block object-contain" alt="Logo Housih" />
                     
                     {/* Desktop Minimized Icon Logo */}
-                    <img src="/logo-icon.png?v=4" className="h-6 w-auto shrink-0 hidden lg:block lg:group-hover:hidden" alt="Logo Icon" onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        const fallback = document.getElementById('fallback-logo');
-                        if (fallback) fallback.style.display = '';
-                    }} />
-                    <div className="hidden lg:block lg:group-hover:hidden" style={{ display: 'none' }} id="fallback-logo">
-                        <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg mx-auto">ih.</div>
-                    </div>
+                    <img src="/logo-icon.png?v=5" className="h-10 w-auto shrink-0 hidden lg:block lg:group-hover:hidden object-contain" alt="Logo Icon" />
 
                     {/* Close Button (Mobile Only) */}
                     <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-gray-600">
