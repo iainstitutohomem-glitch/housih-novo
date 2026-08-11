@@ -53,10 +53,17 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     <img src="/logo.png?v=2" className="h-6 lg:hidden" alt="Logo Housih" />
                     
                     {/* Desktop Hover Full Logo */}
-                    <img src="/logo.png?v=2" className="h-6 hidden lg:group-hover:block" alt="Logo Housih" />
+                    <img src="/logo.png?v=3" className="h-6 hidden lg:group-hover:block" alt="Logo Housih" />
                     
                     {/* Desktop Minimized Icon Logo */}
-                    <img src="/logo-icon.png?v=2" className="h-6 hidden lg:block lg:group-hover:hidden" alt="Logo Icon" />
+                    <img src="/logo-icon.png?v=3" className="h-6 hidden lg:block lg:group-hover:hidden" alt="Logo Icon" onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const fallback = document.getElementById('fallback-logo');
+                        if (fallback) fallback.style.display = '';
+                    }} />
+                    <div className="hidden lg:block lg:group-hover:hidden" style={{ display: 'none' }} id="fallback-logo">
+                        <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg mx-auto">ih.</div>
+                    </div>
 
                     {/* Close Button (Mobile Only) */}
                     <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-gray-600">
