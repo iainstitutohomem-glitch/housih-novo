@@ -8,7 +8,7 @@ export const TaskModal = () => {
     const { 
         isModalOpen, closeModal, editingTask, addTask, updateTask, deleteTask, 
         companies, teamMembers, session, boards, boardColumns, activeBoardId,
-        UNIDADES, SETORES, CORPORATIVO_SECTORS, UNIDADES_SECTORS
+        UNIDADES, CORPORATIVO_SECTORS, UNIDADES_SECTORS
     } = useTasks();
 
     const [title, setTitle] = useState('');
@@ -451,6 +451,18 @@ export const TaskModal = () => {
 
     if (!isModalOpen) return null;
 
+    const availableSectors = unit === 'Corporativo' ? CORPORATIVO_SECTORS : UNIDADES_SECTORS;
+
+    const availableBoards = boards.filter(b => {
+        const parent = boards.find(pb => pb.name === sector && !pb.parent_board_id);
+        if (!parent) return !b.parent_board_id;
+        const subs = boards.filter(sb => sb.parent_board_id === parent.id);
+        if (subs.length > 0) return b.parent_board_id === parent.id;
+        return b.id === parent.id;
+    });
+
+    const availableMembers = teamMembers.filter(m => m.sectors?.includes(sector) || m.role === 'master');
+
     const availableColumns = boardColumns.filter(c => c.board_id === boardId);
 
     return (
@@ -531,7 +543,7 @@ export const TaskModal = () => {
                                                 value={sector}
                                                 onChange={(e) => setSector(e.target.value)}
                                                 className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
-                                                {SETORES.map(s => <option key={s} value={s}>{s}</option>)}
+                                                {availableSectors.map(s => <option key={s} value={s}>{s}</option>)}
                                             </select>
                                         </div>
                                     </div>
@@ -543,7 +555,7 @@ export const TaskModal = () => {
                                                 onChange={(e) => handleBoardChange(e.target.value)}
                                                 className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
                                                 <option value="" disabled>Selecionar...</option>
-                                                {boards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                                {availableBoards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                                             </select>
                                         </div>
                                         <div>
@@ -560,19 +572,7 @@ export const TaskModal = () => {
                                     <div>
                                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responsáveis</label>
                                         <div className="space-y-2 max-h-40 overflow-y-auto p-3 bg-gray-50 border border-gray-200 rounded-xl pretty-scrollbar-y">
-                                            {teamMembers && teamMembers.filter(m => {
-                                                if (!m.sectors) return false;
-                                                if (Array.isArray(m.sectors)) return m.sectors.includes(sector);
-                                                if (typeof m.sectors === 'string') {
-                                                    try {
-                                                        const parsed = JSON.parse(m.sectors);
-                                                        return Array.isArray(parsed) && parsed.includes(sector);
-                                                    } catch {
-                                                        return (m.sectors as string).includes(sector);
-                                                    }
-                                                }
-                                                return false;
-                                            }).map(member => (
+                                            {availableMembers.map(member => (
                                                 <label key={member.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer group">
                                                     <input 
                                                         type="checkbox" 
@@ -596,19 +596,7 @@ export const TaskModal = () => {
                                                     <span className="text-sm text-gray-700 group-hover:text-primary-700 font-medium">{member.name}</span>
                                                 </label>
                                             ))}
-                                            {(!teamMembers || teamMembers.filter(m => {
-                                                if (!m.sectors) return false;
-                                                if (Array.isArray(m.sectors)) return m.sectors.includes(sector);
-                                                if (typeof m.sectors === 'string') {
-                                                    try {
-                                                        const parsed = JSON.parse(m.sectors);
-                                                        return Array.isArray(parsed) && parsed.includes(sector);
-                                                    } catch {
-                                                        return (m.sectors as string).includes(sector);
-                                                    }
-                                                }
-                                                return false;
-                                            }).length === 0) && (
+                                            {availableMembers.length === 0 && (
                                                 <p className="text-xs text-gray-400 italic text-center py-2">Nenhum membro da equipe encontrado neste setor.</p>
                                             )}
                                         </div>
