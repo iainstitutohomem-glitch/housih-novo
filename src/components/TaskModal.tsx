@@ -19,7 +19,7 @@ export const TaskModal = () => {
     const [columnId, setColumnId] = useState<string | null>(null);
     const [dueDate, setDueDate] = useState('');
     const [priority, setPriority] = useState('Média');
-    const [unit, setUnit] = useState('Geral');
+    const [unit, setUnit] = useState('Corporativo');
     const [sector, setSector] = useState('Comercial');
     const [observations, setObservations] = useState('');
     const [observationsHistory, setObservationsHistory] = useState('');
@@ -238,7 +238,7 @@ export const TaskModal = () => {
             setStatus('Não Iniciado');
             setDueDate('');
             setPriority('Média');
-            setUnit('Geral');
+            setUnit('Corporativo');
             setSector('Comercial');
             setObservations('');
             setObservationsHistory('');
@@ -269,7 +269,7 @@ export const TaskModal = () => {
                     setDueDate('');
                 }
                 setPriority(editingTask.priority || 'Média');
-                setUnit(editingTask.unit || 'Geral');
+                setUnit(editingTask.unit || 'Corporativo');
                 setSector(editingTask.sector || 'Comercial');
                 setObservations(''); // Limpa o campo de digitação para novos comentários
                 setObservationsHistory(editingTask.observations || '');
@@ -282,7 +282,7 @@ export const TaskModal = () => {
                 setBoardId(defBoard);
                 const defCol = boardColumns.find(c => c.board_id === defBoard)?.id || null;
                 setColumnId(defCol);
-                setUnit('Geral');
+                setUnit('Corporativo');
                 setSector('Comercial');
                 setObservations('');
                 setObservationsHistory('');
