@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useTasks } from '../context/TasksContext';
 import { NewGroupModal } from './Chat/NewGroupModal';
+import { LOGO_ICON_BASE64 } from './logoIconBase64';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -60,7 +61,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                     {isExpanded ? (
                         <img src="/logo.png?v=20" className="h-7 w-auto shrink-0 object-contain" alt="Housih Logo" />
                     ) : (
-                        <img src="/logo-icon.png?v=20" className="h-8 w-auto shrink-0 object-contain mx-auto" alt="Housih Icon" />
+                        <img src={LOGO_ICON_BASE64} className="h-8 w-8 shrink-0 object-contain mx-auto" alt="Housih Icon" />
                     )}
 
                     {/* Close Button (Mobile Only) */}
