@@ -48,14 +48,25 @@ export const KanbanBoard = () => {
     const parentBoards = useMemo(() => {
         let pBoards = boards.filter(b => !b.parent_board_id);
         const userUnits = currentUser?.units || [];
-        const isCorporativo = userUnits.includes('Corporativo');
+        const isUserCorporativo = userUnits.includes('Corporativo');
         
-        if (!isCorporativo && currentUser) {
-            const unitAllowedBoards = ['Recepção', 'Administrativo', 'Enfermagem', 'Comercial', 'Médico'];
-            pBoards = pBoards.filter(b => unitAllowedBoards.includes(b.name));
+        const unitBoards = ['Recepção', 'Administrativo', 'Enfermagem', 'Comercial', 'Médico'];
+        const corporativoBoards = ['Arquitetura e Obras', 'Atendimento Comercial', 'Cobrança', 'Comercial', 'Comunicação & Marketing', 'Financeiro', 'Jurídico', 'Operações & Projetos Internos', 'RH', 'TI', 'Controladoria'];
+
+        if (!isUserCorporativo && currentUser) {
+            // Usuário de unidade vê apenas quadros da unidade
+            pBoards = pBoards.filter(b => unitBoards.includes(b.name));
+        } else if (isUserCorporativo) {
+            if (activeUnit && activeUnit !== 'Todas' && activeUnit !== 'Corporativo') {
+                // Corporativo filtrando uma unidade específica
+                pBoards = pBoards.filter(b => unitBoards.includes(b.name));
+            } else {
+                // Corporativo vendo 'Todas' ou 'Corporativo'
+                pBoards = pBoards.filter(b => corporativoBoards.includes(b.name));
+            }
         }
         return pBoards;
-    }, [boards, currentUser]);
+    }, [boards, currentUser, activeUnit]);
     const subBoardsOf = (parentId: string) => boards.filter(b => b.parent_board_id === parentId);
 
     const userUnits = useMemo(() => ['Todas', ...UNIDADES], [UNIDADES]);
