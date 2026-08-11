@@ -47,7 +47,7 @@ export const ChatDrawer = () => {
                         </div>
                     ) : (
                         <div className="space-y-1">
-                            {conversations.map(conv => {
+                            {conversations.filter(c => c.id !== '00000000-0000-0000-0000-000000000000' && c.name !== 'Geral (Sistema)').map(conv => {
                                 const isGroup = conv.type === 'group';
                                 const otherEmail = !isGroup ? conv.participants.find((p: string) => p.toLowerCase() !== session?.user?.email?.toLowerCase()) : null;
                                 const otherMember = otherEmail ? teamMembers.find(m => m.email?.toLowerCase() === otherEmail.toLowerCase()) : null;

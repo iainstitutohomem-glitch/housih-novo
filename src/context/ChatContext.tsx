@@ -125,15 +125,17 @@ export const ChatProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 if (cError) console.error("Error fetching conversations:", cError);
 
                 if (convs) {
-                    const mapped = convs.map(c => {
-                        const myParticipantInfo = c.chat_participants.find((p: any) => p.user_email?.toLowerCase() === userEmail.toLowerCase());
-                        const unreadCount = myParticipantInfo?.unread_count || 0;
-                        return {
-                            ...c,
-                            participants: c.chat_participants.map((p: any) => p.user_email as string),
-                            unread_count: unreadCount
-                        };
-                    });
+                    const mapped = convs
+                        .filter(c => c.id !== '00000000-0000-0000-0000-000000000000' && c.name !== 'Geral (Sistema)')
+                        .map(c => {
+                            const myParticipantInfo = c.chat_participants.find((p: any) => p.user_email?.toLowerCase() === userEmail.toLowerCase());
+                            const unreadCount = myParticipantInfo?.unread_count || 0;
+                            return {
+                                ...c,
+                                participants: c.chat_participants.map((p: any) => p.user_email as string),
+                                unread_count: unreadCount
+                            };
+                        });
                     setConversations(mapped.sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()));
                 }
             }
