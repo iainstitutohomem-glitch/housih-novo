@@ -69,7 +69,21 @@ export const KanbanBoard = () => {
     }, [boards, currentUser, activeUnit]);
     const subBoardsOf = (parentId: string) => boards.filter(b => b.parent_board_id === parentId);
 
-    const userUnits = useMemo(() => UNIDADES, [UNIDADES]);
+    const userUnits = useMemo(() => {
+        const isMaster = 
+            currentUser?.sectors?.includes('Master') || 
+            currentUser?.sectors?.includes('Diretoria') || 
+            session?.user?.email?.toLowerCase() === 'institutohomem@gmail.com';
+            
+        const isCorporativo = currentUser?.units?.includes('Corporativo');
+
+        if (isMaster || isCorporativo || !currentUser) {
+            return UNIDADES;
+        }
+
+        const myUnits = currentUser.units || [];
+        return UNIDADES.filter(u => myUnits.includes(u));
+    }, [UNIDADES, currentUser, session]);
 
     // Determine the active sub-boards for the selected parent
     const activeSubBoards = useMemo(() => {

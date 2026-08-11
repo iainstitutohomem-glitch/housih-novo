@@ -213,6 +213,25 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         busca: ''
     });
 
+    useEffect(() => {
+        if (!session?.user?.email || teamMembers.length === 0) return;
+        const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session.user?.email?.toLowerCase());
+        if (!currentUser) return;
+
+        const isMaster = 
+            currentUser.sectors?.includes('Master') || 
+            currentUser.sectors?.includes('Diretoria') || 
+            session.user?.email?.toLowerCase() === 'institutohomem@gmail.com';
+            
+        const isCorporativo = currentUser.units?.includes('Corporativo');
+
+        if (!isMaster && !isCorporativo && currentUser.units && currentUser.units.length > 0) {
+            if (!currentUser.units.includes(activeUnit)) {
+                setActiveUnit(currentUser.units[0]);
+            }
+        }
+    }, [session, teamMembers]);
+
     const filteredTasks = useMemo(() => {
         const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
         const isMaster = 
