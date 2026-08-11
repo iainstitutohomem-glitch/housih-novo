@@ -8,7 +8,7 @@ export const TaskModal = () => {
     const { 
         isModalOpen, closeModal, editingTask, addTask, updateTask, deleteTask, 
         companies, teamMembers, session, boards, boardColumns, activeBoardId,
-        UNIDADES, SETORES
+        UNIDADES, SETORES, CORPORATIVO_SECTORS, UNIDADES_SECTORS
     } = useTasks();
 
     const [title, setTitle] = useState('');
@@ -288,7 +288,39 @@ export const TaskModal = () => {
                 setObservationsHistory('');
             }
         }
-    }, [editingTask?.id, editingTask?.observations, isModalOpen, boards, boardColumns, activeBoardId]);
+    }, [editingTask, isModalOpen, boards, activeBoardId]);
+
+    // Efeito para auto-ajustar o Setor quando a Unidade muda
+    useEffect(() => {
+        if (!isModalOpen) return;
+        const availableSectors = unit === 'Corporativo' ? CORPORATIVO_SECTORS : UNIDADES_SECTORS;
+        if (!availableSectors.includes(sector)) {
+            setSector(availableSectors[0]);
+        }
+    }, [unit, isModalOpen, CORPORATIVO_SECTORS, UNIDADES_SECTORS, sector]);
+
+    // Efeito para auto-ajustar o Quadro quando o Setor muda
+    useEffect(() => {
+        if (!isModalOpen) return;
+        const parent = boards.find(pb => pb.name === sector && !pb.parent_board_id);
+        let availableBoards = [];
+        if (!parent) {
+            availableBoards = boards.filter(b => !b.parent_board_id);
+        } else {
+            const subs = boards.filter(sb => sb.parent_board_id === parent.id);
+            if (subs.length > 0) availableBoards = subs;
+            else availableBoards = [parent];
+        }
+
+        if (availableBoards.length > 0 && !availableBoards.find(b => b.id === boardId)) {
+            const newBoardId = availableBoards[0].id;
+            setBoardId(newBoardId);
+            const cols = boardColumns.filter(c => c.board_id === newBoardId);
+            if (cols.length > 0) {
+                setColumnId(cols[0].id);
+            }
+        }
+    }, [sector, boards, isModalOpen, boardColumns, boardId]);
 
     const handleSave = async () => {
         if (!title.trim() || isSubmitting) return;
