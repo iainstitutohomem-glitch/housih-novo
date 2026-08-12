@@ -7,7 +7,7 @@ import { useTasks } from '../context/TasksContext';
 export const TaskModal = () => {
     const { 
         isModalOpen, closeModal, editingTask, addTask, updateTask, deleteTask, 
-        companies, teamMembers, session, boards, boardColumns, activeBoardId,
+        companies, teamMembers, session, boards, boardColumns,
         UNIDADES, CORPORATIVO_SECTORS, UNIDADES_SECTORS
     } = useTasks();
 
@@ -227,9 +227,8 @@ export const TaskModal = () => {
         }
     }, [observations]);
 
-    // Efeito para carregar os dados da tarefa quando abrir o modal ou atualizar os dados de segundo plano
+    // Efeito para carregar e atualizar TODOS os dados da tarefa no modal
     useEffect(() => {
-        // Se o modal não estiver aberto, limpamos tudo e resetamos o rastreador
         if (!isModalOpen) {
             prevTaskIdRef.current = null;
             setTitle('');
@@ -247,47 +246,53 @@ export const TaskModal = () => {
             return;
         }
 
-        const currentId = editingTask?.id || 'new';
-        const isNewTask = currentId !== prevTaskIdRef.current;
-        prevTaskIdRef.current = currentId;
-
         if (editingTask) {
-            if (isNewTask) {
-                setTitle(editingTask.title || '');
-                setCompany(editingTask.company_id || 'Nenhuma');
-                setAssignees(editingTask.assignee || []);
-                setStatus(editingTask.status || 'Não Iniciado');
-                setBoardId(editingTask.board_id);
-                setColumnId(editingTask.column_id);
-                if (editingTask.due_date) {
-                    const d = new Date(editingTask.due_date);
-                    const y = d.getUTCFullYear();
-                    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-                    const dd = String(d.getUTCDate()).padStart(2, '0');
-                    setDueDate(`${y}-${m}-${dd}`);
-                } else {
-                    setDueDate('');
-                }
-                setPriority(editingTask.priority || 'Média');
-                setUnit(editingTask.unit || 'Corporativo');
-                setSector(editingTask.sector || 'Comercial');
-                setObservations(''); // Limpa o campo de digitação para novos comentários
+            const isNewTask = editingTask.id !== prevTaskIdRef.current;
+            prevTaskIdRef.current = editingTask.id;
+
+            setTitle(editingTask.title || '');
+            setCompany(editingTask.company_id || 'Nenhuma');
+            setAssignees(editingTask.assignee || []);
+            setStatus(editingTask.status || 'Não Iniciado');
+            if (editingTask.board_id) setBoardId(editingTask.board_id);
+            if (editingTask.column_id) setColumnId(editingTask.column_id);
+            
+            if (editingTask.due_date) {
+                const d = new Date(editingTask.due_date);
+                const y = d.getUTCFullYear();
+                const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+                const dd = String(d.getUTCDate()).padStart(2, '0');
+                setDueDate(`${y}-${m}-${dd}`);
+            } else {
+                setDueDate('');
             }
 
-            // Sempre atualizamos observações, checklist e anexos quando o carregamento completo do Supabase finalizar
-            if (editingTask.observations !== undefined) {
-                setObservationsHistory(editingTask.observations || '');
+            setPriority(editingTask.priority || 'Média');
+            setUnit(editingTask.unit || 'Corporativo');
+            setSector(editingTask.sector || 'Comercial');
+
+            if (isNewTask) {
+                setObservations(''); // Limpa o campo de digitação apenas ao trocar de tarefa
             }
-            if (editingTask.checklist !== undefined) {
-                setChecklist(editingTask.checklist || []);
-            }
-            if (editingTask.attachments !== undefined) {
-                setAttachments(editingTask.attachments || []);
-                setObservations('');
-                setObservationsHistory('');
-            }
+
+            setObservationsHistory(editingTask.observations || '');
+            setChecklist(editingTask.checklist || []);
+            setAttachments(editingTask.attachments || []);
+        } else {
+            setTitle('');
+            setCompany('Nenhuma');
+            setAssignees([]);
+            setStatus('Não Iniciado');
+            setDueDate('');
+            setPriority('Média');
+            setUnit('Corporativo');
+            setSector('Comercial');
+            setObservations('');
+            setObservationsHistory('');
+            setChecklist([]);
+            setAttachments([]);
         }
-    }, [editingTask, isModalOpen, boards, activeBoardId]);
+    }, [isModalOpen, editingTask]);
 
     // Efeito para auto-ajustar o Setor quando a Unidade muda
     useEffect(() => {
