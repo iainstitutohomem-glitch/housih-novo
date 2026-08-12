@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import TurndownService from 'turndown';
-import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus, Download, Paperclip, HelpCircle, Activity, Link } from 'lucide-react';
+import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus, Download, Paperclip, HelpCircle, Activity, Link, Maximize2 } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const TaskModal = () => {
@@ -30,6 +30,7 @@ export const TaskModal = () => {
         due_date?: string | null;
         assignees?: string[];
         sub_items?: { id: number, text: string, done: boolean }[];
+        comments?: { id: number, author: string, avatarUrl?: string | null, text: string, created_at: string }[];
     }[]>([]);
     const [editingChecklistItemId, setEditingChecklistItemId] = useState<number | null>(null);
     const [attachments, setAttachments] = useState<{ name: string, data: string }[]>([]);
@@ -693,14 +694,21 @@ export const TaskModal = () => {
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Checklist</label>
                                 <div className="space-y-4 mb-3">
                                     {checklist.map((item) => {
-                                        const now = new Date();
-                                        now.setHours(0, 0, 0, 0);
-                                        const itemDate = item.due_date ? new Date(item.due_date) : null;
-                                        if (itemDate) itemDate.setHours(0, 0, 0, 0);
-                                        
-                                        const isOverdue = itemDate && itemDate < now && !item.done;
+                                        const nowStr = new Date().toISOString().substring(0, 10);
+                                        const cleanItemDate = item.due_date ? item.due_date.split('T')[0] : null;
+                                        const isOverdue = cleanItemDate && cleanItemDate < nowStr && !item.done;
                                         const itemAssignees = item.assignees || [];
                                         
+                                        const formatChecklistDate = (dateStr?: string | null) => {
+                                            if (!dateStr) return '';
+                                            const clean = dateStr.split('T')[0];
+                                            const parts = clean.split('-');
+                                            if (parts.length === 3) {
+                                                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                                            }
+                                            return dateStr;
+                                        };
+
                                         return (
                                             <div key={item.id} className="flex flex-col gap-2">
                                                 <div className="flex items-center gap-3 group">
@@ -727,15 +735,15 @@ export const TaskModal = () => {
                                                                 <Calendar size={14} />
                                                             </button>
                                                             {activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'date' && (
-                                                                <div className="absolute bottom-full right-0 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] animate-in zoom-in-95 duration-200">
+                                                                <div className="absolute top-full mt-2 right-0 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[9999] w-48">
                                                                     <input 
-                                                                        type="date" 
-                                                                        className="text-xs border-none bg-gray-50 rounded-lg p-1.5 focus:ring-0"
-                                                                        value={item.due_date || ''}
+                                                                        type="date"
+                                                                        value={item.due_date ? item.due_date.split('T')[0] : ''}
                                                                         onChange={(e) => {
                                                                             setChecklist(checklist.map(c => c.id === item.id ? { ...c, due_date: e.target.value } : c));
                                                                             setActiveChecklistMenu(null);
                                                                         }}
+                                                                        className="w-full bg-gray-50 border border-gray-200 text-xs py-1.5 px-2 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500/50"
                                                                     />
                                                                 </div>
                                                             )}
@@ -747,19 +755,20 @@ export const TaskModal = () => {
                                                                 type="button"
                                                                 onClick={() => setActiveChecklistMenu(activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'users' ? null : { id: item.id, type: 'users' })}
                                                                 className={`p-1.5 rounded-lg hover:bg-gray-100 transition-colors ${itemAssignees.length > 0 ? 'text-primary-600 bg-primary-50' : 'text-gray-400'}`}
-                                                                title="Adicionar responsáveis"
+                                                                title="Atribuir pessoas"
                                                             >
                                                                 <UserPlus size={14} />
                                                             </button>
                                                             {activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'users' && (
-                                                                <div className="absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] animate-in zoom-in-95 duration-200">
-                                                                    <div className="max-h-40 overflow-y-auto space-y-1 pretty-scrollbar-y">
-                                                                        {teamMembers.map(member => (
+                                                                <div className="absolute top-full mt-2 right-0 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[9999] w-48 max-h-48 overflow-y-auto space-y-1 custom-scrollbar">
+                                                                    {teamMembers.map(member => {
+                                                                        const isSelected = itemAssignees.includes(member.name);
+                                                                        return (
                                                                             <label key={member.id} className="flex items-center gap-2 p-1.5 hover:bg-primary-50 rounded-lg cursor-pointer transition-colors">
                                                                                 <input 
                                                                                     type="checkbox"
-                                                                                    className="w-3 h-3 text-primary-600 rounded"
-                                                                                    checked={itemAssignees.includes(member.name)}
+                                                                                    className="w-3.5 h-3.5 text-primary-600 rounded border-gray-300"
+                                                                                    checked={isSelected}
                                                                                     onChange={(e) => {
                                                                                         const newAssignees = e.target.checked 
                                                                                             ? [...itemAssignees, member.name]
@@ -767,49 +776,50 @@ export const TaskModal = () => {
                                                                                         setChecklist(checklist.map(c => c.id === item.id ? { ...c, assignees: newAssignees } : c));
                                                                                     }}
                                                                                 />
-                                                                                <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
-                                                                                    {member.avatar_url ? (
-                                                                                        <img src={member.avatar_url} className="w-full h-full object-cover" alt="" />
-                                                                                    ) : (
-                                                                                        <div className="w-full h-full bg-primary-100 flex items-center justify-center text-[10px] font-bold text-primary-600">
-                                                                                            {member.name.charAt(0)}
-                                                                                        </div>
-                                                                                    )}
-                                                                                </div>
-                                                                                <span className="text-[11px] font-medium text-gray-700 truncate">{member.name}</span>
+                                                                                <span className="text-xs font-medium text-gray-700">{member.name}</span>
                                                                             </label>
-                                                                        ))}
-                                                                    </div>
+                                                                        );
+                                                                    })}
                                                                 </div>
                                                             )}
                                                         </div>
 
-                                                        <button
+                                                        {/* Botão Detalhes */}
+                                                        <button 
                                                             type="button"
                                                             onClick={() => setEditingChecklistItemId(item.id)}
-                                                            className="text-gray-300 hover:text-primary-500 transition-all p-1.5"
-                                                            title="Detalhes Avançados (Sub-tarefas)"
+                                                            className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                                            title="Ver detalhes"
                                                         >
-                                                            <Plus size={14} />
+                                                            <Maximize2 size={14} />
                                                         </button>
-                                                        <button
+
+                                                        {/* Botão Excluir */}
+                                                        <button 
                                                             type="button"
                                                             onClick={() => setChecklist(checklist.filter(c => c.id !== item.id))}
-                                                            className="text-gray-300 hover:text-red-500 transition-all p-1.5"
+                                                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Excluir item"
                                                         >
                                                             <X size={14} />
                                                         </button>
                                                     </div>
                                                 </div>
 
-                                                {/* Detalhes do item (data, responsáveis e sub-tarefas) */}
-                                                {(item.due_date || itemAssignees.length > 0 || (item.sub_items && item.sub_items.length > 0)) && (
+                                                {/* Detalhes do item (data, responsáveis, comentários e sub-tarefas) */}
+                                                {(item.due_date || itemAssignees.length > 0 || (item.comments && item.comments.length > 0) || (item.sub_items && item.sub_items.length > 0)) && (
                                                     <div className="flex flex-col gap-2 ml-8 mt-1">
                                                         <div className="flex items-center gap-3">
                                                             {item.due_date && (
                                                                 <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${isOverdue ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
                                                                     <Calendar size={10} />
-                                                                    {new Date(item.due_date).toLocaleDateString('pt-BR')}
+                                                                    {formatChecklistDate(item.due_date)}
+                                                                </div>
+                                                            )}
+                                                            {item.comments && item.comments.length > 0 && (
+                                                                <div className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100">
+                                                                    <MessageSquare size={10} />
+                                                                    {item.comments.length} {item.comments.length === 1 ? 'comentário' : 'comentários'}
                                                                 </div>
                                                             )}
                                                             {itemAssignees.length > 0 && (
@@ -1451,6 +1461,74 @@ export const TaskModal = () => {
                                                             const text = e.currentTarget.value.trim();
                                                             const newSub = { id: Date.now(), text, done: false };
                                                             setChecklist(checklist.map(c => c.id === item.id ? { ...c, sub_items: [...(c.sub_items || []), newSub] } : c));
+                                                            e.currentTarget.value = '';
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Comentários Exclusivos do Item do Checklist */}
+                                        <div className="pt-2 border-t border-gray-100">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                                    Comentários do Item ({item.comments?.length || 0})
+                                                </label>
+                                            </div>
+                                            
+                                            <div className="space-y-2 mb-3">
+                                                {item.comments && item.comments.length > 0 ? item.comments.map(comment => (
+                                                    <div key={comment.id} className="bg-gray-50 p-3 rounded-xl flex gap-3 items-start border border-gray-100 group/comment">
+                                                        <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-[10px]">
+                                                            {comment.avatarUrl ? (
+                                                                <img src={comment.avatarUrl} className="w-full h-full object-cover" alt="" />
+                                                            ) : (
+                                                                comment.author.charAt(0)
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-xs font-bold text-gray-800">{comment.author}</span>
+                                                                <span className="text-[10px] text-gray-400">
+                                                                    {new Date(comment.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-gray-600 mt-0.5 whitespace-pre-wrap">{comment.text}</p>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => setChecklist(checklist.map(c => c.id === item.id ? { ...c, comments: c.comments?.filter(cm => cm.id !== comment.id) } : c))}
+                                                            className="text-gray-300 hover:text-red-500 opacity-0 group-hover/comment:opacity-100 transition-all p-1"
+                                                            title="Excluir comentário"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    </div>
+                                                )) : (
+                                                    <div className="text-center py-4 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                                        <p className="text-xs text-gray-400 font-medium">Nenhum comentário exclusivo neste item</p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center gap-2 p-2 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 focus-within:border-primary-300 focus-within:bg-white transition-all">
+                                                <MessageSquare size={16} className="text-gray-400" />
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Adicionar comentário neste item..."
+                                                    className="flex-1 bg-transparent border-none text-sm focus:outline-none text-gray-600"
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                                            const text = e.currentTarget.value.trim();
+                                                            const authorName = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase())?.name || 'Membro';
+                                                            const avatarUrl = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase())?.avatar_url;
+                                                            const newComment = { 
+                                                                id: Date.now(), 
+                                                                author: authorName, 
+                                                                avatarUrl, 
+                                                                text, 
+                                                                created_at: new Date().toISOString() 
+                                                            };
+                                                            setChecklist(checklist.map(c => c.id === item.id ? { ...c, comments: [...(c.comments || []), newComment] } : c));
                                                             e.currentTarget.value = '';
                                                         }
                                                     }}
