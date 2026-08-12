@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Bell, Check, Trash2, Calendar, User, X, MessageSquare } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 import { useChat } from '../context/ChatContext';
+import { supabase } from '../lib/supabase';
 
 export const NotificationBell = () => {
     const { notifications, markNotificationAsRead, deleteNotification, clearAllNotifications, openModal, tasks, teamMembers } = useTasks();
@@ -9,7 +10,7 @@ export const NotificationBell = () => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    const handleNotificationClick = (notif: any) => {
+    const handleNotificationClick = async (notif: any) => {
         markNotificationAsRead(notif.id);
         
         if (notif.type === 'ticket') {
@@ -30,9 +31,25 @@ export const NotificationBell = () => {
             return;
         }
 
-        const task = tasks.find(t => t.id === notif.task_id);
+        // 1. Try to find task in state by ID
+        let task = tasks.find(t => t.id === notif.task_id);
+
+        // 2. If not found by ID, try to find task by title
+        if (!task && notif.task_title) {
+            task = tasks.find(t => t.title?.trim().toLowerCase() === notif.task_title?.trim().toLowerCase());
+        }
+
+        // 3. If still not found, fetch directly from Supabase
+        if (!task && notif.task_id) {
+            const { data } = await supabase.from('tasks').select('*').eq('id', notif.task_id).maybeSingle();
+            if (data) task = data;
+        }
+
         if (task) {
             openModal(task);
+            setIsOpen(false);
+        } else {
+            console.warn("Task not found for notification:", notif);
             setIsOpen(false);
         }
     };
