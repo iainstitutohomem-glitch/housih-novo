@@ -251,7 +251,13 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             if (!matchesUnit) return false;
 
             // 2. Filtragem por Quadro Ativo
-            const matchesBoard = activeBoardId === 'Todas' || task.board_id === activeBoardId;
+            const matchesBoard = 
+                activeBoardId === 'Todas' || 
+                task.board_id === activeBoardId || 
+                (activeParentBoardId && activeParentBoardId !== 'Todas' && (
+                    task.board_id === activeParentBoardId || 
+                    boards.find(b => b.id === task.board_id)?.parent_board_id === activeParentBoardId
+                ));
             if (!matchesBoard) return false;
 
             // 3. Permissões de Visualização (Risco Zero de exposição)
@@ -308,22 +314,26 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     const openModal = async (task?: Task) => {
         if (task) {
-            // OPTIMIZATION: Fetch full task details (description, checklist, etc) only when opening the modal
-            // This allows the initial Kanban load to stay light and avoid timeouts.
-            const { data, error } = await supabase.from('tasks').select('*').eq('id', task.id).single();
-            if (!error && data) {
-                // Ensure assignee is always an array
-                if (!Array.isArray(data.assignee)) {
-                    data.assignee = typeof data.assignee === 'string' ? [data.assignee] : [];
+            // Synchronously open modal immediately so UI responds instantly
+            setEditingTask(task);
+            setIsModalOpen(true);
+
+            // Asynchronously fetch full task details in background
+            try {
+                const { data, error } = await supabase.from('tasks').select('*').eq('id', task.id).single();
+                if (!error && data) {
+                    if (!Array.isArray(data.assignee)) {
+                        data.assignee = typeof data.assignee === 'string' ? [data.assignee] : [];
+                    }
+                    setEditingTask(data);
                 }
-                setEditingTask(data);
-            } else {
-                setEditingTask(task);
+            } catch (err) {
+                console.error("Background task fetch error:", err);
             }
         } else {
             setEditingTask(null);
+            setIsModalOpen(true);
         }
-        setIsModalOpen(true);
     };
 
     const closeModal = () => {

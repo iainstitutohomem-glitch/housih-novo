@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { Bell, Check, Trash2, Calendar, User, X, MessageSquare } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 import { useChat } from '../context/ChatContext';
-import { supabase } from '../lib/supabase';
 
 export const NotificationBell = () => {
     const { notifications, markNotificationAsRead, deleteNotification, clearAllNotifications, openModal, tasks, teamMembers } = useTasks();
@@ -39,17 +38,14 @@ export const NotificationBell = () => {
             task = tasks.find(t => t.title?.trim().toLowerCase() === notif.task_title?.trim().toLowerCase());
         }
 
-        // 3. If still not found, fetch directly from Supabase
-        if (!task && notif.task_id) {
-            const { data } = await supabase.from('tasks').select('*').eq('id', notif.task_id).maybeSingle();
-            if (data) task = data;
-        }
-
         if (task) {
-            openModal(task);
             setIsOpen(false);
+            openModal(task);
+        } else if (notif.task_id) {
+            setIsOpen(false);
+            // Open modal immediately with fallback task payload; openModal will fetch full details from Supabase
+            openModal({ id: notif.task_id, title: notif.task_title || 'Carregando...' } as any);
         } else {
-            console.warn("Task not found for notification:", notif);
             setIsOpen(false);
         }
     };
