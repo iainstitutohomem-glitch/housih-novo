@@ -18,14 +18,34 @@ const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 const supabase = createClient(envConfig.VITE_SUPABASE_URL, SERVICE_ROLE_KEY);
 
 async function main() {
-  const { data: board } = await supabase.from('boards').select('*').eq('id', '12d35a8b-3b34-4670-8291-61652e2998d6').single();
-  console.log('Board:', board);
+  const { data: boards } = await supabase.from('boards').select('*');
+  console.log('BOARDS:');
+  const comMktParent = boards.find(b => b.name === 'Comunicação & Marketing' && !b.parent_board_id);
+  console.log('Comunicação & Marketing parent board:', comMktParent);
 
-  const { data: column } = await supabase.from('board_columns').select('*').eq('id', '5186a5ca-633f-4da0-8dac-3807f186cbef').single();
-  console.log('Column:', column);
+  if (comMktParent) {
+    const subBoards = boards.filter(b => b.parent_board_id === comMktParent.id);
+    console.log('Subboards of Comunicação & Marketing:', subBoards);
+    
+    // Find Geral or first subboard of Comunicação & Marketing
+    const targetBoard = subBoards.find(b => b.name === 'Geral') || subBoards[0] || comMktParent;
+    console.log('Target board:', targetBoard);
 
-  const { data: allColumns } = await supabase.from('board_columns').select('*').eq('board_id', '12d35a8b-3b34-4670-8291-61652e2998d6');
-  console.log('All columns for board:', allColumns);
+    const { data: cols } = await supabase.from('board_columns').select('*').eq('board_id', targetBoard.id);
+    console.log('Target board columns:', cols);
+
+    const atrasadoCol = cols?.find(c => c.title === 'Atrasado') || cols?.[0];
+    
+    // Update task 0f9d4a60-c9b4-40ba-ab6e-4d87362f8ddb
+    const { error: upErr } = await supabase.from('tasks').update({
+      board_id: targetBoard.id,
+      column_id: atrasadoCol?.id,
+      unit: 'Corporativo',
+      sector: 'Comunicação & Marketing'
+    }).eq('id', '0f9d4a60-c9b4-40ba-ab6e-4d87362f8ddb');
+
+    console.log('Task update result error:', upErr);
+  }
 
   process.exit(0);
 }

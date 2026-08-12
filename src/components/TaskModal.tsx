@@ -461,7 +461,48 @@ export const TaskModal = () => {
         return b.id === parent.id;
     });
 
-    const availableMembers = teamMembers.filter(m => m.sectors?.includes(sector) || m.role === 'master');
+    const availableMembers = teamMembers.filter(m => {
+        let memberUnits: string[] = [];
+        if (m.units) {
+            if (Array.isArray(m.units)) {
+                memberUnits = m.units;
+            } else if (typeof m.units === 'string') {
+                try {
+                    const parsed = JSON.parse(m.units);
+                    memberUnits = Array.isArray(parsed) ? parsed : [m.units];
+                } catch {
+                    memberUnits = [m.units];
+                }
+            }
+        }
+
+        let memberSectors: string[] = [];
+        if (m.sectors) {
+            if (Array.isArray(m.sectors)) {
+                memberSectors = m.sectors;
+            } else if (typeof m.sectors === 'string') {
+                try {
+                    const parsed = JSON.parse(m.sectors);
+                    memberSectors = Array.isArray(parsed) ? parsed : [m.sectors];
+                } catch {
+                    memberSectors = [m.sectors];
+                }
+            }
+        }
+
+        const isMaster = memberSectors.includes('Master') || memberSectors.includes('Diretoria') || m.role === 'master';
+        const matchesSector = memberSectors.includes(sector) || isMaster;
+
+        if (!matchesSector) return false;
+
+        // If unit is set to a specific unit (e.g. Osasco, Cuiabá, etc.)
+        if (unit && unit !== 'Geral') {
+            const matchesUnit = memberUnits.includes(unit) || memberUnits.includes('Corporativo') || isMaster;
+            if (!matchesUnit) return false;
+        }
+
+        return true;
+    });
 
     const availableColumns = boardColumns.filter(c => c.board_id === boardId);
 
