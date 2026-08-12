@@ -4,6 +4,26 @@ import TurndownService from 'turndown';
 import { X, Calendar, Upload, MessageSquare, Plus, CheckCircle2, Circle, Trash2, UserPlus, Download, Paperclip, HelpCircle, Activity, Link, Maximize2 } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
+const autoLinkify = (text: string) => {
+    if (!text) return '';
+    const urlRegex = /(?<!\[[^\]]*\]\()(?<!href=["'])(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi;
+    return text.replace(urlRegex, (url) => {
+        let cleanUrl = url;
+        let trailing = '';
+        const matchTrailing = cleanUrl.match(/[.,;!)]+$/);
+        if (matchTrailing) {
+            trailing = matchTrailing[0];
+            cleanUrl = cleanUrl.substring(0, cleanUrl.length - trailing.length);
+        }
+
+        let href = cleanUrl;
+        if (cleanUrl.toLowerCase().startsWith('www.')) {
+            href = 'http://' + cleanUrl;
+        }
+        return `[${cleanUrl}](${href})${trailing}`;
+    });
+};
+
 export const TaskModal = () => {
     const { 
         isModalOpen, closeModal, editingTask, addTask, updateTask, deleteTask, 
@@ -1205,11 +1225,11 @@ export const TaskModal = () => {
                                                                 <div className="bg-gray-100 border border-gray-150/50 text-gray-800 text-[11px] py-1.5 px-2.5 rounded-xl rounded-tl-none inline-block max-w-full leading-relaxed shadow-sm break-words">
                                                                     <ReactMarkdown 
                                                                         components={{
-                                                                            a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-bold" />
+                                                                            a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-bold break-all" />
                                                                         }}
                                                                     >
                                                                         {(() => {
-                                                                            let text = item.content || '';
+                                                                            let text = autoLinkify(item.content || '');
                                                                             // Force single newlines to break by adding two spaces
                                                                             text = text.replace(/\n/g, '  \n');
                                                                             // Force multiple empty lines to render using zero-width space
@@ -1493,7 +1513,15 @@ export const TaskModal = () => {
                                                                     {new Date(comment.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                                                 </span>
                                                             </div>
-                                                            <p className="text-xs text-gray-600 mt-0.5 whitespace-pre-wrap">{comment.text}</p>
+                                                            <div className="text-xs text-gray-600 mt-0.5 whitespace-pre-wrap leading-relaxed break-words">
+                                                                <ReactMarkdown 
+                                                                    components={{
+                                                                        a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline font-bold break-all" />
+                                                                    }}
+                                                                >
+                                                                    {autoLinkify(comment.text || '')}
+                                                                </ReactMarkdown>
+                                                            </div>
                                                         </div>
                                                         <button 
                                                             onClick={() => setChecklist(checklist.map(c => c.id === item.id ? { ...c, comments: c.comments?.filter(cm => cm.id !== comment.id) } : c))}
