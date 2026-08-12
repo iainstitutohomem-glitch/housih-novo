@@ -227,7 +227,7 @@ export const TaskModal = () => {
         }
     }, [observations]);
 
-    // Efeito para carregar os dados da tarefa apenas quando abrir o modal ou mudar de tarefa
+    // Efeito para carregar os dados da tarefa quando abrir o modal ou atualizar os dados de segundo plano
     useEffect(() => {
         // Se o modal não estiver aberto, limpamos tudo e resetamos o rastreador
         if (!isModalOpen) {
@@ -247,12 +247,12 @@ export const TaskModal = () => {
             return;
         }
 
-        // Só carregamos os dados se for uma tarefa REALMENTE diferente (ID mudou) ou se nada foi carregado ainda
         const currentId = editingTask?.id || 'new';
-        if (currentId !== prevTaskIdRef.current) {
-            prevTaskIdRef.current = currentId;
+        const isNewTask = currentId !== prevTaskIdRef.current;
+        prevTaskIdRef.current = currentId;
 
-            if (editingTask) {
+        if (editingTask) {
+            if (isNewTask) {
                 setTitle(editingTask.title || '');
                 setCompany(editingTask.company_id || 'Nenhuma');
                 setAssignees(editingTask.assignee || []);
@@ -272,18 +272,17 @@ export const TaskModal = () => {
                 setUnit(editingTask.unit || 'Corporativo');
                 setSector(editingTask.sector || 'Comercial');
                 setObservations(''); // Limpa o campo de digitação para novos comentários
+            }
+
+            // Sempre atualizamos observações, checklist e anexos quando o carregamento completo do Supabase finalizar
+            if (editingTask.observations !== undefined) {
                 setObservationsHistory(editingTask.observations || '');
+            }
+            if (editingTask.checklist !== undefined) {
                 setChecklist(editingTask.checklist || []);
+            }
+            if (editingTask.attachments !== undefined) {
                 setAttachments(editingTask.attachments || []);
-            } else {
-                // Nova tarefa
-                setTitle('');
-                const defBoard = activeBoardId !== 'Todas' ? activeBoardId : (boards.find(b => b.is_default)?.id || boards[0]?.id || null);
-                setBoardId(defBoard);
-                const defCol = boardColumns.find(c => c.board_id === defBoard)?.id || null;
-                setColumnId(defCol);
-                setUnit('Corporativo');
-                setSector('Comercial');
                 setObservations('');
                 setObservationsHistory('');
             }
