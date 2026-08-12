@@ -241,7 +241,13 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         return tasks.filter(task => {
             // 1. Filtragem por Unidade Ativa
-            const matchesUnit = activeUnit === 'Corporativo' || task.unit === activeUnit || (!task.unit && activeUnit === 'Corporativo');
+            const matchesUnit = 
+                activeUnit === 'Corporativo' || 
+                activeUnit === 'Geral' || 
+                !task.unit || 
+                task.unit === 'Geral' || 
+                task.unit === 'Corporativo' || 
+                task.unit === activeUnit;
             if (!matchesUnit) return false;
 
             // 2. Filtragem por Quadro Ativo
@@ -257,16 +263,18 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 if (isLeader && isCorporativo) {
                     // Líder Corporativo vê TUDO
                 } else if (!isCorporativo) {
-                    // Usuários de Unidade (Membros ou Líderes) veem todas as tarefas da sua unidade
-                    if (!userUnits.includes(task.unit || '')) return false;
+                    // Usuários de Unidade (Membros ou Líderes) veem tarefas de sua unidade e tarefas gerais
+                    if (task.unit && task.unit !== 'Geral' && task.unit !== 'Corporativo' && !userUnits.includes(task.unit)) return false;
                 } else {
-                    // Membros do Corporativo veem apenas seu setor ou tarefas atribuídas
+                    // Membros do Corporativo veem tarefas do seu setor ou tarefas onde foram atribuídos
                     const userSectors = currentUser?.sectors || [];
                     const taskBoard = boards.find(b => b.id === task.board_id);
                     const taskParentBoard = boards.find(b => b.id === taskBoard?.parent_board_id);
                     
-                    const isUserInTaskSector = userSectors.includes(taskBoard?.name || '') || 
-                                               userSectors.includes(taskParentBoard?.name || '');
+                    const isUserInTaskSector = 
+                        userSectors.includes(taskBoard?.name || '') || 
+                        userSectors.includes(taskParentBoard?.name || '') ||
+                        (task.sector && userSectors.includes(task.sector));
                     
                     const isAssigned = Array.isArray(task.assignee) && (
                         task.assignee.includes(currentUser?.name || '') || 
