@@ -366,7 +366,7 @@ export const KanbanBoard = () => {
                 <DragDropContext onDragEnd={onDragEnd}>
                     {currentColumns.map((col) => {
                         const tasksInCol = filteredTasks
-                            .filter((t) => t.column_id === col.id)
+                            .filter((t) => t.column_id === col.id || (t.board_id === col.board_id && t.status === col.title))
                             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
                         return (

@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 
-const envPath = path.resolve('.env.local');
+const envPath = 'C:/Users/cleve/.gemini/antigravity/scratch/crm-system/.env.local';
 const envContent = fs.readFileSync(envPath, 'utf8');
 const envConfig = {};
 envContent.split(/\r?\n/).forEach(line => {
@@ -18,10 +18,15 @@ const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 const supabase = createClient(envConfig.VITE_SUPABASE_URL, SERVICE_ROLE_KEY);
 
 async function main() {
-  const { error: d1 } = await supabase.from('chat_participants').delete().eq('conversation_id', '00000000-0000-0000-0000-000000000000');
-  console.log('Deleted participants for Geral (Sistema):', d1);
+  const { data: board } = await supabase.from('boards').select('*').eq('id', '12d35a8b-3b34-4670-8291-61652e2998d6').single();
+  console.log('Board:', board);
 
-  const { error: d2 } = await supabase.from('chat_conversations').delete().eq('id', '00000000-0000-0000-0000-000000000000');
-  console.log('Deleted Geral (Sistema) conversation:', d2);
+  const { data: column } = await supabase.from('board_columns').select('*').eq('id', '5186a5ca-633f-4da0-8dac-3807f186cbef').single();
+  console.log('Column:', column);
+
+  const { data: allColumns } = await supabase.from('board_columns').select('*').eq('board_id', '12d35a8b-3b34-4670-8291-61652e2998d6');
+  console.log('All columns for board:', allColumns);
+
+  process.exit(0);
 }
 main();
