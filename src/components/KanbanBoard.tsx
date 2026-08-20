@@ -18,6 +18,38 @@ const SECTOR_DESCRIPTIONS: Record<string, string> = {
     'RH': 'Folha de pagamento, benefícios, férias, recrutamento, admissões e clima.'
 };
 
+const normalizeText = (str?: string) => (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+const matchesColumnCategory = (taskStatus?: string, colTitle?: string) => {
+    if (!taskStatus || !colTitle) return false;
+    const t = normalizeText(taskStatus);
+    const c = normalizeText(colTitle);
+
+    if (t === c) return true;
+
+    // Em Andamento / Produção / Execução / Em Progresso
+    const isEmAndamento = (s: string) => s.includes('andamento') || s.includes('producao') || s.includes('executar') || s.includes('aprovacao') || s.includes('programar') || s.includes('progresso');
+    if (isEmAndamento(t) && isEmAndamento(c)) return true;
+
+    // Não Iniciado / Projetos / A Fazer
+    const isNaoIniciado = (s: string) => s.includes('nao iniciado') || s.includes('projetos') || s.includes('a fazer') || s.includes('to do');
+    if (isNaoIniciado(t) && isNaoIniciado(c)) return true;
+
+    // Concluído / Finalizado
+    const isConcluido = (s: string) => s.includes('concluid') || s.includes('finalizad');
+    if (isConcluido(t) && isConcluido(c)) return true;
+
+    // Cancelado
+    const isCancelado = (s: string) => s.includes('cancelad');
+    if (isCancelado(t) && isCancelado(c)) return true;
+
+    // Atrasado / Em atraso
+    const isAtrasado = (s: string) => s.includes('atras');
+    if (isAtrasado(t) && isAtrasado(c)) return true;
+
+    return false;
+};
+
 export const KanbanBoard = () => {
     const [hoveredSector, setHoveredSector] = useState<{name: string, rect: DOMRect} | null>(null);
     const { 
@@ -210,13 +242,7 @@ export const KanbanBoard = () => {
         const tasksInDest = filteredTasks
             .filter((t) => {
                 if (t.column_id === destColId) return true;
-                if (t.status && destColumn.title && t.status.trim().toLowerCase() === destColumn.title.trim().toLowerCase()) {
-                    if (t.board_id === destColumn.board_id) return true;
-                    const tBoard = boards.find(b => b.id === t.board_id);
-                    const colBoard = boards.find(b => b.id === destColumn.board_id);
-                    if (tBoard?.parent_board_id === destColumn.board_id || colBoard?.parent_board_id === t.board_id) return true;
-                    if (tBoard?.parent_board_id && tBoard.parent_board_id === colBoard?.parent_board_id) return true;
-                }
+                if (matchesColumnCategory(t.status, destColumn.title)) return true;
                 return false;
             })
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
@@ -379,13 +405,7 @@ export const KanbanBoard = () => {
                         const tasksInCol = filteredTasks
                             .filter((t) => {
                                 if (t.column_id === col.id) return true;
-                                if (t.status && col.title && t.status.trim().toLowerCase() === col.title.trim().toLowerCase()) {
-                                    if (t.board_id === col.board_id) return true;
-                                    const tBoard = boards.find(b => b.id === t.board_id);
-                                    const colBoard = boards.find(b => b.id === col.board_id);
-                                    if (tBoard?.parent_board_id === col.board_id || colBoard?.parent_board_id === t.board_id) return true;
-                                    if (tBoard?.parent_board_id && tBoard.parent_board_id === colBoard?.parent_board_id) return true;
-                                }
+                                if (matchesColumnCategory(t.status, col.title)) return true;
                                 return false;
                             })
                             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));

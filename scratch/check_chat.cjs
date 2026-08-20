@@ -18,10 +18,40 @@ const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 const supabase = createClient(envConfig.VITE_SUPABASE_URL, SERVICE_ROLE_KEY);
 
 async function main() {
-  // Test modifying update_overdue_tasks via raw SQL query if possible or inspect
-  console.log("Checking update_overdue_tasks...");
-  const { data: tasks } = await supabase.from('tasks').select('id, title, status, due_date, column_id, board_id').eq('status', 'Em Andamento');
-  console.log("Tasks in Em Andamento:", tasks);
+  // 1. Create a dummy task with past due date and status 'Em Andamento'
+  const { data: board } = await supabase.from('boards').select('id').limit(1).single();
+  const { data: cols } = await supabase.from('board_columns').select('id, title').eq('board_id', board.id);
+  const emAndamentoCol = cols.find(c => c.title === 'Em Andamento') || cols[0];
+
+  console.log("Inserting test task with status 'Em Andamento' and past due_date...");
+  const { data: newTask, error: insertErr } = await supabase.from('tasks').insert([{
+    title: 'TEST_OVERDUE_TASK_EM_ANDAMENTO',
+    status: 'Em Andamento',
+    board_id: board.id,
+    column_id: emAndamentoCol.id,
+    due_date: '2026-08-01T12:00:00.000Z',
+    unit: 'Corporativo',
+    sector: 'Comercial'
+  }]).select().single();
+
+  if (insertErr) {
+    console.error("Insert error:", insertErr);
+    process.exit(1);
+  }
+
+  console.log("Created task:", newTask.id, "Status:", newTask.status, "Column:", newTask.column_id);
+
+  // 2. Call update_overdue_tasks RPC
+  console.log("Executing update_overdue_tasks RPC...");
+  await supabase.rpc('update_overdue_tasks');
+
+  // 3. Fetch task after RPC
+  const { data: taskAfter } = await supabase.from('tasks').select('id, title, status, column_id').eq('id', newTask.id).single();
+  console.log("Task AFTER update_overdue_tasks RPC:", taskAfter);
+
+  // Clean up
+  await supabase.from('tasks').delete().eq('id', newTask.id);
+
   process.exit(0);
 }
 main();
