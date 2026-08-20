@@ -364,9 +364,18 @@ export const KanbanBoard = () => {
 
             <div className="flex-1 flex gap-6 overflow-x-auto px-6 pb-6 h-full mt-2 pretty-scrollbar">
                 <DragDropContext onDragEnd={onDragEnd}>
-                    {currentColumns.map((col) => {
                         const tasksInCol = filteredTasks
-                            .filter((t) => t.column_id === col.id || (t.board_id === col.board_id && t.status === col.title))
+                            .filter((t) => {
+                                if (t.column_id === col.id) return true;
+                                if (t.status && col.title && t.status.trim().toLowerCase() === col.title.trim().toLowerCase()) {
+                                    if (t.board_id === col.board_id) return true;
+                                    const tBoard = boards.find(b => b.id === t.board_id);
+                                    const colBoard = boards.find(b => b.id === col.board_id);
+                                    if (tBoard?.parent_board_id === col.board_id || colBoard?.parent_board_id === t.board_id) return true;
+                                    if (tBoard?.parent_board_id && tBoard.parent_board_id === colBoard?.parent_board_id) return true;
+                                }
+                                return false;
+                            })
                             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
                         return (

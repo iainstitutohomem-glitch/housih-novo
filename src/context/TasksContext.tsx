@@ -418,8 +418,14 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     const updateTaskStatus = async (taskId: string, columnId: string, statusName: string) => {
-        setTasks(tasks.map(t => t.id === taskId ? { ...t, column_id: columnId, status: statusName } : t));
-        const { error } = await supabase.from('tasks').update({ column_id: columnId, status: statusName }).eq('id', taskId);
+        const targetCol = boardColumns.find(c => c.id === columnId);
+        const updates: any = { column_id: columnId, status: statusName };
+        if (targetCol?.board_id) {
+            updates.board_id = targetCol.board_id;
+        }
+
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+        const { error } = await supabase.from('tasks').update(updates).eq('id', taskId);
         if (error) {
             console.error("Update task status error:", error);
             alert("Erro ao mover tarefa: " + error.message);
@@ -891,16 +897,22 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     };
     
     const updateTaskOrder = async (taskId: string, newOrder: number, columnId?: string, statusName?: string) => {
+        const updates: any = { order_index: newOrder };
+        if (columnId) {
+            updates.column_id = columnId;
+            const targetCol = boardColumns.find(c => c.id === columnId);
+            if (targetCol?.board_id) {
+                updates.board_id = targetCol.board_id;
+            }
+        }
+        if (statusName) updates.status = statusName;
+
         // Atualização otimista
         setTasks(prev => prev.map(t => 
             t.id === taskId 
-                ? { ...t, order_index: newOrder, ...(columnId ? { column_id: columnId } : {}), ...(statusName ? { status: statusName } : {}) } 
+                ? { ...t, ...updates } 
                 : t
         ).sort((a, b) => (a.order_index || 0) - (b.order_index || 0)));
-
-        const updates: any = { order_index: newOrder };
-        if (columnId) updates.column_id = columnId;
-        if (statusName) updates.status = statusName;
 
         const { error } = await supabase.from('tasks').update(updates).eq('id', taskId);
         if (error) {
