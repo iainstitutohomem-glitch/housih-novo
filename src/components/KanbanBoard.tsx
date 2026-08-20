@@ -364,6 +364,7 @@ export const KanbanBoard = () => {
 
             <div className="flex-1 flex gap-6 overflow-x-auto px-6 pb-6 h-full mt-2 pretty-scrollbar">
                 <DragDropContext onDragEnd={onDragEnd}>
+                    {currentColumns.map((col) => {
                         const tasksInCol = filteredTasks
                             .filter((t) => {
                                 if (t.column_id === col.id) return true;
