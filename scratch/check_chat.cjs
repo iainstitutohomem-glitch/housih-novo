@@ -18,58 +18,10 @@ const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 const supabase = createClient(envConfig.VITE_SUPABASE_URL, SERVICE_ROLE_KEY);
 
 async function main() {
-  const { data: tasks } = await supabase.from('tasks').select('id, title, status, board_id, column_id, unit, sector');
-  const { data: cols } = await supabase.from('board_columns').select('*');
-  const { data: boards } = await supabase.from('boards').select('*');
-
-  console.log(`Checking ${tasks ? tasks.length : 0} tasks for repair...`);
-
-  let fixedCount = 0;
-
-  for (const t of tasks || []) {
-    let needsFix = false;
-    let newColumnId = t.column_id;
-    let newBoardId = t.board_id;
-    let newStatus = t.status;
-
-    let col = cols.find(c => c.id === t.column_id);
-    let board = boards.find(b => b.id === t.board_id);
-
-    // If column_id is null or invalid/orphan, find matching column by board_id and status
-    if (!col || col.board_id !== t.board_id) {
-      needsFix = true;
-      const bCols = cols.filter(c => c.board_id === t.board_id);
-      let matchCol = bCols.find(c => c.title.toLowerCase().trim() === (t.status || '').toLowerCase().trim());
-      if (!matchCol && bCols.length > 0) {
-        matchCol = bCols[0];
-      }
-      if (matchCol) {
-        newColumnId = matchCol.id;
-        console.log(`Fixing column_id for "${t.title}": was "${t.column_id}" -> now "${newColumnId}" (${matchCol.title})`);
-      }
-    } else if (col.title !== t.status) {
-      // Sync status to column title if status was outdated
-      needsFix = true;
-      newStatus = col.title;
-      console.log(`Fixing status for "${t.title}": was "${t.status}" -> now "${newStatus}"`);
-    }
-
-    if (needsFix) {
-      const { error } = await supabase.from('tasks').update({
-        column_id: newColumnId,
-        board_id: newBoardId,
-        status: newStatus
-      }).eq('id', t.id);
-
-      if (error) {
-        console.error(`Error repairing task "${t.title}":`, error);
-      } else {
-        fixedCount++;
-      }
-    }
-  }
-
-  console.log(`Successfully repaired ${fixedCount} tasks in Supabase!`);
+  // Test modifying update_overdue_tasks via raw SQL query if possible or inspect
+  console.log("Checking update_overdue_tasks...");
+  const { data: tasks } = await supabase.from('tasks').select('id, title, status, due_date, column_id, board_id').eq('status', 'Em Andamento');
+  console.log("Tasks in Em Andamento:", tasks);
   process.exit(0);
 }
 main();

@@ -57,6 +57,8 @@ export const TaskModal = () => {
     const [newChecklistItem, setNewChecklistItem] = useState('');
     const [mentionSearch, setMentionSearch] = useState('');
     const [showMentionList, setShowMentionList] = useState(false);
+    const [assigneeSearch, setAssigneeSearch] = useState('');
+    const [checklistSearch, setChecklistSearch] = useState('');
     const [activeChecklistMenu, setActiveChecklistMenu] = useState<{ id: number, type: 'date' | 'users' } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showActivityDetails, setShowActivityDetails] = useState(false);
@@ -636,36 +638,47 @@ export const TaskModal = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responsáveis</label>
-                                        <div className="space-y-2 max-h-40 overflow-y-auto p-3 bg-gray-50 border border-gray-200 rounded-xl pretty-scrollbar-y">
-                                            {availableMembers.map(member => (
-                                                <label key={member.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer group">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
-                                                        checked={assignees.includes(member.name)}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                                setAssignees([...assignees, member.name]);
-                                                            } else {
-                                                                setAssignees(assignees.filter(a => a !== member.name));
-                                                            }
-                                                        }}
-                                                    />
-                                                    <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
-                                                        {member.avatar_url ? (
-                                                            <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <span className="text-[10px] font-bold text-primary-600">{member.name.charAt(0)}</span>
-                                                        )}
-                                                    </div>
-                                                    <span className="text-sm text-gray-700 group-hover:text-primary-700 font-medium">{member.name}</span>
-                                                </label>
-                                            ))}
-                                            {availableMembers.length === 0 && (
-                                                <p className="text-xs text-gray-400 italic text-center py-2">Nenhum membro da equipe encontrado neste setor.</p>
-                                            )}
-                                        </div>
+                                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responsáveis</label>
+                                         <div className="mb-2">
+                                             <input
+                                                 type="text"
+                                                 placeholder="Buscar responsável..."
+                                                 value={assigneeSearch}
+                                                 onChange={(e) => setAssigneeSearch(e.target.value)}
+                                                 className="w-full bg-gray-50 border border-gray-200 text-xs text-gray-700 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all"
+                                             />
+                                         </div>
+                                         <div className="space-y-2 max-h-40 overflow-y-auto p-3 bg-gray-50 border border-gray-200 rounded-xl pretty-scrollbar-y">
+                                             {availableMembers
+                                                 .filter(member => member.name.toLowerCase().includes(assigneeSearch.toLowerCase()))
+                                                 .map(member => (
+                                                 <label key={member.id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer group">
+                                                     <input 
+                                                         type="checkbox" 
+                                                         className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+                                                         checked={assignees.includes(member.name)}
+                                                         onChange={(e) => {
+                                                             if (e.target.checked) {
+                                                                 setAssignees([...assignees, member.name]);
+                                                             } else {
+                                                                 setAssignees(assignees.filter(a => a !== member.name));
+                                                             }
+                                                         }}
+                                                     />
+                                                     <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
+                                                         {member.avatar_url ? (
+                                                             <img src={member.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                         ) : (
+                                                             <span className="text-[10px] font-bold text-primary-600">{member.name.charAt(0)}</span>
+                                                         )}
+                                                     </div>
+                                                     <span className="text-sm text-gray-700 group-hover:text-primary-700 font-medium">{member.name}</span>
+                                                 </label>
+                                             ))}
+                                             {availableMembers.filter(member => member.name.toLowerCase().includes(assigneeSearch.toLowerCase())).length === 0 && (
+                                                 <p className="text-xs text-gray-400 italic text-center py-2">Nenhum responsável encontrado.</p>
+                                             )}
+                                         </div>
                                         {assignees.length > 0 && (
                                             <div className="flex flex-wrap gap-1 mt-2">
                                                 {assignees.map(name => (
@@ -780,28 +793,40 @@ export const TaskModal = () => {
                                                                 <UserPlus size={14} />
                                                             </button>
                                                             {activeChecklistMenu && activeChecklistMenu.id === item.id && activeChecklistMenu.type === 'users' && (
-                                                                <div className="absolute top-full mt-2 right-0 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[9999] w-48 max-h-48 overflow-y-auto space-y-1 custom-scrollbar">
-                                                                    {teamMembers.map(member => {
-                                                                        const isSelected = itemAssignees.includes(member.name);
-                                                                        return (
-                                                                            <label key={member.id} className="flex items-center gap-2 p-1.5 hover:bg-primary-50 rounded-lg cursor-pointer transition-colors">
-                                                                                <input 
-                                                                                    type="checkbox"
-                                                                                    className="w-3.5 h-3.5 text-primary-600 rounded border-gray-300"
-                                                                                    checked={isSelected}
-                                                                                    onChange={(e) => {
-                                                                                        const newAssignees = e.target.checked 
-                                                                                            ? [...itemAssignees, member.name]
-                                                                                            : itemAssignees.filter(name => name !== member.name);
-                                                                                        setChecklist(checklist.map(c => c.id === item.id ? { ...c, assignees: newAssignees } : c));
-                                                                                    }}
-                                                                                />
-                                                                                <span className="text-xs font-medium text-gray-700">{member.name}</span>
-                                                                            </label>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            )}
+                                                                 <div className="absolute top-full mt-2 right-0 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[9999] w-52 animate-in fade-in zoom-in-95">
+                                                                     <input 
+                                                                         type="text" 
+                                                                         placeholder="Buscar..." 
+                                                                         value={checklistSearch} 
+                                                                         onChange={(e) => setChecklistSearch(e.target.value)} 
+                                                                         onClick={(e) => e.stopPropagation()} 
+                                                                         className="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 mb-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500" 
+                                                                     />
+                                                                     <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
+                                                                         {teamMembers
+                                                                             .filter(member => member.name.toLowerCase().includes(checklistSearch.toLowerCase()))
+                                                                             .map(member => {
+                                                                             const isSelected = itemAssignees.includes(member.name);
+                                                                             return (
+                                                                                 <label key={member.id} className="flex items-center gap-2 p-1.5 hover:bg-primary-50 rounded-lg cursor-pointer transition-colors">
+                                                                                     <input 
+                                                                                         type="checkbox"
+                                                                                         className="w-3.5 h-3.5 text-primary-600 rounded border-gray-300"
+                                                                                         checked={isSelected}
+                                                                                         onChange={(e) => {
+                                                                                             const newAssignees = e.target.checked 
+                                                                                                 ? [...itemAssignees, member.name]
+                                                                                                 : itemAssignees.filter(name => name !== member.name);
+                                                                                             setChecklist(checklist.map(c => c.id === item.id ? { ...c, assignees: newAssignees } : c));
+                                                                                         }}
+                                                                                     />
+                                                                                     <span className="text-xs font-medium text-gray-700">{member.name}</span>
+                                                                                 </label>
+                                                                             );
+                                                                         })}
+                                                                     </div>
+                                                                 </div>
+                                                             )}
                                                         </div>
 
                                                         {/* Botão Detalhes */}
@@ -1418,8 +1443,17 @@ export const TaskModal = () => {
                                                         <UserPlus size={16} className="text-gray-400" />
                                                     </div>
                                                     <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-[99999] hidden group-hover/users:block">
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="Buscar..." 
+                                                            value={checklistSearch} 
+                                                            onChange={(e) => setChecklistSearch(e.target.value)} 
+                                                            className="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 mb-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500" 
+                                                        />
                                                         <div className="max-h-40 overflow-y-auto space-y-1 pretty-scrollbar-y">
-                                                            {teamMembers.map(member => (
+                                                            {teamMembers
+                                                                .filter(member => member.name.toLowerCase().includes(checklistSearch.toLowerCase()))
+                                                                .map(member => (
                                                                 <label key={member.id} className="flex items-center gap-2 p-2 hover:bg-primary-50 rounded-lg cursor-pointer transition-colors">
                                                                     <input 
                                                                         type="checkbox"

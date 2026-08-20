@@ -32,6 +32,7 @@ export const KanbanBoard = () => {
     const { session } = useAuth();
 
     const [transferringTaskId, setTransferringTaskId] = useState<string | null>(null);
+    const [popoverSearch, setPopoverSearch] = useState('');
     const leaveTimeoutRef = useRef<any>(null);
     const unitScrollRef = useRef<HTMLDivElement>(null);
     const parentBoardScrollRef = useRef<HTMLDivElement>(null);
@@ -207,7 +208,17 @@ export const KanbanBoard = () => {
         if (!destColumn) return;
 
         const tasksInDest = filteredTasks
-            .filter(t => t.column_id === destColId || (t.board_id === destColumn.board_id && t.status === destColumn.title))
+            .filter((t) => {
+                if (t.column_id === destColId) return true;
+                if (t.status && destColumn.title && t.status.trim().toLowerCase() === destColumn.title.trim().toLowerCase()) {
+                    if (t.board_id === destColumn.board_id) return true;
+                    const tBoard = boards.find(b => b.id === t.board_id);
+                    const colBoard = boards.find(b => b.id === destColumn.board_id);
+                    if (tBoard?.parent_board_id === destColumn.board_id || colBoard?.parent_board_id === t.board_id) return true;
+                    if (tBoard?.parent_board_id && tBoard.parent_board_id === colBoard?.parent_board_id) return true;
+                }
+                return false;
+            })
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
         let newOrder: number;
@@ -456,10 +467,20 @@ export const KanbanBoard = () => {
                                                                     {transferringTaskId === task.id && (
                                                                         <>
                                                                             <div className="absolute left-0 bottom-full w-full h-4 bg-transparent" />
-                                                                            <div className="absolute left-0 bottom-full mb-1 bg-white rounded-xl shadow-2xl border border-gray-100 p-2 z-50 w-52 animate-in fade-in slide-in-from-bottom-2">
-                                                                                <p className="text-[10px] font-bold text-gray-400 mb-2 px-1 uppercase tracking-wide">Gerenciar Responsáveis</p>
+                                                                            <div className="absolute left-0 bottom-full mb-1 bg-white rounded-xl shadow-2xl border border-gray-100 p-2 z-50 w-56 animate-in fade-in slide-in-from-bottom-2">
+                                                                                <p className="text-[10px] font-bold text-gray-400 mb-1 px-1 uppercase tracking-wide">Gerenciar Responsáveis</p>
+                                                                                <input 
+                                                                                    type="text" 
+                                                                                    placeholder="Buscar..." 
+                                                                                    value={popoverSearch} 
+                                                                                    onChange={(e) => setPopoverSearch(e.target.value)} 
+                                                                                    onClick={(e) => e.stopPropagation()} 
+                                                                                    className="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 mb-2 focus:outline-none focus:ring-1 focus:ring-primary-500" 
+                                                                                />
                                                                                 <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1">
-                                                                                    {teamMembers.map(m => {
+                                                                                    {teamMembers
+                                                                                        .filter(m => m.name.toLowerCase().includes(popoverSearch.toLowerCase()))
+                                                                                        .map(m => {
                                                                                         const isSelected = task.assignee?.includes(m.name);
                                                                                         return (
                                                                                             <button 
