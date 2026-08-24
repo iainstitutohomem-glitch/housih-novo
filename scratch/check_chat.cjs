@@ -18,39 +18,25 @@ const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 const supabase = createClient(envConfig.VITE_SUPABASE_URL, SERVICE_ROLE_KEY);
 
 async function main() {
-  // 1. Create a dummy task with past due date and status 'Em Andamento'
-  const { data: board } = await supabase.from('boards').select('id').limit(1).single();
-  const { data: cols } = await supabase.from('board_columns').select('id, title').eq('board_id', board.id);
-  const emAndamentoCol = cols.find(c => c.title === 'Em Andamento') || cols[0];
+  const { data: squadBoard } = await supabase.from('boards').select('*').eq('name', 'Squad de Criação').single();
+  const { data: cols } = await supabase.from('board_columns').select('*').eq('board_id', squadBoard.id).order('order_index');
+  const { data: tasks } = await supabase.from('tasks').select('*').eq('board_id', squadBoard.id);
 
-  console.log("Inserting test task with status 'Em Andamento' and past due_date...");
-  const { data: newTask, error: insertErr } = await supabase.from('tasks').insert([{
-    title: 'TEST_OVERDUE_TASK_EM_ANDAMENTO',
-    status: 'Em Andamento',
-    board_id: board.id,
-    column_id: emAndamentoCol.id,
-    due_date: '2026-08-01T12:00:00.000Z',
-    unit: 'Corporativo',
-    sector: 'Comercial'
-  }]).select().single();
+  console.log(`Squad de Criação has ${cols.length} columns and ${tasks.length} tasks.`);
 
-  if (insertErr) {
-    console.error("Insert error:", insertErr);
-    process.exit(1);
+  const normalizeText = (str) => (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+  for (const col of cols) {
+    const tasksInCol = tasks.filter(t => {
+      if (t.column_id && t.column_id === col.id) return true;
+      if (t.status && col.title && normalizeText(t.status) === normalizeText(col.title)) return true;
+      return false;
+    });
+    console.log(`Column "${col.title}" (${col.id}): ${tasksInCol.length} tasks`);
+    for (const t of tasksInCol) {
+      console.log(`   - "${t.title}" (status: ${t.status}, col_id: ${t.column_id})`);
+    }
   }
-
-  console.log("Created task:", newTask.id, "Status:", newTask.status, "Column:", newTask.column_id);
-
-  // 2. Call update_overdue_tasks RPC
-  console.log("Executing update_overdue_tasks RPC...");
-  await supabase.rpc('update_overdue_tasks');
-
-  // 3. Fetch task after RPC
-  const { data: taskAfter } = await supabase.from('tasks').select('id, title, status, column_id').eq('id', newTask.id).single();
-  console.log("Task AFTER update_overdue_tasks RPC:", taskAfter);
-
-  // Clean up
-  await supabase.from('tasks').delete().eq('id', newTask.id);
 
   process.exit(0);
 }

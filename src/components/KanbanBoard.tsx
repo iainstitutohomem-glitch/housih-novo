@@ -232,6 +232,18 @@ export const KanbanBoard = () => {
         leaveTimeoutRef.current = setTimeout(() => setTransferringTaskId(null), 300);
     };
 
+    const currentBoardColIds = currentColumns.map(c => c.id);
+
+    const filterTaskForCol = (t: any, col: any) => {
+        if (t.column_id) {
+            if (t.column_id === col.id) return true;
+            if (currentBoardColIds.includes(t.column_id)) return false;
+        }
+        if (t.status && col.title && normalizeText(t.status) === normalizeText(col.title)) return true;
+        if (!t.column_id && matchesColumnCategory(t.status, col.title)) return true;
+        return false;
+    };
+
     const onDragEnd = async (result: any) => {
         if (!result.destination) return;
         const { source, destination, draggableId } = result;
@@ -240,11 +252,7 @@ export const KanbanBoard = () => {
         if (!destColumn) return;
 
         const tasksInDest = filteredTasks
-            .filter((t) => {
-                if (t.column_id === destColId) return true;
-                if (matchesColumnCategory(t.status, destColumn.title)) return true;
-                return false;
-            })
+            .filter((t) => filterTaskForCol(t, destColumn))
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
         let newOrder: number;
@@ -403,11 +411,7 @@ export const KanbanBoard = () => {
                 <DragDropContext onDragEnd={onDragEnd}>
                     {currentColumns.map((col) => {
                         const tasksInCol = filteredTasks
-                            .filter((t) => {
-                                if (t.column_id === col.id) return true;
-                                if (matchesColumnCategory(t.status, col.title)) return true;
-                                return false;
-                            })
+                            .filter((t) => filterTaskForCol(t, col))
                             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
                         return (
