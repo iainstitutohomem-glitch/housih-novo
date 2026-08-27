@@ -36,11 +36,11 @@ export interface BoardColumn {
 }
 
 export const DEFAULT_UNIDADES = [
-    "Corporativo", "Tatuapé", "São José do Rio Preto", "Osasco", "Santos", "Piracicaba", 
-    "São Bernardo do Campo", "Presidente Prudente", "Jundiaí", "Faria Lima", 
-    "São José dos Campos", "Ribeirão Preto", "Bauru", "Campo Grande", 
-    "Curitiba", "Londrina", "Foz do Iguaçu", "Joinville", "Florianópolis", 
-    "Balneário Camboriú"
+    "Corporativo", "Balneário Camboriú", "Bauru", "Brasília", "Campo Grande", 
+    "Cuiabá", "Faria Lima", "Florianópolis", "Foz do Iguaçu", "Jundiaí", 
+    "Joinville", "Londrina", "Osasco", "Piracicaba", "Presidente Prudente", 
+    "Ribeirão Preto", "Santos", "Sorocaba", "São Bernardo do Campo", 
+    "São José do Rio Preto", "São José dos Campos", "Tatuapé"
 ];
 
 export const CORPORATIVO_SECTORS = [
@@ -1176,7 +1176,18 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setFilters(prev => ({ ...prev, status: 'Todos' }));
     }, [activeBoardId]);
 
-    const UNIDADES = dbUnits.length > 0 ? dbUnits : DEFAULT_UNIDADES;
+    const UNIDADES = useMemo(() => {
+        const unitSet = new Set<string>(["Corporativo", ...DEFAULT_UNIDADES]);
+        dbUnits.forEach(u => u && unitSet.add(u));
+        teamMembers.forEach(m => {
+            if (Array.isArray(m.units)) m.units.forEach(u => u && unitSet.add(u));
+            else if (typeof m.units === 'string') unitSet.add(m.units);
+        });
+        tasks.forEach(t => {
+            if (t.unit) unitSet.add(t.unit);
+        });
+        return Array.from(unitSet);
+    }, [dbUnits, teamMembers, tasks]);
 
     useEffect(() => {
         if (!session) return;

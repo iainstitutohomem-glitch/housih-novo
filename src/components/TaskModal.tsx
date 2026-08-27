@@ -28,7 +28,7 @@ export const TaskModal = () => {
     const { 
         isModalOpen, closeModal, editingTask, addTask, updateTask, deleteTask, 
         companies, teamMembers, session, boards, boardColumns,
-        UNIDADES, CORPORATIVO_SECTORS, UNIDADES_SECTORS
+        UNIDADES, CORPORATIVO_SECTORS, UNIDADES_SECTORS, activeUnit
     } = useTasks();
 
     const [title, setTitle] = useState('');
@@ -250,6 +250,38 @@ export const TaskModal = () => {
         }
     }, [observations]);
 
+    const availableUnits = useMemo(() => {
+        const userEmail = session?.user?.email?.toLowerCase();
+        const currentUser = teamMembers.find(m => m.email?.toLowerCase() === userEmail);
+        if (!currentUser) return UNIDADES;
+
+        const isMaster = 
+            currentUser.sectors?.includes('Master') || 
+            currentUser.sectors?.includes('Diretoria') || 
+            userEmail === 'institutohomem@gmail.com';
+            
+        let myUnits: string[] = [];
+        if (Array.isArray(currentUser.units)) {
+            myUnits = currentUser.units;
+        } else if (typeof currentUser.units === 'string') {
+            try {
+                const parsed = JSON.parse(currentUser.units);
+                myUnits = Array.isArray(parsed) ? parsed : [currentUser.units];
+            } catch {
+                myUnits = [currentUser.units];
+            }
+        }
+        const isCorporativo = myUnits.includes('Corporativo');
+
+        if (isMaster || isCorporativo) {
+            return UNIDADES;
+        }
+
+        const allowed = new Set<string>(["Corporativo", ...myUnits]);
+        const filtered = UNIDADES.filter(u => allowed.has(u));
+        return filtered.length > 0 ? filtered : ["Corporativo", ...myUnits];
+    }, [UNIDADES, teamMembers, session]);
+
     // Efeito para carregar e atualizar TODOS os dados da tarefa no modal
     useEffect(() => {
         if (!isModalOpen) {
@@ -260,7 +292,7 @@ export const TaskModal = () => {
             setStatus('Não Iniciado');
             setDueDate('');
             setPriority('Média');
-            setUnit('Corporativo');
+            setUnit(availableUnits.includes(activeUnit) ? activeUnit : availableUnits[0] || 'Corporativo');
             setSector('Comercial');
             setObservations('');
             setObservationsHistory('');
@@ -602,7 +634,7 @@ export const TaskModal = () => {
                                                 value={unit}
                                                 onChange={(e) => setUnit(e.target.value)}
                                                 className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all">
-                                                {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                                                {availableUnits.map(u => <option key={u} value={u}>{u}</option>)}
                                             </select>
                                         </div>
                                         <div>

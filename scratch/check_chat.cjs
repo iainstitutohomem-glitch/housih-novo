@@ -18,26 +18,20 @@ const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 const supabase = createClient(envConfig.VITE_SUPABASE_URL, SERVICE_ROLE_KEY);
 
 async function main() {
-  const { data: squadBoard } = await supabase.from('boards').select('*').eq('name', 'Squad de Criação').single();
-  const { data: cols } = await supabase.from('board_columns').select('*').eq('board_id', squadBoard.id).order('order_index');
-  const { data: tasks } = await supabase.from('tasks').select('*').eq('board_id', squadBoard.id);
+  const { data: members } = await supabase.from('team_members').select('units');
+  const { data: tasks } = await supabase.from('tasks').select('unit');
 
-  console.log(`Squad de Criação has ${cols.length} columns and ${tasks.length} tasks.`);
+  const allUnits = new Set();
+  (members || []).forEach(m => {
+    if (Array.isArray(m.units)) m.units.forEach(u => u && allUnits.add(u.trim()));
+    else if (m.units) allUnits.add(m.units.trim());
+  });
 
-  const normalizeText = (str) => (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  (tasks || []).forEach(t => {
+    if (t.unit) allUnits.add(t.unit.trim());
+  });
 
-  for (const col of cols) {
-    const tasksInCol = tasks.filter(t => {
-      if (t.column_id && t.column_id === col.id) return true;
-      if (t.status && col.title && normalizeText(t.status) === normalizeText(col.title)) return true;
-      return false;
-    });
-    console.log(`Column "${col.title}" (${col.id}): ${tasksInCol.length} tasks`);
-    for (const t of tasksInCol) {
-      console.log(`   - "${t.title}" (status: ${t.status}, col_id: ${t.column_id})`);
-    }
-  }
-
+  console.log("ALL DISTINCT UNIDADES IN DB:", Array.from(allUnits).sort());
   process.exit(0);
 }
 main();
