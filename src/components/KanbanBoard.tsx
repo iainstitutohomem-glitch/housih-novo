@@ -80,26 +80,17 @@ export const KanbanBoard = () => {
     
     const parentBoards = useMemo(() => {
         let pBoards = boards.filter(b => !b.parent_board_id);
-        const userUnits = currentUser?.units || [];
-        const isUserCorporativo = userUnits.includes('Corporativo');
         
         const unitBoards = ['Recepção', 'Administrativo', 'Enfermagem', 'Comercial', 'Médico'];
         const corporativoBoards = ['Arquitetura e Obras', 'Atendimento Comercial', 'Cobrança', 'Comercial', 'Comunicação & Marketing', 'Financeiro', 'Jurídico', 'Operações & Projetos Internos', 'RH', 'TI', 'Controladoria'];
 
-        if (!isUserCorporativo && currentUser) {
-            // Usuário de unidade vê apenas quadros da unidade
+        if (activeUnit === 'Corporativo') {
+            pBoards = pBoards.filter(b => corporativoBoards.includes(b.name));
+        } else {
             pBoards = pBoards.filter(b => unitBoards.includes(b.name));
-        } else if (isUserCorporativo) {
-            if (activeUnit && activeUnit !== 'Corporativo') {
-                // Corporativo filtrando uma unidade específica
-                pBoards = pBoards.filter(b => unitBoards.includes(b.name));
-            } else {
-                // Corporativo vendo 'Corporativo'
-                pBoards = pBoards.filter(b => corporativoBoards.includes(b.name));
-            }
         }
         return pBoards;
-    }, [boards, currentUser, activeUnit]);
+    }, [boards, activeUnit]);
     const subBoardsOf = (parentId: string) => boards.filter(b => b.parent_board_id === parentId);
 
     const userUnits = useMemo(() => {
@@ -167,21 +158,22 @@ export const KanbanBoard = () => {
         }
     }, [filteredTasks, openModal]);
 
-    // On mount: auto-select first parent board based on user sector
+    // Auto-select valid parent board when unit or parentBoards change
     useEffect(() => {
-        // Wait until teamMembers are loaded so we can find the currentUser
-        if (parentBoards.length > 0 && teamMembers.length > 0 && activeParentBoardId === 'Todas') {
-            let defaultParent = parentBoards.find(b => b.is_default) || parentBoards[0];
-            
-            if (currentUser && currentUser.sectors && currentUser.sectors.length > 0) {
-                // Try to find a parent board that matches any of the user's sectors
-                const sectorBoard = parentBoards.find(b => currentUser.sectors!.includes(b.name));
-                if (sectorBoard) {
-                    defaultParent = sectorBoard;
+        if (parentBoards.length > 0) {
+            const isCurrentParentInList = parentBoards.some(b => b.id === activeParentBoardId);
+            if (!isCurrentParentInList || activeParentBoardId === 'Todas') {
+                let defaultParent = parentBoards.find(b => b.is_default) || parentBoards[0];
+                
+                if (currentUser && currentUser.sectors && currentUser.sectors.length > 0) {
+                    const sectorBoard = parentBoards.find(b => currentUser.sectors!.includes(b.name));
+                    if (sectorBoard) {
+                        defaultParent = sectorBoard;
+                    }
                 }
+                
+                handleSelectParent(defaultParent.id);
             }
-            
-            handleSelectParent(defaultParent.id);
         }
     }, [parentBoards, teamMembers, session, activeParentBoardId, currentUser]);
 

@@ -266,28 +266,38 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 const isCorporativo = userUnits.includes('Corporativo');
                 const isLeader = currentUser?.role === 'Líder';
 
+                const userSectors = currentUser?.sectors || [];
+                const taskBoard = boards.find(b => b.id === task.board_id);
+                const taskParentBoard = boards.find(b => b.id === taskBoard?.parent_board_id);
+                
+                const isUserInTaskSector = 
+                    userSectors.includes(taskBoard?.name || '') || 
+                    userSectors.includes(taskParentBoard?.name || '') ||
+                    (task.sector && userSectors.includes(task.sector));
+
+                const isAssigned = Array.isArray(task.assignee) && (
+                    task.assignee.includes(currentUser?.name || '') || 
+                    task.assignee.includes(currentUser?.email || '')
+                );
+
+                const isCreator = task.created_by?.toLowerCase() === currentUser?.email?.toLowerCase();
+
                 if (isLeader && isCorporativo) {
                     // Líder Corporativo vê TUDO
                 } else if (!isCorporativo) {
-                    // Usuários de Unidade (Membros ou Líderes) veem tarefas de sua unidade e tarefas gerais
-                    if (task.unit && task.unit !== 'Geral' && task.unit !== 'Corporativo' && !userUnits.includes(task.unit)) return false;
-                } else {
-                    // Membros do Corporativo veem tarefas do seu setor ou tarefas onde foram atribuídos
-                    const userSectors = currentUser?.sectors || [];
-                    const taskBoard = boards.find(b => b.id === task.board_id);
-                    const taskParentBoard = boards.find(b => b.id === taskBoard?.parent_board_id);
-                    
-                    const isUserInTaskSector = 
-                        userSectors.includes(taskBoard?.name || '') || 
-                        userSectors.includes(taskParentBoard?.name || '') ||
-                        (task.sector && userSectors.includes(task.sector));
-                    
-                    const isAssigned = Array.isArray(task.assignee) && (
-                        task.assignee.includes(currentUser?.name || '') || 
-                        task.assignee.includes(currentUser?.email || '')
-                    );
+                    // Usuários de Unidade (Membros ou Líderes)
+                    const isTaskInUserUnit = task.unit && userUnits.includes(task.unit);
 
-                    if (!isUserInTaskSector && !isAssigned) return false;
+                    if (isTaskInUserUnit) {
+                        // Na própria unidade: se for de outro setor e não for líder nem atribuído/criador, esconde
+                        if (!isLeader && !isUserInTaskSector && !isAssigned && !isCreator) return false;
+                    } else {
+                        // Em outra unidade ou no Corporativo: só vê SE for atribuído/mencionado na tarefa ou criador da tarefa
+                        if (!isAssigned && !isCreator) return false;
+                    }
+                } else {
+                    // Membros do Corporativo veem tarefas do seu setor ou tarefas onde foram atribuídos/criadores
+                    if (!isUserInTaskSector && !isAssigned && !isCreator) return false;
                 }
             }
 
