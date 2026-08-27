@@ -281,6 +281,10 @@ export const TaskModal = () => {
         return filtered.length > 0 ? filtered : myUnits;
     }, [UNIDADES, teamMembers, session]);
 
+    const availableSectors = useMemo(() => {
+        return unit === 'Corporativo' ? CORPORATIVO_SECTORS : UNIDADES_SECTORS;
+    }, [unit, CORPORATIVO_SECTORS, UNIDADES_SECTORS]);
+
     // Efeito para carregar e atualizar TODOS os dados da tarefa no modal
     useEffect(() => {
         if (!isModalOpen) {
@@ -291,8 +295,10 @@ export const TaskModal = () => {
             setStatus('Não Iniciado');
             setDueDate('');
             setPriority('Média');
-            setUnit(availableUnits.includes(activeUnit) ? activeUnit : availableUnits[0] || 'Corporativo');
-            setSector('Comercial');
+            const initialUnit = availableUnits.includes(activeUnit) ? activeUnit : availableUnits[0] || 'Corporativo';
+            const initialSectors = initialUnit === 'Corporativo' ? CORPORATIVO_SECTORS : UNIDADES_SECTORS;
+            setUnit(initialUnit);
+            setSector(initialSectors[0] || 'Recepção');
             setObservations('');
             setObservationsHistory('');
             setChecklist([]);
@@ -339,8 +345,10 @@ export const TaskModal = () => {
             setStatus('Não Iniciado');
             setDueDate('');
             setPriority('Média');
-            setUnit('Corporativo');
-            setSector('Comercial');
+            const initialUnit = availableUnits.includes(activeUnit) ? activeUnit : availableUnits[0] || 'Corporativo';
+            const initialSectors = initialUnit === 'Corporativo' ? CORPORATIVO_SECTORS : UNIDADES_SECTORS;
+            setUnit(initialUnit);
+            setSector(initialSectors[0] || 'Recepção');
             setObservations('');
             setObservationsHistory('');
             setChecklist([]);
@@ -351,11 +359,10 @@ export const TaskModal = () => {
     // Efeito para auto-ajustar o Setor quando a Unidade muda
     useEffect(() => {
         if (!isModalOpen) return;
-        const availableSectors = unit === 'Corporativo' ? CORPORATIVO_SECTORS : UNIDADES_SECTORS;
         if (!availableSectors.includes(sector)) {
             setSector(availableSectors[0]);
         }
-    }, [unit, isModalOpen, CORPORATIVO_SECTORS, UNIDADES_SECTORS, sector]);
+    }, [unit, isModalOpen, availableSectors, sector]);
 
     // Efeito para auto-ajustar o Quadro quando o Setor muda
     useEffect(() => {
@@ -508,8 +515,6 @@ export const TaskModal = () => {
     };
 
     if (!isModalOpen) return null;
-
-    const availableSectors = unit === 'Corporativo' ? CORPORATIVO_SECTORS : UNIDADES_SECTORS;
 
     const availableBoards = boards.filter(b => {
         const parent = boards.find(pb => pb.name === sector && !pb.parent_board_id);
