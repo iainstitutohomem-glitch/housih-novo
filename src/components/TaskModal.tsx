@@ -277,9 +277,8 @@ export const TaskModal = () => {
             return UNIDADES;
         }
 
-        const allowed = new Set<string>(["Corporativo", ...myUnits]);
-        const filtered = UNIDADES.filter(u => allowed.has(u));
-        return filtered.length > 0 ? filtered : ["Corporativo", ...myUnits];
+        const filtered = UNIDADES.filter(u => myUnits.includes(u));
+        return filtered.length > 0 ? filtered : myUnits;
     }, [UNIDADES, teamMembers, session]);
 
     // Efeito para carregar e atualizar TODOS os dados da tarefa no modal
