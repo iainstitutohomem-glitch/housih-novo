@@ -367,7 +367,8 @@ export const TaskModal = () => {
     // Efeito para auto-ajustar o Quadro quando o Setor muda
     useEffect(() => {
         if (!isModalOpen) return;
-        const parent = boards.find(pb => pb.name === sector && !pb.parent_board_id);
+        const targetSectorName = sector === 'Gestor/Assessor' ? 'Comercial' : sector;
+        const parent = boards.find(pb => pb.name === targetSectorName && !pb.parent_board_id);
         let availableBoards = [];
         if (!parent) {
             availableBoards = boards.filter(b => !b.parent_board_id);
@@ -377,7 +378,7 @@ export const TaskModal = () => {
             else availableBoards = [parent];
         }
 
-        if (availableBoards.length > 0 && !availableBoards.find(b => b.id === boardId)) {
+        if (availableBoards.length > 0) {
             const newBoardId = availableBoards[0].id;
             setBoardId(newBoardId);
             const cols = boardColumns.filter(c => c.board_id === newBoardId);
@@ -385,7 +386,7 @@ export const TaskModal = () => {
                 setColumnId(cols[0].id);
             }
         }
-    }, [sector, boards, isModalOpen, boardColumns, boardId]);
+    }, [sector, boards, isModalOpen, boardColumns]);
 
     const handleSave = async () => {
         if (!title.trim() || isSubmitting) return;
@@ -517,7 +518,8 @@ export const TaskModal = () => {
     if (!isModalOpen) return null;
 
     const availableBoards = boards.filter(b => {
-        const parent = boards.find(pb => pb.name === sector && !pb.parent_board_id);
+        const targetSectorName = sector === 'Gestor/Assessor' ? 'Comercial' : sector;
+        const parent = boards.find(pb => pb.name === targetSectorName && !pb.parent_board_id);
         if (!parent) return !b.parent_board_id;
         const subs = boards.filter(sb => sb.parent_board_id === parent.id);
         if (subs.length > 0) return b.parent_board_id === parent.id;
