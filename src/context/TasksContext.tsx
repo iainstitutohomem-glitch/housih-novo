@@ -1210,7 +1210,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         fetchAllData();
 
         // Subscrição Realtime para atualizações automáticas
-        const taskSubscription = supabase
+        let channel = supabase
             .channel('db-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchTasks(true))
             .on('postgres_changes', { event: '*', schema: 'public', table: 'board_columns' }, () => fetchBoardColumns())
@@ -1223,14 +1223,18 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'system_units' }, async () => {
                 const { data } = await supabase.from('system_units').select('name').order('name');
                 if (data) setDbUnits(data.map(u => u.name));
-            })
-            .on('postgres_changes', {
+            });
+
+        if (session?.user?.email) {
+            channel = channel.on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
                 table: 'notifications',
                 filter: `recipient_email=eq.${session.user.email}`
-            }, () => fetchNotifications())
-            .subscribe();
+            }, () => fetchNotifications());
+        }
+
+        const taskSubscription = channel.subscribe();
 
         return () => {
             supabase.removeChannel(taskSubscription);
