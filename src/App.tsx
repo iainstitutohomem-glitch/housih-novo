@@ -13,12 +13,11 @@ import { BoardManager } from './components/BoardManager';
 import { CalendarManager } from './components/CalendarManager';
 import { Timeline } from './components/Timeline';
 import { TicketManager } from './components/TicketManager';
-import { Plus, Menu, MessageSquare } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useState, Component, type ReactNode, type ErrorInfo } from 'react';
 import { ChatDrawer } from './components/Chat/ChatDrawer';
 import { ChatProvider, useChat } from './context/ChatContext';
 import { AIChatDrawer } from './components/AIChatDrawer';
-import { Sparkles, Eye, Share2, X, Check, Copy, LogOut } from 'lucide-react';
+import { Plus, Menu, MessageSquare, Sparkles, Eye, Share2, X, Check, Copy, LogOut } from 'lucide-react';
 import { SharedReportPage } from './components/SharedReportPage';
 
 const NovaTarefaButton = () => {
@@ -223,46 +222,80 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
 };
 
 
-function App() {
-  return (
-    <AuthProvider>
-      <TasksProvider>
-        <ChatProvider>
-          <TaskModal />
-          <BrowserRouter>
-            <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans overflow-hidden">
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/shared/:id" element={<SharedReportPage />} />
-                <Route path="*" element={
-                  <ProtectedRoute>
-                    <DashboardLayout>
-                      <Routes>
-                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                        <Route path="/dashboard" element={<MetricsDashboard />} />
-                        <Route path="/kanban" element={<KanbanBoard />} />
-                        <Route path="/companies" element={<CompanyManager />} />
-                        <Route path="/team" element={<TeamManager />} />
-                        <Route path="/boards" element={<BoardManager />} />
-                        <Route path="/agenda" element={<CalendarManager />} />
-                        <Route path="/timeline" element={<Timeline />} />
-                        <Route path="/tickets" element={<TicketManager />} />
-                      </Routes>
-                    </DashboardLayout>
-                  </ProtectedRoute>
-                } />
-              </Routes>
-            </div>
-            <ChatDrawerPortal />
-          </BrowserRouter>
-        </ChatProvider>
-      </TasksProvider>
-    </AuthProvider>
-  );
+class GlobalErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Global Error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-screen w-screen flex flex-col items-center justify-center bg-gray-50 p-6 text-center">
+          <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg border border-gray-100">
+            <h2 className="text-2xl font-black text-gray-900 mb-2">Ops! Ocorreu um problema de exibição.</h2>
+            <p className="text-sm text-gray-600 mb-6">Clique no botão abaixo para recarregar a tela do sistema.</p>
+            <button 
+              onClick={() => { this.setState({ hasError: false }); window.location.href = '/dashboard'; }} 
+              className="bg-primary-600 hover:bg-primary-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition-all"
+            >
+              Recarregar Housih
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
-import React, { Component } from 'react';
-import type { ErrorInfo } from 'react';
+function App() {
+  return (
+    <GlobalErrorBoundary>
+      <AuthProvider>
+        <TasksProvider>
+          <ChatProvider>
+            <TaskModal />
+            <BrowserRouter>
+              <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900 font-sans overflow-hidden">
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/shared/:id" element={<SharedReportPage />} />
+                  <Route path="*" element={
+                    <ProtectedRoute>
+                      <DashboardLayout>
+                        <Routes>
+                          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                          <Route path="/dashboard" element={<MetricsDashboard />} />
+                          <Route path="/kanban" element={<KanbanBoard />} />
+                          <Route path="/companies" element={<CompanyManager />} />
+                          <Route path="/team" element={<TeamManager />} />
+                          <Route path="/boards" element={<BoardManager />} />
+                          <Route path="/agenda" element={<CalendarManager />} />
+                          <Route path="/timeline" element={<Timeline />} />
+                          <Route path="/tickets" element={<TicketManager />} />
+                        </Routes>
+                      </DashboardLayout>
+                    </ProtectedRoute>
+                  } />
+                </Routes>
+              </div>
+              <ChatDrawerPortal />
+            </BrowserRouter>
+          </ChatProvider>
+        </TasksProvider>
+      </AuthProvider>
+    </GlobalErrorBoundary>
+  );
+}
 
 class ChatErrorBoundary extends Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
   constructor(props: {children: React.ReactNode}) {

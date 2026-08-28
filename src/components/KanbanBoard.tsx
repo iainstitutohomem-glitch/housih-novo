@@ -172,10 +172,12 @@ export const KanbanBoard = () => {
                     }
                 }
                 
-                handleSelectParent(defaultParent.id);
+                if (defaultParent && defaultParent.id !== activeParentBoardId) {
+                    handleSelectParent(defaultParent.id);
+                }
             }
         }
-    }, [parentBoards, teamMembers, session, activeParentBoardId, currentUser]);
+    }, [parentBoards, activeUnit]);
 
     const handleSelectParent = (parentId: string) => {
         setActiveParentBoardId(parentId);
