@@ -261,12 +261,12 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             if (!matchesBoard) return false;
 
             // 3. Permissões de Visualização (Risco Zero de exposição)
-            if (!isMaster) {
-                const userUnits = currentUser?.units || [];
+            if (!isMaster && currentUser) {
+                const userUnits = currentUser.units || [];
                 const isCorporativo = userUnits.includes('Corporativo');
-                const isLeader = currentUser?.role === 'Líder';
+                const isLeader = currentUser.role === 'Líder';
 
-                const userSectors = currentUser?.sectors || [];
+                const userSectors = currentUser.sectors || [];
                 const taskBoard = boards.find(b => b.id === task.board_id);
                 const taskParentBoard = boards.find(b => b.id === taskBoard?.parent_board_id);
                 
@@ -276,23 +276,20 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     (task.sector && userSectors.includes(task.sector));
 
                 const isAssigned = Array.isArray(task.assignee) && (
-                    task.assignee.includes(currentUser?.name || '') || 
-                    task.assignee.includes(currentUser?.email || '')
+                    task.assignee.includes(currentUser.name || '') || 
+                    task.assignee.includes(currentUser.email || '')
                 );
 
-                const isCreator = task.created_by?.toLowerCase() === currentUser?.email?.toLowerCase();
+                const isCreator = task.created_by?.toLowerCase() === currentUser.email?.toLowerCase();
 
                 if (isLeader && isCorporativo) {
                     // Líder Corporativo vê TUDO
                 } else if (!isCorporativo) {
                     // Usuários de Unidade (Membros ou Líderes)
-                    const isTaskInUserUnit = task.unit && userUnits.includes(task.unit);
+                    const isTaskInUserUnit = !task.unit || task.unit === 'Geral' || userUnits.includes(task.unit) || task.unit === activeUnit;
 
-                    if (isTaskInUserUnit) {
-                        // Na própria unidade: se for de outro setor e não for líder nem atribuído/criador, esconde
-                        if (!isLeader && !isUserInTaskSector && !isAssigned && !isCreator) return false;
-                    } else {
-                        // Em outra unidade ou no Corporativo: só vê SE for atribuído/mencionado na tarefa ou criador da tarefa
+                    if (!isTaskInUserUnit) {
+                        // Se a tarefa for de OUTRA unidade, só vê se for atribuído/mencionado ou criador
                         if (!isAssigned && !isCreator) return false;
                     }
                 } else {

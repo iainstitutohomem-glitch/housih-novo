@@ -18,20 +18,18 @@ const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 const supabase = createClient(envConfig.VITE_SUPABASE_URL, SERVICE_ROLE_KEY);
 
 async function main() {
-  const { data: members } = await supabase.from('team_members').select('units');
-  const { data: tasks } = await supabase.from('tasks').select('unit');
+  const { data: tasks, error: tErr } = await supabase.from('tasks').select('*');
+  const { data: members } = await supabase.from('team_members').select('*');
 
-  const allUnits = new Set();
-  (members || []).forEach(m => {
-    if (Array.isArray(m.units)) m.units.forEach(u => u && allUnits.add(u.trim()));
-    else if (m.units) allUnits.add(m.units.trim());
-  });
+  console.log(`TOTAL TASKS IN DB: ${tasks ? tasks.length : 0}`);
+  if (tErr) console.error("Error fetching tasks:", tErr);
 
-  (tasks || []).forEach(t => {
-    if (t.unit) allUnits.add(t.unit.trim());
-  });
+  if (tasks && tasks.length > 0) {
+    const units = new Set(tasks.map(t => t.unit));
+    console.log("Distinct task units in DB:", Array.from(units));
+    console.log("Sample tasks:", tasks.slice(0, 5).map(t => ({ id: t.id, title: t.title, unit: t.unit, board_id: t.board_id })));
+  }
 
-  console.log("ALL DISTINCT UNIDADES IN DB:", Array.from(allUnits).sort());
   process.exit(0);
 }
 main();
