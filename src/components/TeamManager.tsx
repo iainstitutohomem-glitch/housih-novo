@@ -115,9 +115,15 @@ export const TeamManager = () => {
     return (
         <div className="w-full flex flex-col h-full gap-6">
             {/* Header */}
-            <div className="flex justify-between items-center bg-white/60 backdrop-blur-md p-6 rounded-2xl border border-white/40 shadow-sm">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/80 backdrop-blur-md p-6 rounded-2xl border border-white/40 shadow-sm">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Equipe</h2>
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Equipe</h2>
+                        <span className="bg-primary-50 text-primary-700 border border-primary-200/60 px-3 py-1 rounded-full text-xs font-bold shadow-xs flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></span>
+                            {teamMembers.length} {teamMembers.length === 1 ? 'membro cadastrado' : 'membros cadastrados'}
+                        </span>
+                    </div>
                     <p className="text-sm text-gray-500 mt-1">Gerencie os membros da equipe e os responsáveis pelas tarefas</p>
                 </div>
                 <div className="flex gap-3">
