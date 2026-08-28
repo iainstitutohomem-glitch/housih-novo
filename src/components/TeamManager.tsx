@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Camera, MessageSquare, Pencil, X, Save } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Trash2, Camera, MessageSquare, Pencil, X, Save, Search, Filter, AlertTriangle, Users } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 import type { TeamMember } from '../context/TasksContext';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +14,85 @@ export const TeamManager = () => {
         currentUser?.sectors?.includes('Master') || 
         currentUser?.sectors?.includes('Diretoria') || 
         user?.email?.toLowerCase() === 'institutohomem@gmail.com';
+
+    // ── Search & Filter State ──
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedUnitFilter, setSelectedUnitFilter] = useState('Todas');
+    const [selectedSectorFilter, setSelectedSectorFilter] = useState('Todos');
+    const [onlyDuplicatesFilter, setOnlyDuplicatesFilter] = useState(false);
+
+    // List of all sectors for filter
+    const ALL_SECTORS = useMemo(() => {
+        const set = new Set<string>(['Recepção', 'Administrativo', 'Gestor/Assessor', 'Enfermagem', 'Médico', 'Comercial', 'Operações & Projetos Internos', 'RH', 'TI', 'Financeiro', 'Jurídico', 'Cobrança', 'Comunicação & Marketing', 'Controladoria', 'Geral', ...SETORES]);
+        teamMembers.forEach(m => {
+            if (Array.isArray(m.sectors)) m.sectors.forEach(s => s && set.add(s));
+            else if (typeof m.sectors === 'string' && m.sectors) set.add(m.sectors);
+        });
+        return Array.from(set).sort();
+    }, [SETORES, teamMembers]);
+
+    // Duplicate detection sets
+    const duplicateEmailsSet = useMemo(() => {
+        const counts = new Map<string, number>();
+        teamMembers.forEach(m => {
+            const email = (m.email || '').toLowerCase().trim();
+            if (email) counts.set(email, (counts.get(email) || 0) + 1);
+        });
+        const dups = new Set<string>();
+        counts.forEach((cnt, email) => { if (cnt > 1) dups.add(email); });
+        return dups;
+    }, [teamMembers]);
+
+    const duplicateNamesSet = useMemo(() => {
+        const counts = new Map<string, number>();
+        teamMembers.forEach(m => {
+            const name = (m.name || '').toLowerCase().trim();
+            if (name) counts.set(name, (counts.get(name) || 0) + 1);
+        });
+        const dups = new Set<string>();
+        counts.forEach((cnt, name) => { if (cnt > 1) dups.add(name); });
+        return dups;
+    }, [teamMembers]);
+
+    const totalDuplicatesCount = duplicateEmailsSet.size + duplicateNamesSet.size;
+
+    // Filtered members list
+    const filteredMembers = useMemo(() => {
+        return teamMembers.filter(member => {
+            const memberUnits = Array.isArray(member.units) ? member.units : [member.units || ''];
+            const memberSectors = Array.isArray(member.sectors) ? member.sectors : [member.sectors || ''];
+
+            // 1. Filter by Unit
+            if (selectedUnitFilter !== 'Todas' && !memberUnits.includes(selectedUnitFilter)) {
+                return false;
+            }
+
+            // 2. Filter by Sector
+            if (selectedSectorFilter !== 'Todos' && !memberSectors.includes(selectedSectorFilter)) {
+                return false;
+            }
+
+            // 3. Filter Duplicates Only
+            const email = (member.email || '').toLowerCase().trim();
+            const name = (member.name || '').toLowerCase().trim();
+            const isDup = duplicateEmailsSet.has(email) || duplicateNamesSet.has(name);
+            if (onlyDuplicatesFilter && !isDup) {
+                return false;
+            }
+
+            // 4. Search Query (Name, Email, Unit, Sector)
+            if (searchQuery.trim()) {
+                const q = searchQuery.toLowerCase().trim();
+                const nameMatch = member.name?.toLowerCase().includes(q);
+                const emailMatch = member.email?.toLowerCase().includes(q);
+                const unitMatch = memberUnits.some(u => u.toLowerCase().includes(q));
+                const sectorMatch = memberSectors.some(s => s.toLowerCase().includes(q));
+                if (!nameMatch && !emailMatch && !unitMatch && !sectorMatch) return false;
+            }
+
+            return true;
+        });
+    }, [teamMembers, selectedUnitFilter, selectedSectorFilter, onlyDuplicatesFilter, searchQuery, duplicateEmailsSet, duplicateNamesSet]);
 
     // ── Add new member state ──
     const [isAdding, setIsAdding] = useState(false);
@@ -146,6 +225,78 @@ export const TeamManager = () => {
                 </div>
             </div>
 
+            {/* Search & Filter Toolbar */}
+            <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-white/40 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+                {/* Search Input */}
+                <div className="relative flex-1 w-full">
+                    <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Buscar por nome, e-mail, unidade ou setor..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 pl-10 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 text-sm"
+                    />
+                    {searchQuery && (
+                        <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
+
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                    {/* Unit Filter */}
+                    <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-xs text-gray-700">
+                        <Filter size={14} className="text-gray-400" />
+                        <span className="font-semibold text-gray-500 hidden sm:inline">Unidade:</span>
+                        <select
+                            value={selectedUnitFilter}
+                            onChange={e => setSelectedUnitFilter(e.target.value)}
+                            className="bg-transparent font-medium focus:outline-none cursor-pointer"
+                        >
+                            <option value="Todas">Todas as Unidades ({UNIDADES.length})</option>
+                            <option value="Corporativo">Corporativo</option>
+                            {UNIDADES.filter(u => u !== 'Corporativo').map(u => (
+                                <option key={u} value={u}>{u}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Sector Filter */}
+                    <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-xs text-gray-700">
+                        <span className="font-semibold text-gray-500 hidden sm:inline">Setor:</span>
+                        <select
+                            value={selectedSectorFilter}
+                            onChange={e => setSelectedSectorFilter(e.target.value)}
+                            className="bg-transparent font-medium focus:outline-none cursor-pointer"
+                        >
+                            <option value="Todos">Todos os Setores</option>
+                            {ALL_SECTORS.map(s => (
+                                <option key={s} value={s}>{s}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Duplicates Toggle Button */}
+                    {totalDuplicatesCount > 0 && (
+                        <button
+                            onClick={() => setOnlyDuplicatesFilter(!onlyDuplicatesFilter)}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-xs ${onlyDuplicatesFilter ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'}`}
+                            title="Filtrar contatos duplicados"
+                        >
+                            <AlertTriangle size={14} />
+                            <span>{onlyDuplicatesFilter ? 'Exibindo Duplicados' : `Duplicados (${totalDuplicatesCount})`}</span>
+                        </button>
+                    )}
+
+                    {/* Counter of filtered results */}
+                    <div className="bg-primary-50 text-primary-700 border border-primary-100 px-3 py-2 rounded-xl text-xs font-bold shadow-xs whitespace-nowrap">
+                        {filteredMembers.length} {filteredMembers.length === 1 ? 'membro' : 'membros'}
+                    </div>
+                </div>
+            </div>
+
             {/* Manage Units */}
             {isUnitModalOpen && isMaster && (
                 <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl border border-white/40 shadow-sm animate-in fade-in slide-in-from-top-4 space-y-4">
@@ -246,7 +397,7 @@ export const TeamManager = () => {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Senha Provisória</label>
-                                    <input type="password" placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                                    <input type="password" placeholder="Mínimo 6 caracteres" value={newPassword} onChange={e => setNewPassword(e.target.value)}
                                         className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
                                 </div>
                                 <div>
@@ -255,11 +406,11 @@ export const TeamManager = () => {
                                         className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
                                 </div>
                             </div>
-                            <div className="flex gap-4 pt-2">
-                                <button onClick={handleAdd} className="bg-gray-800 text-white px-6 py-2.5 rounded-xl hover:bg-gray-700 transition-colors shadow-sm">
-                                    Salvar Membro e Gerar Acesso
+                            <div className="flex gap-3 pt-2">
+                                <button onClick={handleAdd} className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-sm transition-all">
+                                    <Plus size={18} /> Confirmar Cadastro
                                 </button>
-                                <button onClick={() => setIsAdding(false)} className="text-gray-500 px-4 hover:text-gray-800 transition-colors">Cancelar</button>
+                                <button onClick={() => setIsAdding(false)} className="text-gray-500 hover:text-gray-700 px-4">Cancelar</button>
                             </div>
                         </div>
                     </div>
@@ -268,11 +419,10 @@ export const TeamManager = () => {
 
             {/* Edit member modal/drawer */}
             {editingMember && (
-                <div className="bg-white/90 backdrop-blur-md p-6 rounded-2xl border border-primary-200 shadow-xl animate-in fade-in slide-in-from-top-4 space-y-5">
-                    <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
-                            <Pencil size={18} className="text-primary-500" />
-                            Editar: {editingMember.name}
+                <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl border border-white/40 shadow-sm animate-in fade-in slide-in-from-top-4 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h3 className="font-semibold text-gray-800">
+                            Editar Membro: <span className="text-primary-600 font-bold">{editingMember.name}</span>
                         </h3>
                         <button onClick={closeEdit} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all"><X size={20} /></button>
                     </div>
@@ -360,90 +510,113 @@ export const TeamManager = () => {
             )}
 
             {/* Member cards grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 overflow-y-auto no-scrollbar pb-8">
-                {teamMembers.map(member => (
-                    <div key={member.id} className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-white/50 shadow-sm hover:shadow-md transition-shadow group relative flex flex-col items-center text-center">
-                        {/* Edit & Delete buttons — top right */}
-                        <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {isMaster && (
-                                <button
-                                    onClick={() => openEdit(member)}
-                                    className="p-2 text-primary-500 bg-primary-50 hover:bg-primary-100 rounded-full transition-colors shadow-sm"
-                                    title="Editar membro"
-                                >
-                                    <Pencil size={15} />
-                                </button>
-                            )}
-                            {isMaster && (
-                                <button
-                                    onClick={() => { if (window.confirm('Tem certeza que deseja remover este membro da equipe?')) deleteTeamMember(member.id.toString()); }}
-                                    className="p-2 text-red-400 bg-red-50 hover:bg-red-100 rounded-full transition-colors shadow-sm"
-                                    title="Remover membro"
-                                >
-                                    <Trash2 size={15} />
-                                </button>
-                            )}
-                        </div>
+            {filteredMembers.length === 0 ? (
+                <div className="bg-white/60 backdrop-blur-sm p-12 rounded-2xl border border-white/50 text-center flex flex-col items-center justify-center gap-3">
+                    <Users size={48} className="text-gray-300" />
+                    <p className="text-gray-500 font-medium text-sm">Nenhum membro encontrado com os filtros selecionados.</p>
+                    {(searchQuery || selectedUnitFilter !== 'Todas' || selectedSectorFilter !== 'Todos' || onlyDuplicatesFilter) && (
+                        <button
+                            onClick={() => { setSearchQuery(''); setSelectedUnitFilter('Todas'); setSelectedSectorFilter('Todos'); setOnlyDuplicatesFilter(false); }}
+                            className="text-xs text-primary-600 font-bold hover:underline mt-1"
+                        >
+                            Limpar Filtros
+                        </button>
+                    )}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 overflow-y-auto no-scrollbar pb-8">
+                    {filteredMembers.map(member => {
+                        const email = (member.email || '').toLowerCase().trim();
+                        const name = (member.name || '').toLowerCase().trim();
+                        const isDup = (email && duplicateEmailsSet.has(email)) || (name && duplicateNamesSet.has(name));
 
-                        {/* Avatar with hover to change photo */}
-                        <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center font-bold text-2xl text-primary-700 mb-4 border-4 border-white shadow-sm overflow-hidden relative group/avatar">
-                            {member.avatar_url ? (
-                                <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
-                            ) : (
-                                member.name.charAt(0).toUpperCase()
-                            )}
-                            {(user?.email === member.email || isMaster) && (
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-pointer">
-                                    <Camera size={24} className="text-white" />
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                        onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) {
-                                                const reader = new FileReader();
-                                                reader.onloadend = async () => {
-                                                    await updateTeamMember(member.id, { avatar_url: reader.result as string });
-                                                };
-                                                reader.readAsDataURL(file);
-                                            }
-                                        }}
-                                    />
+                        return (
+                            <div key={member.id} className={`bg-white/60 backdrop-blur-sm p-6 rounded-2xl border shadow-sm hover:shadow-md transition-shadow group relative flex flex-col items-center text-center ${isDup ? 'border-red-300 ring-2 ring-red-400/30' : 'border-white/50'}`}>
+                                {/* Duplicate Badge */}
+                                {isDup && (
+                                    <div className="absolute top-4 left-4 bg-red-100 text-red-700 border border-red-200 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs" title="Este contato possui e-mail ou nome duplicado no sistema">
+                                        <AlertTriangle size={11} /> Duplicado
+                                    </div>
+                                )}
+
+                                {/* Edit & Delete buttons — top right */}
+                                <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {isMaster && (
+                                        <button
+                                            onClick={() => openEdit(member)}
+                                            className="p-2 text-primary-500 bg-primary-50 hover:bg-primary-100 rounded-full transition-colors shadow-sm"
+                                            title="Editar membro"
+                                        >
+                                            <Pencil size={15} />
+                                        </button>
+                                    )}
+                                    {isMaster && (
+                                        <button
+                                            onClick={() => { if (window.confirm('Tem certeza que deseja remover este membro da equipe?')) deleteTeamMember(member.id.toString()); }}
+                                            className="p-2 text-red-400 bg-red-50 hover:bg-red-100 rounded-full transition-colors shadow-sm"
+                                            title="Remover membro"
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
+                                    )}
                                 </div>
-                            )}
-                        </div>
 
-                        <h3 className="text-lg font-semibold text-gray-800">{member.name}</h3>
-                        <p className="text-xs font-bold text-primary-600 mt-1">{member.role === 'Líder' ? 'Líder de Setor' : (member.email === 'institutohomem@gmail.com' ? 'Administrador' : 'Membro da Equipe')}</p>
+                                {/* Avatar with hover to change photo */}
+                                <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center font-bold text-2xl text-primary-700 mb-4 border-4 border-white shadow-sm overflow-hidden relative group/avatar">
+                                    {member.avatar_url ? (
+                                        <img src={member.avatar_url} alt={member.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        member.name.charAt(0).toUpperCase()
+                                    )}
+                                    {(user?.email === member.email || isMaster) && (
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-pointer">
+                                            <Camera size={24} className="text-white" />
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        const reader = new FileReader();
+                                                        reader.onloadend = async () => {
+                                                            await updateTeamMember(member.id, { avatar_url: reader.result as string });
+                                                        };
+                                                        reader.readAsDataURL(file);
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
 
-                        <div className="flex flex-wrap justify-center gap-1 mt-2">
-                            {member.units?.map(u => (
-                                <span key={u} className="text-[9px] bg-primary-50 text-primary-700 px-2 py-0.5 rounded-full font-medium">{u}</span>
-                            ))}
-                            {member.sectors?.map(s => (
-                                <span key={s} className="text-[9px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">{s}</span>
-                            ))}
-                        </div>
-                        <p className="text-[10px] text-gray-400 mt-2">{member.email}</p>
-                        {member.birth_date && <p className="text-[9px] text-gray-300 mt-0.5">🎂 {member.birth_date}</p>}
+                                <h3 className="text-lg font-semibold text-gray-800">{member.name}</h3>
+                                <p className="text-xs font-bold text-primary-600 mt-1">{member.role === 'Líder' ? 'Líder de Setor' : (member.email === 'institutohomem@gmail.com' ? 'Administrador' : 'Membro da Equipe')}</p>
 
-                        {member.email && user?.email !== member.email && (
-                            <button
-                                onClick={() => startPrivateChat(member.email!)}
-                                className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-600 rounded-xl hover:bg-primary-600 hover:text-white transition-all text-xs font-bold border border-primary-100"
-                            >
-                                <MessageSquare size={14} /> Iniciar Chat
-                            </button>
-                        )}
-                    </div>
-                ))}
-                {teamMembers.length === 0 && !isAdding && (
-                    <div className="col-span-full py-12 text-center text-gray-400">
-                        Nenhum membro cadastrado. Cadastre para adicioná-los como responsáveis!
-                    </div>
-                )}
-            </div>
+                                <div className="flex flex-wrap justify-center gap-1 mt-2">
+                                    {member.units?.map(u => (
+                                        <span key={u} className="text-[9px] bg-primary-50 text-primary-700 px-2 py-0.5 rounded-full font-medium">{u}</span>
+                                    ))}
+                                    {member.sectors?.map(s => (
+                                        <span key={s} className="text-[9px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">{s}</span>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-gray-400 mt-2">{member.email}</p>
+                                {member.birth_date && <p className="text-[9px] text-gray-300 mt-0.5">🎂 {member.birth_date}</p>}
+
+                                {member.email && user?.email !== member.email && (
+                                    <button
+                                        onClick={() => startPrivateChat(member.email!)}
+                                        className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-600 rounded-xl hover:bg-primary-600 hover:text-white transition-all text-xs font-bold border border-primary-100"
+                                    >
+                                        <MessageSquare size={14} /> Iniciar Chat
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 };
