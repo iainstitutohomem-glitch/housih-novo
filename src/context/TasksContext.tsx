@@ -260,20 +260,10 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 ));
             if (!matchesBoard) return false;
 
-            // 3. Permissões de Visualização (Risco Zero de exposição)
+            // 3. Permissões de Visualização (Garante exibição de tarefas para todos os perfis)
             if (!isMaster && currentUser) {
                 const userUnits = currentUser.units || [];
                 const isCorporativo = userUnits.includes('Corporativo');
-                const isLeader = currentUser.role === 'Líder';
-
-                const userSectors = currentUser.sectors || [];
-                const taskBoard = boards.find(b => b.id === task.board_id);
-                const taskParentBoard = boards.find(b => b.id === taskBoard?.parent_board_id);
-                
-                const isUserInTaskSector = 
-                    userSectors.includes(taskBoard?.name || '') || 
-                    userSectors.includes(taskParentBoard?.name || '') ||
-                    (task.sector && userSectors.includes(task.sector));
 
                 const isAssigned = Array.isArray(task.assignee) && (
                     task.assignee.includes(currentUser.name || '') || 
@@ -282,19 +272,13 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
                 const isCreator = task.created_by?.toLowerCase() === currentUser.email?.toLowerCase();
 
-                if (isLeader && isCorporativo) {
-                    // Líder Corporativo vê TUDO
-                } else if (!isCorporativo) {
-                    // Usuários de Unidade (Membros ou Líderes)
+                if (!isCorporativo) {
+                    // Usuários de Unidade: se a tarefa for de OUTRA unidade, só vê se for atribuído/criador
                     const isTaskInUserUnit = !task.unit || task.unit === 'Geral' || userUnits.includes(task.unit) || task.unit === activeUnit;
 
-                    if (!isTaskInUserUnit) {
-                        // Se a tarefa for de OUTRA unidade, só vê se for atribuído/mencionado ou criador
-                        if (!isAssigned && !isCreator) return false;
+                    if (!isTaskInUserUnit && !isAssigned && !isCreator) {
+                        return false;
                     }
-                } else {
-                    // Membros do Corporativo veem tarefas do seu setor ou tarefas onde foram atribuídos/criadores
-                    if (!isUserInTaskSector && !isAssigned && !isCreator) return false;
                 }
             }
 

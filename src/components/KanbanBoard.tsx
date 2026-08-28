@@ -85,11 +85,12 @@ export const KanbanBoard = () => {
         const corporativoBoards = ['Arquitetura e Obras', 'Atendimento Comercial', 'Cobrança', 'Comercial', 'Comunicação & Marketing', 'Financeiro', 'Jurídico', 'Operações & Projetos Internos', 'RH', 'TI', 'Controladoria'];
 
         if (activeUnit === 'Corporativo') {
-            pBoards = pBoards.filter(b => corporativoBoards.includes(b.name));
+            const filtered = pBoards.filter(b => corporativoBoards.includes(b.name));
+            return filtered.length > 0 ? filtered : pBoards;
         } else {
-            pBoards = pBoards.filter(b => unitBoards.includes(b.name));
+            const filtered = pBoards.filter(b => unitBoards.includes(b.name));
+            return filtered.length > 0 ? filtered : pBoards;
         }
-        return pBoards;
     }, [boards, activeUnit]);
     const subBoardsOf = (parentId: string) => boards.filter(b => b.parent_board_id === parentId);
 
