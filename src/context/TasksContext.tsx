@@ -364,24 +364,44 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 await supabase.rpc('update_overdue_tasks');
             }
 
-            // OPTIMIZATION: Select only necessary fields for Kanban/List views (including unit and sector)
-            const { data, error } = await supabase
-                .from('tasks')
-                .select('id, title, status, priority, company_id, due_date, assignee, board_id, column_id, order_index, unit, sector, created_by')
-                .order('order_index', { ascending: true });
+            let allTasks: any[] = [];
+            let hasMore = true;
+            let offset = 0;
+            const PAGE_SIZE = 1000;
+            let pageCount = 0;
             
-            if (error) {
-                console.error("Fetch tasks error:", error);
-                // Removed disruptive alert for fetch errors. JWT expired and other transient errors should fail silently.
-            } else if (data) {
-                const updatedData = data.map((t: any) => {
-                    if (!Array.isArray(t.assignee)) {
-                        t.assignee = typeof t.assignee === 'string' ? [t.assignee] : [];
+            while (hasMore && pageCount < 20) { // Limit to 20,000 tasks max
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .select('id, title, status, priority, company_id, due_date, assignee, board_id, column_id, order_index, unit, sector, created_by')
+                    .order('order_index', { ascending: true })
+                    .range(offset, offset + PAGE_SIZE - 1);
+                
+                if (error) {
+                    console.error("Fetch tasks error:", error);
+                    hasMore = false;
+                    break;
+                }
+                
+                if (data && data.length > 0) {
+                    allTasks = allTasks.concat(data);
+                    offset += PAGE_SIZE;
+                    pageCount++;
+                    if (data.length < PAGE_SIZE) {
+                        hasMore = false;
                     }
-                    return t;
-                });
-                setTasks(updatedData);
+                } else {
+                    hasMore = false;
+                }
             }
+
+            const updatedData = allTasks.map((t: any) => {
+                if (!Array.isArray(t.assignee)) {
+                    t.assignee = typeof t.assignee === 'string' ? [t.assignee] : [];
+                }
+                return t;
+            });
+            setTasks(updatedData);
         } catch (err) {
             console.error("Critical error in fetchTasks:", err);
         } finally {
