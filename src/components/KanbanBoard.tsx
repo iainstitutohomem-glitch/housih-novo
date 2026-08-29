@@ -120,8 +120,8 @@ export const KanbanBoard = () => {
             return UNIDADES;
         }
 
-        const filtered = UNIDADES.filter(u => myUnits.includes(u));
-        return filtered.length > 0 ? filtered : myUnits;
+        const filtered = UNIDADES.filter(u => myUnits.includes(u) || u === 'Corporativo');
+        return filtered.length > 0 ? filtered : ['Corporativo', ...myUnits];
     }, [UNIDADES, currentUser, session]);
 
     // Determine the active sub-boards for the selected parent

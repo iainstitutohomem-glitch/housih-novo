@@ -263,6 +263,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             // 3. Permissões de Visualização (Garante exibição de tarefas para todos os perfis)
             if (!isMaster && currentUser) {
                 const userUnits = currentUser.units || [];
+                const userSectors = currentUser.sectors || [];
                 const isCorporativo = userUnits.includes('Corporativo');
 
                 const isAssigned = Array.isArray(task.assignee) && (
@@ -271,6 +272,12 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 );
 
                 const isCreator = task.created_by?.toLowerCase() === currentUser.email?.toLowerCase();
+
+                // Regra do Setor: se a tarefa for de outro setor do usuário, só vê se for atribuído ou criador
+                const isSameSector = task.sector && userSectors.includes(task.sector);
+                if (task.sector && !isSameSector && !isAssigned && !isCreator) {
+                    return false;
+                }
 
                 if (!isCorporativo) {
                     // Usuários de Unidade: se a tarefa for de OUTRA unidade, só vê se for atribuído/criador
