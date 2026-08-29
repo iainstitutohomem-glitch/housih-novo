@@ -525,6 +525,25 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     const updateTask = async (taskId: string, task: Partial<Task>) => {
         const oldTask = tasks.find(t => t.id === taskId);
+        
+        // Segurança: Bloquear não-líderes de alterar a data de vencimento
+        const currentUser = teamMembers.find(m => m.email?.toLowerCase() === session?.user?.email?.toLowerCase());
+        const isMaster = 
+            currentUser?.sectors?.includes('Master') || 
+            currentUser?.sectors?.includes('Diretoria') || 
+            session?.user?.email?.toLowerCase() === 'institutohomem@gmail.com';
+        const isLeader = currentUser?.role === 'Líder' || isMaster;
+
+        const oldDateStr = oldTask?.due_date ? new Date(oldTask.due_date).toISOString().split('T')[0] : '';
+        const newDateStr = task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : '';
+
+        if (task.due_date !== undefined && oldTask && oldDateStr !== newDateStr) {
+            if (!isLeader) {
+                alert("Apenas líderes podem alterar a data de vencimento de uma tarefa.");
+                return;
+            }
+        }
+
         const { data, error } = await supabase.from('tasks').update(task).eq('id', taskId).select();
         if (error) alert("Erro: " + error.message);
         else if (data) {

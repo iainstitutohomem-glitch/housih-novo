@@ -71,6 +71,22 @@ export const TaskModal = () => {
 
     const currentUser = teamMembers.find(m => m.email === session?.user?.email)?.name || 'Sistema';
 
+    const currentUserMember = useMemo(() => {
+        const userEmail = session?.user?.email?.toLowerCase();
+        return teamMembers.find(m => m.email?.toLowerCase() === userEmail);
+    }, [teamMembers, session]);
+
+    const isMaster = useMemo(() => {
+        const userEmail = session?.user?.email?.toLowerCase();
+        return currentUserMember?.sectors?.includes('Master') || 
+            currentUserMember?.sectors?.includes('Diretoria') || 
+            userEmail === 'institutohomem@gmail.com';
+    }, [currentUserMember, session]);
+
+    const isLeader = useMemo(() => {
+        return currentUserMember?.role === 'Líder' || isMaster;
+    }, [currentUserMember, isMaster]);
+
     const handleMouseMove = (e: MouseEvent) => {
         if (!isDraggingRef.current || !containerRef.current) return;
         const containerRect = containerRef.current.getBoundingClientRect();
@@ -742,7 +758,9 @@ export const TaskModal = () => {
                                                 type="date"
                                                 value={dueDate}
                                                 onChange={(e) => setDueDate(e.target.value)}
-                                                className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 pl-10 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all"
+                                                disabled={!!editingTask && !isLeader}
+                                                className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2.5 pl-10 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                                                title={!!editingTask && !isLeader ? "Apenas líderes podem alterar a data de vencimento desta tarefa." : undefined}
                                             />
                                         </div>
                                     </div>
