@@ -274,8 +274,13 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 const isCreator = task.created_by?.toLowerCase() === currentUser.email?.toLowerCase();
 
                 // Regra do Setor: se a tarefa for de outro setor do usuário, só vê se for atribuído ou criador
-                const isSameSector = task.sector && userSectors.includes(task.sector);
-                if (task.sector && !isSameSector && !isAssigned && !isCreator) {
+                // Para garantir robustez com dados legados, resolvemos o setor dinamicamente pelo quadro correspondente da tarefa
+                const taskBoard = boards.find(b => b.id === task.board_id);
+                const parentBoard = taskBoard?.parent_board_id ? boards.find(b => b.id === taskBoard.parent_board_id) : null;
+                const resolvedSector = parentBoard ? parentBoard.name : (taskBoard ? taskBoard.name : task.sector);
+
+                const isSameSector = resolvedSector && userSectors.includes(resolvedSector);
+                if (resolvedSector && !isSameSector && !isAssigned && !isCreator) {
                     return false;
                 }
 
