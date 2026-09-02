@@ -212,6 +212,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         dataFim: '',
         busca: ''
     });
+    const lastOverdueCheckRef = useRef<number>(0);
 
     useEffect(() => {
         if (!session?.user?.email || teamMembers.length === 0) return;
@@ -364,8 +365,10 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const fetchTasks = async (silent = false) => {
         if (!silent) setLoading(true);
         try {
-            // Automatically update overdue tasks in the database before fetching
-            if (!silent) {
+            // Automatically update overdue tasks in the database at most once every 5 minutes
+            const now = Date.now();
+            if (!silent && now - lastOverdueCheckRef.current > 5 * 60 * 1000) {
+                lastOverdueCheckRef.current = now;
                 await supabase.rpc('update_overdue_tasks');
             }
 
@@ -1237,22 +1240,22 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const fetchAllData = async () => {
             setLoading(true);
             try {
-                // Fetch units
-                const { data: unitsData } = await supabase.from('system_units').select('name').order('name');
-                if (unitsData && unitsData.length > 0) {
-                    setDbUnits(unitsData.map(u => u.name));
+                const [unitsRes] = await Promise.all([
+                    supabase.from('system_units').select('name').order('name'),
+                    fetchBoards(),
+                    fetchBoardColumns(),
+                    fetchTasks(),
+                    fetchCompanies(),
+                    fetchTeam(),
+                    fetchNotifications(),
+                    fetchTimeline(),
+                    fetchTickets()
+                ]);
+                if (unitsRes?.data && unitsRes.data.length > 0) {
+                    setDbUnits(unitsRes.data.map((u: any) => u.name));
                 } else {
                     setDbUnits(DEFAULT_UNIDADES);
                 }
-
-                fetchBoards();
-                fetchBoardColumns();
-                fetchTasks();
-                fetchCompanies();
-                fetchTeam();
-                fetchNotifications();
-                fetchTimeline();
-                fetchTickets();
             } finally {
                 setLoading(false);
             }
@@ -1260,10 +1263,38 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         fetchAllData();
 
-        // Subscrição Realtime para atualizações automáticas
+        // Subscrição Realtime com atualizações granulares em memória (zero download redundante)
         let channel = supabase
             .channel('db-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => fetchTasks(true))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    const newTask = payload.new as any;
+                    if (newTask && newTask.id) {
+                        if (!Array.isArray(newTask.assignee)) {
+                            newTask.assignee = typeof newTask.assignee === 'string' ? [newTask.assignee] : [];
+                        }
+                        setTasks(prev => {
+                            if (prev.some(t => t.id === newTask.id)) {
+                                return prev.map(t => t.id === newTask.id ? { ...t, ...newTask } : t);
+                            }
+                            return [newTask, ...prev];
+                        });
+                    }
+                } else if (payload.eventType === 'UPDATE') {
+                    const updated = payload.new as any;
+                    if (updated && updated.id) {
+                        if (updated.assignee !== undefined && !Array.isArray(updated.assignee)) {
+                            updated.assignee = typeof updated.assignee === 'string' ? [updated.assignee] : [];
+                        }
+                        setTasks(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t));
+                    }
+                } else if (payload.eventType === 'DELETE') {
+                    const oldId = (payload.old as any)?.id;
+                    if (oldId) {
+                        setTasks(prev => prev.filter(t => t.id !== oldId));
+                    }
+                }
+            })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'board_columns' }, () => fetchBoardColumns())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, () => fetchBoards())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'team_members' }, () => fetchTeam())

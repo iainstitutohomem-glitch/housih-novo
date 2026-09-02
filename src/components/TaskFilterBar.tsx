@@ -1,9 +1,23 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { useTasks } from '../context/TasksContext';
 
 export const TaskFilterBar = () => {
     const { filters, setFilters, companies, teamMembers, boardColumns, activeBoardId } = useTasks();
+    const [searchValue, setSearchValue] = useState(filters.busca);
+
+    useEffect(() => {
+        setSearchValue(filters.busca);
+    }, [filters.busca]);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            if (searchValue !== filters.busca) {
+                setFilters(prev => ({ ...prev, busca: searchValue }));
+            }
+        }, 150);
+        return () => clearTimeout(handler);
+    }, [searchValue, filters.busca, setFilters]);
 
     const availableStatuses = useMemo(() => {
         let cols = boardColumns;
@@ -29,8 +43,8 @@ export const TaskFilterBar = () => {
                 <input 
                     type="text"
                     placeholder="Buscar tarefa pelo nome do chamado..."
-                    value={filters.busca}
-                    onChange={(e) => setFilters({ ...filters, busca: e.target.value })}
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
                     className="w-full bg-gray-50/50 border border-gray-200 text-gray-700 py-3 pl-12 px-4 rounded-xl focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:bg-white focus:border-primary-500/50 transition-all text-sm outline-none shadow-sm"
                 />
             </div>

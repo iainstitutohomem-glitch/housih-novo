@@ -239,6 +239,26 @@ export const KanbanBoard = () => {
         return false;
     };
 
+    const tasksByColumn = useMemo(() => {
+        const map = new Map<string, any[]>();
+        currentColumns.forEach(col => map.set(col.id, []));
+
+        filteredTasks.forEach(task => {
+            for (const col of currentColumns) {
+                if (filterTaskForCol(task, col)) {
+                    map.get(col.id)?.push(task);
+                    break;
+                }
+            }
+        });
+
+        map.forEach(list => {
+            list.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+        });
+
+        return map;
+    }, [currentColumns, filteredTasks, currentBoardColIds]);
+
     const onDragEnd = async (result: any) => {
         if (!result.destination) return;
         const { source, destination, draggableId } = result;
@@ -246,9 +266,7 @@ export const KanbanBoard = () => {
         const destColumn = currentColumns.find(c => c.id === destColId);
         if (!destColumn) return;
 
-        const tasksInDest = filteredTasks
-            .filter((t) => filterTaskForCol(t, destColumn))
-            .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+        const tasksInDest = tasksByColumn.get(destColId) || [];
 
         let newOrder: number;
         if (tasksInDest.length === 0) {
@@ -405,9 +423,7 @@ export const KanbanBoard = () => {
             <div className="flex-1 flex gap-6 overflow-x-auto px-6 pb-6 h-full mt-2 pretty-scrollbar">
                 <DragDropContext onDragEnd={onDragEnd}>
                     {currentColumns.map((col) => {
-                        const tasksInCol = filteredTasks
-                            .filter((t) => filterTaskForCol(t, col))
-                            .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+                        const tasksInCol = tasksByColumn.get(col.id) || [];
 
                         return (
                             <Droppable key={col.id} droppableId={col.id}>
@@ -457,7 +473,7 @@ export const KanbanBoard = () => {
                                                                 >
                                                                     <div className="flex -space-x-2 overflow-hidden items-center group/av">
                                                                         {task.assignee && task.assignee.length > 0 ? (
-                                                                            task.assignee.slice(0, 3).map((name, i) => {
+                                                                            task.assignee.slice(0, 3).map((name: string, i: number) => {
                                                                                 const member = teamMembers.find(m => m.name === name);
                                                                                 return (
                                                                                     <div key={i} className="w-6 h-6 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold border-2 border-white overflow-hidden relative transition-transform hover:translate-y-[-2px] z-[1]">
@@ -507,7 +523,7 @@ export const KanbanBoard = () => {
                                                                                                 onClick={async (e) => {
                                                                                                     e.stopPropagation();
                                                                                                     const next = isSelected 
-                                                                                                        ? task.assignee.filter(a => a !== m.name)
+                                                                                                        ? task.assignee.filter((a: string) => a !== m.name)
                                                                                                         : [...(task.assignee || []), m.name];
                                                                                                     await updateTask(task.id, { assignee: next });
                                                                                                 }}
