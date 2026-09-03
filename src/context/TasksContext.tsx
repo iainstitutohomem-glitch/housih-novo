@@ -740,44 +740,53 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     };
 
-    const fetchTeam = async () => {
-        const { data, error } = await supabase
-            .from('team_members')
-            .select('id, name, email, avatar_url, birth_date, units, sectors, role');
-            
-        if (!error && data) {
-            setTeamMembers(data.map((m: any) => {
-                let units: string[] = [];
-                if (Array.isArray(m.units)) {
-                    units = m.units;
-                } else if (typeof m.units === 'string') {
-                    try {
-                        const parsed = JSON.parse(m.units);
-                        units = Array.isArray(parsed) ? parsed : [m.units];
-                    } catch {
-                        units = [m.units];
+    const fetchTeam = async (retries = 2) => {
+        try {
+            const { data, error } = await supabase
+                .from('team_members')
+                .select('id, name, email, avatar_url, birth_date, units, sectors, role');
+                
+            if (error) throw error;
+            if (data) {
+                setTeamMembers(data.map((m: any) => {
+                    let units: string[] = [];
+                    if (Array.isArray(m.units)) {
+                        units = m.units;
+                    } else if (typeof m.units === 'string') {
+                        try {
+                            const parsed = JSON.parse(m.units);
+                            units = Array.isArray(parsed) ? parsed : [m.units];
+                        } catch {
+                            units = [m.units];
+                        }
                     }
-                }
 
-                let sectors: string[] = [];
-                if (Array.isArray(m.sectors)) {
-                    sectors = m.sectors;
-                } else if (typeof m.sectors === 'string') {
-                    try {
-                        const parsed = JSON.parse(m.sectors);
-                        sectors = Array.isArray(parsed) ? parsed : [m.sectors];
-                    } catch {
-                        sectors = [m.sectors];
+                    let sectors: string[] = [];
+                    if (Array.isArray(m.sectors)) {
+                        sectors = m.sectors;
+                    } else if (typeof m.sectors === 'string') {
+                        try {
+                            const parsed = JSON.parse(m.sectors);
+                            sectors = Array.isArray(parsed) ? parsed : [m.sectors];
+                        } catch {
+                            sectors = [m.sectors];
+                        }
                     }
-                }
 
-                return {
-                    ...m,
-                    units,
-                    sectors,
-                    avatar_url: m.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random`
-                };
-            }));
+                    return {
+                        ...m,
+                        units,
+                        sectors,
+                        avatar_url: m.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=random`
+                    };
+                }));
+            }
+        } catch (err: any) {
+            console.warn("fetchTeam retry attempt...", err.message);
+            if (retries > 0) {
+                await new Promise(r => setTimeout(r, 300));
+                return fetchTeam(retries - 1);
+            }
         }
     };
 
@@ -998,36 +1007,47 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     };
 
-    const fetchTimeline = async () => {
-        const { data, error } = await supabase
-            .from('timeline_posts')
-            .select(`
-                *,
-                author:team_members(name, avatar_url),
-                likes:timeline_likes(user_id),
-                comments:timeline_comments(
+    const fetchTimeline = async (retries = 2) => {
+        try {
+            const { data, error } = await supabase
+                .from('timeline_posts')
+                .select(`
                     *,
-                    author:team_members(name, avatar_url)
-                )
-            `)
-            .order('created_at', { ascending: false });
-        
-        if (!error && data) {
-            const userId = session?.user?.id;
+                    likes:timeline_likes(user_id),
+                    comments:timeline_comments(*)
+                `)
+                .order('created_at', { ascending: false });
+            
+            if (error) throw error;
+            if (data) {
+                const userId = session?.user?.id;
 
-            const formatted = data.map((p: any) => ({
-                ...p,
-                author_name: p.author?.name,
-                author_avatar: p.author?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.author?.name || 'Membro')}&background=random`,
-                likes_count: p.likes?.length || 0,
-                user_has_liked: p.likes?.some((l: any) => l.user_id === userId),
-                comments: (p.comments || []).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).map((c: any) => ({
-                    ...c,
-                    author_name: c.author?.name,
-                    author_avatar: c.author?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.author?.name || 'Membro')}&background=random`
-                }))
-            }));
-            setTimelinePosts(formatted);
+                const formatted = data.map((p: any) => {
+                    const authorMember = teamMembers.find(m => m.id === p.author_id || m.email?.toLowerCase() === p.author_id?.toLowerCase());
+                    return {
+                        ...p,
+                        author_name: authorMember?.name || p.author_name || 'Membro',
+                        author_avatar: authorMember?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorMember?.name || 'Membro')}&background=random`,
+                        likes_count: p.likes?.length || 0,
+                        user_has_liked: p.likes?.some((l: any) => l.user_id === userId),
+                        comments: (p.comments || []).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).map((c: any) => {
+                            const commentAuthor = teamMembers.find(m => m.id === c.author_id || m.email?.toLowerCase() === c.author_id?.toLowerCase());
+                            return {
+                                ...c,
+                                author_name: commentAuthor?.name || c.author_name || 'Membro',
+                                author_avatar: commentAuthor?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(commentAuthor?.name || 'Membro')}&background=random`
+                            };
+                        })
+                    };
+                });
+                setTimelinePosts(formatted);
+            }
+        } catch (err: any) {
+            console.warn("fetchTimeline retry attempt...", err.message);
+            if (retries > 0) {
+                await new Promise(r => setTimeout(r, 300));
+                return fetchTimeline(retries - 1);
+            }
         }
     };
 
@@ -1120,37 +1140,48 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         else fetchTimeline();
     };
 
-    const fetchTickets = async () => {
-        const { data, error } = await supabase
-            .from('tickets')
-            .select(`
-                *,
-                sender:team_members!sender_id(id, name, avatar_url, sectors),
-                messages:ticket_messages(
+    const fetchTickets = async (retries = 2) => {
+        try {
+            const { data, error } = await supabase
+                .from('tickets')
+                .select(`
                     *,
-                    sender:team_members!sender_id(id, name, avatar_url)
-                )
-            `)
-            .order('created_at', { ascending: false });
-        
-        if (!error && data) {
-            const formatted = data.map((t: any) => {
-                const match = t.subject?.match(/^\[(.*?)\]\s*(.*)$/);
-                const theme = match ? match[1] : 'GERAL';
-                const subject = match ? match[2] : t.subject;
-                
-                return {
-                    ...t,
-                    theme,
-                    subject,
-                    sender_avatar: t.sender?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.sender?.name || 'Remetente')}&background=random`,
-                    messages: (t.messages || []).map((m: any) => ({
-                        ...m,
-                        sender_avatar: m.sender?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.sender?.name || 'Membro')}&background=random`
-                    }))
-                };
-            });
-            setTickets(formatted);
+                    messages:ticket_messages(*)
+                `)
+                .order('created_at', { ascending: false });
+            
+            if (error) throw error;
+            if (data) {
+                const formatted = data.map((t: any) => {
+                    const match = t.subject?.match(/^\[(.*?)\]\s*(.*)$/);
+                    const theme = match ? match[1] : 'GERAL';
+                    const subject = match ? match[2] : t.subject;
+                    const senderMember = teamMembers.find(m => m.id === t.sender_id || m.email?.toLowerCase() === t.sender_id?.toLowerCase());
+                    
+                    return {
+                        ...t,
+                        theme,
+                        subject,
+                        sender: senderMember || { id: t.sender_id, name: 'Remetente', avatar_url: '', sectors: [] },
+                        sender_avatar: senderMember?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderMember?.name || 'Remetente')}&background=random`,
+                        messages: (t.messages || []).map((m: any) => {
+                            const msgSender = teamMembers.find(mem => mem.id === m.sender_id || mem.email?.toLowerCase() === m.sender_id?.toLowerCase());
+                            return {
+                                ...m,
+                                sender: msgSender || { id: m.sender_id, name: 'Membro', avatar_url: '' },
+                                sender_avatar: msgSender?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(msgSender?.name || 'Membro')}&background=random`
+                            };
+                        })
+                    };
+                });
+                setTickets(formatted);
+            }
+        } catch (err: any) {
+            console.warn("fetchTickets retry attempt...", err.message);
+            if (retries > 0) {
+                await new Promise(r => setTimeout(r, 300));
+                return fetchTickets(retries - 1);
+            }
         }
     };
 
@@ -1312,25 +1343,32 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         const fetchAllData = async () => {
             setLoading(true);
             try {
+                // Fase 1: Carregamento Crítico Imediato (Quadros, Membros, Empresas, Tarefas)
                 const [unitsRes] = await Promise.all([
                     supabase.from('system_units').select('name').order('name'),
                     fetchBoards(),
                     fetchBoardColumns(),
-                    fetchTasks(),
-                    fetchCompanies(),
                     fetchTeam(),
-                    fetchNotifications(),
-                    fetchTimeline(),
-                    fetchTickets()
+                    fetchCompanies(),
+                    fetchTasks()
                 ]);
                 if (unitsRes?.data && unitsRes.data.length > 0) {
                     setDbUnits(unitsRes.data.map((u: any) => u.name));
                 } else {
                     setDbUnits(DEFAULT_UNIDADES);
                 }
+            } catch (err) {
+                console.error("Erro no carregamento principal:", err);
             } finally {
                 setLoading(false);
             }
+
+            // Fase 2: Carregamento Não-Bloqueante em Segundo Plano (sem sobrecarregar o pool do banco)
+            setTimeout(() => {
+                fetchNotifications();
+                fetchTimeline();
+                fetchTickets();
+            }, 60);
         };
 
         fetchAllData();
