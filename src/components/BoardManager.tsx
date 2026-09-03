@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTasks } from '../context/TasksContext';
 import type { BoardColumn } from '../context/TasksContext';
-import { Plus, Trash2, GripVertical, Save, X, Settings2, Pencil, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Save, X, Settings2, Pencil, ChevronRight, Sparkles } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 export const BoardManager = () => {
     const { 
-        boards, boardColumns, addBoard, updateBoard, deleteBoard, 
+        boards, boardColumns, addBoard, updateBoard, deleteBoard, applyDefaultColumns,
         addColumn, updateColumn, deleteColumn, updateColumnsOrder 
     } = useTasks();
     const [selectedBoardId, setSelectedBoardId] = useState<string | null>(boards[0]?.id || null);
@@ -269,18 +269,37 @@ export const BoardManager = () => {
                                     )}
                                     <p className="text-xs text-gray-400 mt-1">Personalize as colunas e cores deste fluxo</p>
                                 </div>
-                                <button 
-                                    onClick={handleAddColumn}
-                                    className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-primary-200 hover:scale-105 transition-transform"
-                                >
-                                    <Plus size={18} /> Add Coluna
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        onClick={() => {
+                                            if (window.confirm('Deseja aplicar as 5 colunas padrão neste quadro? (Não Iniciado, Em Andamento, Finalizado, Cancelado, Em atraso)')) {
+                                                applyDefaultColumns(selectedBoard.id);
+                                            }
+                                        }}
+                                        className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition-colors"
+                                        title="Adiciona as 5 colunas padrão da Housih"
+                                    >
+                                        <Sparkles size={14} className="text-amber-500" /> Colunas Padrão
+                                    </button>
+                                    <button 
+                                        onClick={handleAddColumn}
+                                        className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-primary-200 hover:scale-105 transition-transform"
+                                    >
+                                        <Plus size={18} /> Add Coluna
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="space-y-3">
                                 {columns.length === 0 && (
-                                    <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                        <p className="text-gray-400 text-sm">Nenhuma coluna definida.</p>
+                                    <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200 space-y-3">
+                                        <p className="text-gray-500 text-sm font-medium">Nenhuma coluna definida neste quadro.</p>
+                                        <button
+                                            onClick={() => applyDefaultColumns(selectedBoard.id)}
+                                            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm inline-flex items-center gap-1.5"
+                                        >
+                                            <Sparkles size={14} /> Inserir 5 Colunas Padrão
+                                        </button>
                                     </div>
                                 )}
                                 <DragDropContext onDragEnd={handleDragEnd}>

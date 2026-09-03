@@ -55,6 +55,14 @@ export const UNIDADES_SECTORS = [
 
 export const SETORES = Array.from(new Set([...CORPORATIVO_SECTORS, ...UNIDADES_SECTORS]));
 
+export const DEFAULT_BOARD_COLUMNS = [
+    { title: 'Não Iniciado', color: 'bg-blue-100 text-blue-700', dot_color: '#3b82f6', order_index: 0 },
+    { title: 'Em Andamento', color: 'bg-amber-100 text-amber-700', dot_color: '#fbbf24', order_index: 1 },
+    { title: 'Finalizado', color: 'bg-green-100 text-green-700', dot_color: '#4ade80', order_index: 2 },
+    { title: 'Cancelado', color: 'bg-purple-100 text-purple-700', dot_color: '#c084fc', order_index: 3 },
+    { title: 'Em atraso', color: 'bg-red-100 text-red-700', dot_color: '#ef4444', order_index: 4 },
+];
+
 export interface Task {
     id: string;
     title: string;
@@ -156,6 +164,7 @@ interface TasksContextType {
     addBoard: (name: string, memberEmails?: string[], parentBoardId?: string | null) => Promise<void>;
     updateBoard: (id: string, name: string, memberEmails?: string[]) => Promise<void>;
     deleteBoard: (id: string) => Promise<void>;
+    applyDefaultColumns: (boardId: string) => Promise<void>;
     activeParentBoardId: string;
     setActiveParentBoardId: (id: string) => void;
     addColumn: (boardId: string, column: Partial<BoardColumn>) => Promise<void>;
@@ -854,14 +863,35 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         }
     };
 
+    const applyDefaultColumns = async (boardId: string) => {
+        const defaultCols = DEFAULT_BOARD_COLUMNS.map(col => ({
+            ...col,
+            board_id: boardId
+        }));
+        const { error } = await supabase.from('board_columns').insert(defaultCols);
+        if (error) {
+            alert("Erro ao aplicar colunas padrão: " + error.message);
+        } else {
+            await fetchBoardColumns();
+        }
+    };
+
     const addBoard = async (name: string, memberEmails: string[] = [], parentBoardId?: string | null) => {
         const payload: any = { name };
         if (parentBoardId) payload.parent_board_id = parentBoardId;
         const { data, error } = await supabase.from('boards').insert([payload]).select();
         if (error) {
             alert(error.message);
-        } else if (data) {
+        } else if (data && data.length > 0) {
             const boardId = data[0].id;
+
+            // Insere automaticamente as 5 colunas padrão
+            const defaultCols = DEFAULT_BOARD_COLUMNS.map(col => ({
+                ...col,
+                board_id: boardId
+            }));
+            await supabase.from('board_columns').insert(defaultCols);
+
             if (memberEmails.length > 0) {
                 const accessInserts = memberEmails.map(email => ({
                     board_id: boardId,
@@ -869,7 +899,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                 }));
                 await supabase.from('board_access').insert(accessInserts);
             }
-            fetchBoards();
+            await Promise.all([fetchBoards(), fetchBoardColumns()]);
         }
     };
 
@@ -1466,7 +1496,7 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             notifications, fetchNotifications, markNotificationAsRead, deleteNotification, clearAllNotifications, session,
             createSharedReport,
             boards, boardColumns, activeBoardId, setActiveBoardId, activeParentBoardId, setActiveParentBoardId,
-            addBoard, updateBoard, deleteBoard, addColumn, updateColumn, deleteColumn, updateColumnsOrder,
+            addBoard, updateBoard, deleteBoard, applyDefaultColumns, addColumn, updateColumn, deleteColumn, updateColumnsOrder,
             updateTaskOrder,
             UNIDADES, SETORES, activeUnit, setActiveUnit,
             timelinePosts, addTimelinePost, deleteTimelinePost, uploadTimelineImage, toggleLike, addComment,
