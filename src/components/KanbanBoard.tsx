@@ -12,10 +12,12 @@ const SECTOR_DESCRIPTIONS: Record<string, string> = {
     'Cobrança': 'Tratativas de atrasos, renegociações, emissão de 2ª via e inadimplência.',
     'Comercial': 'Novos negócios, propostas comerciais, parcerias e metas de vendas.',
     'Comunicação & Marketing': 'Redes sociais, campanhas, materiais gráficos, eventos e comunicados.',
+    'Controladoria': 'Auditoria, controles financeiros, orçamentos e conformidade fiscal.',
+    'DP': 'Departamento pessoal, admissões, rescisões, folha de pagamento e benefícios.',
     'Financeiro': 'Pagamentos, recebimentos, notas fiscais, reembolsos e fluxo de caixa.',
     'Jurídico': 'Análise de contratos, processos judiciais, dúvidas legais e notificações.',
     'Operações & Projetos Internos': 'Processos internos, melhoria contínua, auditorias e implantações.',
-    'RH': 'Folha de pagamento, benefícios, férias, recrutamento, admissões e clima.'
+    'RH': 'Recrutamento, seleção, treinamento, gestão de clima e desenvolvimento humano.'
 };
 
 const normalizeText = (str?: string) => (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -57,7 +59,8 @@ export const KanbanBoard = () => {
         openModal, teamMembers, updateTask,
         boards, boardColumns, activeBoardId, setActiveBoardId,
         activeParentBoardId, setActiveParentBoardId,
-        updateTaskOrder, activeUnit, setActiveUnit, UNIDADES
+        updateTaskOrder, activeUnit, setActiveUnit, UNIDADES,
+        CORPORATIVO_SECTORS, UNIDADES_SECTORS
     } = useTasks();
 
     const [isFiltersExpanded, setIsFiltersExpanded] = useState(true);
@@ -80,18 +83,16 @@ export const KanbanBoard = () => {
     
     const parentBoards = useMemo(() => {
         let pBoards = boards.filter(b => !b.parent_board_id);
-        
-        const unitBoards = ['Recepção', 'Administrativo', 'Enfermagem', 'Comercial', 'Médico'];
-        const corporativoBoards = ['Arquitetura e Obras', 'Atendimento Comercial', 'Cobrança', 'Comercial', 'Comunicação & Marketing', 'Financeiro', 'Jurídico', 'Operações & Projetos Internos', 'RH', 'TI', 'Controladoria'];
 
         if (activeUnit === 'Corporativo') {
-            const filtered = pBoards.filter(b => corporativoBoards.includes(b.name));
+            const filtered = pBoards.filter(b => CORPORATIVO_SECTORS.includes(b.name) || !UNIDADES_SECTORS.includes(b.name));
             return filtered.length > 0 ? filtered : pBoards;
         } else {
-            const filtered = pBoards.filter(b => unitBoards.includes(b.name));
+            const filtered = pBoards.filter(b => UNIDADES_SECTORS.includes(b.name));
             return filtered.length > 0 ? filtered : pBoards;
         }
-    }, [boards, activeUnit]);
+    }, [boards, activeUnit, CORPORATIVO_SECTORS, UNIDADES_SECTORS]);
+    
     const subBoardsOf = (parentId: string) => boards.filter(b => b.parent_board_id === parentId);
 
     const userUnits = useMemo(() => {
