@@ -7,7 +7,7 @@ import { useChat } from '../context/ChatContext';
 
 export const TeamManager = () => {
     const { user } = useAuth();
-    const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember, UNIDADES, SETORES, addUnit, deleteUnit } = useTasks();
+    const { teamMembers, addTeamMember, updateTeamMember, deleteTeamMember, UNIDADES, SETORES, addUnit, deleteUnit, addSector, deleteSector } = useTasks();
     const { startPrivateChat } = useChat();
     const currentUser = teamMembers.find(m => m.email?.toLowerCase() === user?.email?.toLowerCase());
     const isMaster = 
@@ -23,7 +23,7 @@ export const TeamManager = () => {
 
     // List of all sectors for filter
     const ALL_SECTORS = useMemo(() => {
-        const set = new Set<string>(['Recepção', 'Administrativo', 'Gestor/Assessor', 'Enfermagem', 'Médico', 'Comercial', 'Operações & Projetos Internos', 'RH', 'TI', 'Financeiro', 'Jurídico', 'Cobrança', 'Comunicação & Marketing', 'Controladoria', 'Geral', ...SETORES]);
+        const set = new Set<string>(['Recepção', 'Administrativo', 'Gestor/Assessor', 'Enfermagem', 'Médico', 'Comercial', 'Operações & Projetos Internos', 'RH', 'TI', 'Financeiro', 'Jurídico', 'Cobrança', 'Comunicação & Marketing', 'Controladoria', 'DP', 'Geral', ...SETORES]);
         teamMembers.forEach(m => {
             if (Array.isArray(m.sectors)) m.sectors.forEach(s => s && set.add(s));
             else if (typeof m.sectors === 'string' && m.sectors) set.add(m.sectors);
@@ -109,6 +109,10 @@ export const TeamManager = () => {
     const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
     const [newUnitName, setNewUnitName] = useState('');
 
+    // ── Manage Sectors state ──
+    const [isSectorModalOpen, setIsSectorModalOpen] = useState(false);
+    const [newSectorName, setNewSectorName] = useState('');
+
     // ── Edit member state ──
     const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
     const [editName, setEditName] = useState('');
@@ -155,6 +159,19 @@ export const TeamManager = () => {
     const handleDeleteUnit = async (unit: string) => {
         if (confirm(`Tem certeza que deseja excluir a unidade ${unit}?`)) {
             await deleteUnit(unit);
+        }
+    };
+
+    const handleAddSector = async () => {
+        if (newSectorName.trim()) {
+            await addSector(newSectorName.trim());
+            setNewSectorName('');
+        }
+    };
+
+    const handleDeleteSector = async (sector: string) => {
+        if (confirm(`Tem certeza que deseja excluir o setor ${sector}?`)) {
+            await deleteSector(sector);
         }
     };
 
@@ -205,18 +222,24 @@ export const TeamManager = () => {
                     </div>
                     <p className="text-sm text-gray-500 mt-1">Gerencie os membros da equipe e os responsáveis pelas tarefas</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-2.5">
                     {isMaster && (
                         <>
                             <button
-                                onClick={() => { setIsUnitModalOpen(!isUnitModalOpen); setIsAdding(false); closeEdit(); }}
-                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all ${isUnitModalOpen ? 'bg-primary-100 text-primary-700' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                                onClick={() => { setIsUnitModalOpen(!isUnitModalOpen); setIsSectorModalOpen(false); setIsAdding(false); closeEdit(); }}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all text-sm ${isUnitModalOpen ? 'bg-primary-100 text-primary-700 font-bold' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
                             >
                                 Gerenciar Unidades
                             </button>
                             <button
-                                onClick={() => { setIsAdding(true); setIsUnitModalOpen(false); closeEdit(); }}
-                                className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all"
+                                onClick={() => { setIsSectorModalOpen(!isSectorModalOpen); setIsUnitModalOpen(false); setIsAdding(false); closeEdit(); }}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all text-sm ${isSectorModalOpen ? 'bg-primary-100 text-primary-700 font-bold' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                            >
+                                Gerenciar Setores
+                            </button>
+                            <button
+                                onClick={() => { setIsAdding(true); setIsUnitModalOpen(false); setIsSectorModalOpen(false); closeEdit(); }}
+                                className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all text-sm"
                             >
                                 <Plus size={18} /> Novo Membro
                             </button>
@@ -331,6 +354,40 @@ export const TeamManager = () => {
                 </div>
             )}
 
+            {/* Manage Sectors */}
+            {isSectorModalOpen && isMaster && (
+                <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl border border-white/40 shadow-sm animate-in fade-in slide-in-from-top-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-gray-800">Gerenciar Setores</h3>
+                        <button onClick={() => setIsSectorModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all"><X size={20} /></button>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                        <input type="text" placeholder="Nome do novo setor (ex: DP, Jurídico...)" value={newSectorName} onChange={e => setNewSectorName(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleAddSector()}
+                            className="flex-1 bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50" />
+                        <button onClick={handleAddSector} className="bg-primary-600 text-white px-6 py-2.5 rounded-xl hover:bg-primary-700 transition-colors shadow-sm whitespace-nowrap font-medium">
+                            Adicionar Setor
+                        </button>
+                    </div>
+
+                    <div className="mt-4 border border-gray-100 rounded-xl overflow-hidden bg-gray-50/50">
+                        <div className="max-h-60 overflow-y-auto pretty-scrollbar-y">
+                            {SETORES.map(sector => (
+                                <div key={sector} className="flex justify-between items-center px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-white transition-colors">
+                                    <span className="font-medium text-gray-700">{sector}</span>
+                                    {sector !== 'Geral' && (
+                                        <button onClick={() => handleDeleteSector(sector)} className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Excluir setor">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Add new member form */}
             {isAdding && (
                 <div className="bg-white/80 backdrop-blur-md p-6 rounded-2xl border border-white/40 shadow-sm animate-in fade-in slide-in-from-top-4 space-y-4">
@@ -365,16 +422,31 @@ export const TeamManager = () => {
                                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Unidades (Selecione várias)</label>
                                     <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 max-h-40 overflow-y-auto no-scrollbar grid grid-cols-1 gap-2 pretty-scrollbar-y">
                                         {UNIDADES.map(u => (
-                                            <label key={u} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded-lg transition-colors">
-                                                <input type="checkbox" checked={selectedUnits.includes(u)} onChange={() => toggleUnit(u)}
-                                                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
-                                                <span className="text-sm text-gray-700">{u}</span>
-                                            </label>
+                                             <label key={u} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded-lg transition-colors">
+                                                 <input type="checkbox" checked={selectedUnits.includes(u)} onChange={() => toggleUnit(u)}
+                                                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                                                 <span className="text-sm text-gray-700">{u}</span>
+                                             </label>
                                         ))}
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Setores (Selecione vários)</label>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Setores (Selecione vários)</label>
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                const name = prompt('Nome do novo setor:');
+                                                if (name && name.trim()) {
+                                                    await addSector(name.trim());
+                                                    toggleSector(name.trim());
+                                                }
+                                            }}
+                                            className="text-[11px] font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1 hover:underline"
+                                        >
+                                            <Plus size={13} /> Novo Setor
+                                        </button>
+                                    </div>
                                     <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 max-h-40 overflow-y-auto no-scrollbar grid grid-cols-1 gap-2 pretty-scrollbar-y">
                                         {SETORES.map(s => (
                                             <label key={s} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded-lg transition-colors">
@@ -484,7 +556,22 @@ export const TeamManager = () => {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Setores</label>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Setores</label>
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                const name = prompt('Nome do novo setor:');
+                                                if (name && name.trim()) {
+                                                    await addSector(name.trim());
+                                                    toggleEditSector(name.trim());
+                                                }
+                                            }}
+                                            className="text-[11px] font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1 hover:underline"
+                                        >
+                                            <Plus size={13} /> Novo Setor
+                                        </button>
+                                    </div>
                                     <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 max-h-44 overflow-y-auto pretty-scrollbar-y space-y-1">
                                         {SETORES.map(s => (
                                             <label key={s} className="flex items-center gap-2 cursor-pointer hover:bg-white p-1.5 rounded-lg transition-colors">

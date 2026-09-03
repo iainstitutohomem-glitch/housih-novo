@@ -45,8 +45,8 @@ export const DEFAULT_UNIDADES = [
 
 export const CORPORATIVO_SECTORS = [
     "Arquitetura e Obras", "Atendimento Comercial", "Cobrança", "Comercial", 
-    "Comunicação & Marketing", "Financeiro", "Jurídico", 
-    "Operações & Projetos Internos", "RH", "TI", "Controladoria", "Geral"
+    "Comunicação & Marketing", "Controladoria", "DP", "Financeiro", "Jurídico", 
+    "Operações & Projetos Internos", "RH", "TI", "Geral"
 ];
 
 export const UNIDADES_SECTORS = [
@@ -182,6 +182,8 @@ interface TasksContextType {
     updateTicketStatus: (id: string, status: 'aberto' | 'finalizado') => Promise<void>;
     addUnit: (name: string) => Promise<void>;
     deleteUnit: (name: string) => Promise<void>;
+    addSector: (name: string) => Promise<void>;
+    deleteSector: (name: string) => Promise<void>;
 }
 
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
@@ -1221,6 +1223,34 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         setFilters(prev => ({ ...prev, status: 'Todos' }));
     }, [activeBoardId]);
 
+    const [customSectors, setCustomSectors] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('housih_custom_sectors');
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    const addSector = async (name: string) => {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        setCustomSectors(prev => {
+            if (prev.includes(trimmed)) return prev;
+            const updated = [...prev, trimmed];
+            try { localStorage.setItem('housih_custom_sectors', JSON.stringify(updated)); } catch {}
+            return updated;
+        });
+    };
+
+    const deleteSector = async (name: string) => {
+        setCustomSectors(prev => {
+            const updated = prev.filter(s => s !== name);
+            try { localStorage.setItem('housih_custom_sectors', JSON.stringify(updated)); } catch {}
+            return updated;
+        });
+    };
+
     const UNIDADES = useMemo(() => {
         const unitSet = new Set<string>(["Corporativo", ...DEFAULT_UNIDADES]);
         dbUnits.forEach(u => u && unitSet.add(u));
@@ -1233,6 +1263,18 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
         });
         return Array.from(unitSet);
     }, [dbUnits, teamMembers, tasks]);
+
+    const SETORES = useMemo(() => {
+        const sectorSet = new Set<string>([...CORPORATIVO_SECTORS, ...UNIDADES_SECTORS, ...customSectors]);
+        teamMembers.forEach(m => {
+            if (Array.isArray(m.sectors)) m.sectors.forEach(s => s && sectorSet.add(s));
+            else if (typeof m.sectors === 'string' && m.sectors) sectorSet.add(m.sectors);
+        });
+        tasks.forEach(t => {
+            if (t.sector) sectorSet.add(t.sector);
+        });
+        return Array.from(sectorSet).sort();
+    }, [teamMembers, tasks, customSectors]);
 
     useEffect(() => {
         if (!session) return;
@@ -1431,7 +1473,8 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             CORPORATIVO_SECTORS, UNIDADES_SECTORS,
             tickets, fetchTickets, addTicket, addTicketMessage, updateTicketStatus,
             createNotification,
-            addUnit, deleteUnit
+            addUnit, deleteUnit,
+            addSector, deleteSector
         }}>
             {children}
         </TasksContext.Provider>
