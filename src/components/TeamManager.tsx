@@ -4,6 +4,7 @@ import { useTasks } from '../context/TasksContext';
 import type { TeamMember } from '../context/TasksContext';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
+import { supabase } from '../lib/supabase';
 
 export const TeamManager = () => {
     const { user } = useAuth();
@@ -122,12 +123,31 @@ export const TeamManager = () => {
     const [editAvatar, setEditAvatar] = useState('');
     const [editRole, setEditRole] = useState<string>('Membro');
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setter: (v: string) => void) => {
         const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => setter(reader.result as string);
-            reader.readAsDataURL(file);
+        if (!file) return;
+
+        // Preview imediato na interface
+        const reader = new FileReader();
+        reader.onloadend = () => setter(reader.result as string);
+        reader.readAsDataURL(file);
+
+        // Upload para Supabase Storage
+        try {
+            const ext = file.name.split('.').pop() || 'jpg';
+            const fileName = `avatars/avatar_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+            const { error: uploadError } = await supabase.storage
+                .from('task-attachments')
+                .upload(fileName, file, { upsert: true });
+
+            if (!uploadError) {
+                const { data: { publicUrl } } = supabase.storage
+                    .from('task-attachments')
+                    .getPublicUrl(fileName);
+                setter(publicUrl);
+            }
+        } catch (err) {
+            console.error("Erro ao subir avatar para storage:", err);
         }
     };
 

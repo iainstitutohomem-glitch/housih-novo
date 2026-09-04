@@ -376,41 +376,46 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const fetchTasks = async (silent = false) => {
         if (!silent) setLoading(true);
         try {
-            // Automatically update overdue tasks in the database at most once every 5 minutes
+            // Executa update_overdue_tasks em background a cada 5 min (sem travar a interface)
             const now = Date.now();
             if (!silent && now - lastOverdueCheckRef.current > 5 * 60 * 1000) {
                 lastOverdueCheckRef.current = now;
-                await supabase.rpc('update_overdue_tasks');
+                Promise.resolve(supabase.rpc('update_overdue_tasks')).catch(console.error);
             }
 
-            let allTasks: any[] = [];
-            let hasMore = true;
-            let offset = 0;
-            const PAGE_SIZE = 1000;
-            let pageCount = 0;
-            
-            while (hasMore && pageCount < 20) { // Limit to 20,000 tasks max
-                const { data, error } = await supabase
+            // Carregamento paralelo ultra-rápido das páginas de tarefas
+            const [page1Res, page2Res] = await Promise.all([
+                supabase
                     .from('tasks')
                     .select('id, title, status, priority, company_id, due_date, assignee, board_id, column_id, order_index, unit, sector, created_by')
                     .order('order_index', { ascending: true })
-                    .range(offset, offset + PAGE_SIZE - 1);
-                
-                if (error) {
-                    console.error("Fetch tasks error:", error);
-                    hasMore = false;
-                    break;
-                }
-                
-                if (data && data.length > 0) {
-                    allTasks = allTasks.concat(data);
-                    offset += PAGE_SIZE;
-                    pageCount++;
-                    if (data.length < PAGE_SIZE) {
+                    .range(0, 999),
+                supabase
+                    .from('tasks')
+                    .select('id, title, status, priority, company_id, due_date, assignee, board_id, column_id, order_index, unit, sector, created_by')
+                    .order('order_index', { ascending: true })
+                    .range(1000, 1999)
+            ]);
+
+            let allTasks = [...(page1Res.data || []), ...(page2Res.data || [])];
+            
+            // Suporte para mais de 2.000 tarefas se ultrapassar
+            if (page2Res.data && page2Res.data.length === 1000) {
+                let offset = 2000;
+                let hasMore = true;
+                while (hasMore && offset < 20000) {
+                    const { data } = await supabase
+                        .from('tasks')
+                        .select('id, title, status, priority, company_id, due_date, assignee, board_id, column_id, order_index, unit, sector, created_by')
+                        .order('order_index', { ascending: true })
+                        .range(offset, offset + 999);
+                    if (data && data.length > 0) {
+                        allTasks = allTasks.concat(data);
+                        offset += 1000;
+                        if (data.length < 1000) hasMore = false;
+                    } else {
                         hasMore = false;
                     }
-                } else {
-                    hasMore = false;
                 }
             }
 
@@ -431,8 +436,6 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
 
     const fetchCompanies = async () => {
-        // OPTIMIZATION: Select logo and color from social_media JSONB but exclude passwords.
-        // Passwords are loaded on-demand in CompanyManager when the user opens a company for editing.
         const { data, error } = await supabase
             .from('companies')
             .select('id, name, logo_url, social_media')
@@ -448,15 +451,15 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
                     logoBase64: sm.logoBase64 || '',
                     site: sm.site || '',
                     social: sm.social || '',
-                    passwords: [] // passwords are only loaded on-demand when editing
+                    passwords: []
                 };
             }));
         }
     };
 
     const updateTaskStatus = async (taskId: string, columnId: string, statusName: string) => {
+        const updates: any = { status: statusName, column_id: columnId };
         const targetCol = boardColumns.find(c => c.id === columnId);
-        const updates: any = { column_id: columnId, status: statusName };
         if (targetCol?.board_id) {
             updates.board_id = targetCol.board_id;
         }
@@ -477,7 +480,8 @@ export const TasksProvider: FC<{ children: ReactNode }> = ({ children }) => {
             .from('notifications')
             .select('*')
             .eq('recipient_email', email)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .limit(50);
         if (!error && data) setNotifications(data);
     };
 
